@@ -210,6 +210,7 @@ _cpu_started.wait(smp::count).then([this] {
 10. When `_start_promise` is set, the continuation created by `reactor::when_started()` will be finally called to run the actual seastar program.
 
 ## Relationship between device, interface and ipv4.
+
 * Take native-stack as an example.
 
 * `native_network_stack` constructor goes as follow:
@@ -247,6 +248,39 @@ void dpdk_qp<HugetlbfsMemBackend>::rx_start() {
 }
 ```
 It adds a poller to the reactor, so that `poll_rx_once` is regularly called. When calling `poll_rx_once`, `_dev->l2receive(std::move(*p));` is called, which further calls `_queues[engine().cpu_id()]->_rx_stream.produce(std::move(p));`.
+
+* `ipv4 _inet` actually constructs a `l3protocol _l3`, and passes the `interface _netif` to construct `_l3`.
+
+* When constructing `l3protocol _l3` by `ipv4 _inet`, `_netif->register_packet_provider(std::move(func));` is called to provide a packet provider for `interface _netif`.
+
+* After `_l3` is constructed, a subscription `_rx_packets` is created by:
+```cpp
+_rx_packets(_l3.receive([this] (packet p, ethernet_address ea) {
+       return handle_received_packet(std::move(p), ea); },
+     [this] (forward_hash& out_hash_data, packet& p, size_t off) {
+       return forward(out_hash_data, p, off);}))
+```
+
+* In `_l3.receive`, `_netif->register_l3(_proto_num, std::move(rx_fn), std::move(forward));` is called.
+
+* In `_netif->register_l3`, which is the following function
+```cpp
+subscription<packet, ethernet_address>
+interface::register_l3(eth_protocol_num proto_num,
+        std::function<future<> (packet p, ethernet_address from)> next,
+        std::function<bool (forward_hash&, packet& p, size_t)> forward) {
+    auto i = _proto_map.emplace(std::piecewise_construct, std::make_tuple(uint16_t(proto_num)), std::forward_as_tuple(std::move(forward)));
+    assert(i.second);
+    l3_rx_stream& l3_rx = i.first->second;
+    return l3_rx.packet_stream.listen(std::move(next));
+}
+```
+The forward function is used to construct a `l3_rx_stream` which is stored in the `_proto_map`. The tcp/ip stack's protocol number is ip, seastar also has arp. The next function is used to create a subscription for the `packet_stream` in the constructed `l3_rx_stream`.
+
+* Finally, _tcp, _udp, _icmp are constructed after `_l3`. They are stored in `_l4`.
+
+* When `handle_received_packet` is called by the `l3_rx.packet_stream.produce`,
+the corresponding l4 protocol will be retrieved and `_tcp.received`, `_udp.received` is used to deliver the packet to the final destination.
 
 # Compiling mica2 with dpdk version > 16.11
 * Add rte_hash to the library part of cmakelist file.
