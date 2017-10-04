@@ -230,9 +230,7 @@ native_network_stack::native_network_stack(boost::program_options::variables_map
 ```
 * On each core, `interface _netif` owns a shared pointer to the dpdk_device. `ipv4 _inet` has a reference to `_net_if`.
 
-* When constructing `interface _netif`, `_netif` has a `subscription _rx` which is constructed as `_rx(_dev->receive([this] (packet p) { return dispatch_packet(std::move(p)); }))`.
-
-* `_dev->receive` is the following function:
+* When constructing `interface _netif`, `_netif` has a `subscription _rx` which is constructed as `_rx(_dev->receive([this] (packet p) { return dispatch_packet(std::move(p)); }))`.  `_dev->receive` is the following function:
 ```cpp
 subscription<packet>
 device::receive(std::function<future<> (packet)> next_packet) {
