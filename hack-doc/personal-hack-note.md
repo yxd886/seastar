@@ -241,6 +241,14 @@ device::receive(std::function<future<> (packet)> next_packet) {
     return sub;
 }
 ```
+The `_rx_stream` listens the lambda function and will call the lambda function when `_rx_stream.produce` is called.  `_queues[engine().cpu_id()]->rx_start();` has the following form:
+```cpp
+template <bool HugetlbfsMemBackend>
+void dpdk_qp<HugetlbfsMemBackend>::rx_start() {
+    _rx_poller = reactor::poller::simple([&] { return poll_rx_once(); });
+}
+```
+It adds a poller to the reactor, so that `poll_rx_once` is regularly called. When calling `poll_rx_once`, `_dev->l2receive(std::move(*p));` is called, which further calls `_queues[engine().cpu_id()]->_rx_stream.produce(std::move(p));`.
 
 # Compiling mica2 with dpdk version > 16.11
 * Add rte_hash to the library part of cmakelist file.
