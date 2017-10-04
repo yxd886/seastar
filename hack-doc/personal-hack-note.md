@@ -163,5 +163,42 @@ In particular, in the call of `ipv4_udp::make_channel`, a `udp_channel_state` is
 
 * To correctly start udp_client, we have to add --server ip program option to udp_client binary. However, if there are no udp_server, udp_client generates tons of uncaught exceptions which are arp_queue_full_error. Got to figure out the cause.
 
-## Compiling mica2 with dpdk version > 16.11
+## A better seastar native network stack initialization sequence
+1. `smp::configure` -> `reactor::configure`
+2. `auto network_stack_ready = vm.count("network-stack")
+        ? network_stack_registry::create(sstring(vm["network-stack"].as<std::string>()), vm)
+        : network_stack_registry::create(vm);`
+3. 2 actually calls `native_network_stack::create`
+4. The actual creation of `native_network_stack` is actually accomplished by
+`create_native_net_device`.
+4.1 `create_dpdk_net_device` -> `auto qp = sdev->init_local_queue(opts, qid);` -> `sdev->set_local_queue(std::move(qp));` When executing `init_local_queue`, an asynchronous operation is submitted to core 0: when all the cores has finished creating the local queue, `init_port_fini` is called to check the link status. If the link is successfully up, `_link_ready_promise` is set.
+4.2 When all the cores has finished `set_local_queue`, and the `_link_ready_promise` is set, then each core will go on to `create_native_stack`.
+5. `create_native_stack` simply constructs a `native_network_stack` on each core.
+5.1 Construct `interface`, by passing in the `dpdk_device` created during previous steps.
+5.2 Construct `ipv4`, by passing in the just constructed `interface`.
+5.3 Finally, a thread local ready_promise is set on each core.
+6. Look at 2, 2 returns the future associated with `ready_promise`. After 2, we have
+`network_stack_ready.then([this] (std::unique_ptr<network_stack> stack) {
+        _network_stack_ready_promise.set_value(std::move(stack));
+    });`.
+We have `_network_stack_ready_promise` set.
+7. In `reactor::run`, we have
+`_network_stack_ready_promise.get_future().then([this] (std::unique_ptr<network_stack> stack) {
+        _network_stack = std::move(stack);
+        for (unsigned c = 0; c < smp::count; c++) {
+            smp::submit_to(c, [] {
+                    engine()._cpu_started.signal();
+            });
+        }
+    });`
+8. Before 7, we have
+`_cpu_started.wait(smp::count).then([this] {
+        _network_stack->initialize().then([this] {
+            _start_promise.set_value();
+        });
+    });`
+9. `_network_stack->initialize()` perform some dhcp thing, and returns a future related with dhcp promise. When the dhcp configuration is finished, the `_start_promise` is set.
+10. When `_start_promise` is set, the continuation created by `reactor::when_started()` will be finally called to run the actual seastar program.
+
+# Compiling mica2 with dpdk version > 16.11
 * Add rte_hash to the library part of cmakelist file.
