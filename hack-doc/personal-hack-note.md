@@ -231,15 +231,16 @@ native_network_stack::native_network_stack(boost::program_options::variables_map
 * On each core, `interface _netif` owns a shared pointer to the dpdk_device. `ipv4 _inet` has a reference to `_net_if`.
 
 * When constructing `interface _netif`, `_netif` has a `subscription _rx` which is constructed as `_rx(_dev->receive([this] (packet p) { return dispatch_packet(std::move(p)); }))`.
-  *`_dev->receive` is the following function:
-  ```cpp
-  subscription<packet>
+
+*`_dev->receive` is the following function:
+```cpp
+subscription<packet>
 device::receive(std::function<future<> (packet)> next_packet) {
     auto sub = _queues[engine().cpu_id()]->_rx_stream.listen(std::move(next_packet));
     _queues[engine().cpu_id()]->rx_start();
     return sub;
 }
-  ```
+```
 
 # Compiling mica2 with dpdk version > 16.11
 * Add rte_hash to the library part of cmakelist file.
