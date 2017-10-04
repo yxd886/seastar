@@ -187,6 +187,7 @@ network_stack_ready.then([this] (std::unique_ptr<network_stack> stack) {
     });
 ```
 We have `_network_stack_ready_promise` set.
+
 7. In `reactor::run`, we have
 ```cpp
 _network_stack_ready_promise.get_future().then([this] (std::unique_ptr<network_stack> stack) {
@@ -281,6 +282,22 @@ The forward function is used to construct a `l3_rx_stream` which is stored in th
 
 * When `handle_received_packet` is called by the `l3_rx.packet_stream.produce`,
 the corresponding l4 protocol will be retrieved and `_tcp.received`, `_udp.received` is used to deliver the packet to the final destination.
+
+## A simplified explanation when constructing the `native_network_stack`
+
+1. Construct `interface _netif`.
+
+2.  After 1, the `_rx_stream` of a `dpdk_qp` in `dpdk_device` listens on `[this] (packet p) { return dispatch_packet(std::move(p)); }`. `dpdk_qp` registers a poller to the reactor, which eventually calls `_rx_stream.produce(std::move(p))` to call `dispatch_packet`
+
+3. Construct `ipv4 _inet`. When constructing `ipv4 _inet`, `l3_protocol _l3` is constructed as well. And then `_l3.receive` is called.
+
+4. After 3, the `_proto_map` of `_netif` is added a `l3_rx_stream` (for ip protocol). The `packet_stream` of the `l3_rx_stream` listens on `ipv4::handle_received_packet`.
+
+5. The `dispatch_packet` function mentioned in 2 calls the `l3_rx_stream::packet_stream::produce` in `interface::_proto_map`, which further calls `ipv4::handle_received_packet`
+
+6. `handle_received_packet` function calls `l4->received`. The `l4` retrieved from a map, that is constructed when constructing `ipv4 _inet`.
+
+
 
 # Compiling mica2 with dpdk version > 16.11
 * Add rte_hash to the library part of cmakelist file.
