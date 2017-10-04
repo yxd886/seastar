@@ -209,5 +209,37 @@ _cpu_started.wait(smp::count).then([this] {
 9. `_network_stack->initialize()` perform some dhcp thing, and returns a future related with dhcp promise. When the dhcp configuration is finished, the `_start_promise` is set.
 10. When `_start_promise` is set, the continuation created by `reactor::when_started()` will be finally called to run the actual seastar program.
 
+## Relationship between device, interface and ipv4.
+* Take native-stack as an example.
+
+* `native_network_stack` constructor goes as follow:
+```cpp
+native_network_stack::native_network_stack(boost::program_options::variables_map opts, std::shared_ptr<device> dev)
+    : _netif(std::move(dev))
+    , _inet(&_netif) {
+    _inet.get_udp().set_queue_size(opts["udpv4-queue-size"].as<int>());
+    _dhcp = opts["host-ipv4-addr"].defaulted()
+            && opts["gw-ipv4-addr"].defaulted()
+            && opts["netmask-ipv4-addr"].defaulted() && opts["dhcp"].as<bool>();
+    if (!_dhcp) {
+        _inet.set_host_address(ipv4_address(_dhcp ? 0 : opts["host-ipv4-addr"].as<std::string>()));
+        _inet.set_gw_address(ipv4_address(opts["gw-ipv4-addr"].as<std::string>()));
+        _inet.set_netmask_address(ipv4_address(opts["netmask-ipv4-addr"].as<std::string>()));
+    }
+}
+```
+* On each core, `interface _netif` owns a shared pointer to the dpdk_device. `ipv4 _inet` has a reference to `_net_if`.
+
+* When constructing `interface _netif`, `_netif` has a `subscription _rx` which is constructed as `_rx(_dev->receive([this] (packet p) { return dispatch_packet(std::move(p)); }))`.
+  *`_dev->receive` is the following function:
+  ```cpp
+  subscription<packet>
+device::receive(std::function<future<> (packet)> next_packet) {
+    auto sub = _queues[engine().cpu_id()]->_rx_stream.listen(std::move(next_packet));
+    _queues[engine().cpu_id()]->rx_start();
+    return sub;
+}
+  ```
+
 # Compiling mica2 with dpdk version > 16.11
 * Add rte_hash to the library part of cmakelist file.
