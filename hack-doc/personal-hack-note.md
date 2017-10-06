@@ -305,5 +305,5 @@ the corresponding l4 protocol will be retrieved and `_tcp.received`, `_udp.recei
 * seastar currently only supports ipv4. To allow possible extention to ipv6, the `net::tcp` structure accept a template parameter called `InetTraits`, which could be used to provide ipv6 support.
 
 * dsfsdfa
-- asdfsdf
-- asdfs
+  * asdfsdf
+  * asdfs
