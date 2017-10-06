@@ -297,7 +297,8 @@ the corresponding l4 protocol will be retrieved and `_tcp.received`, `_udp.recei
 
 6. `handle_received_packet` function calls `l4->received`. The `l4` retrieved from a map, that is constructed when constructing `ipv4 _inet`.
 
-
-
 # Compiling mica2 with dpdk version > 16.11
 * Add rte_hash to the library part of cmakelist file.
+
+# Seastar native tcp/ip stack analysis
+* seastar currently only supports ipv4. To allow possible extention to ipv6, the `net::tcp` structure accept a template parameter called `InetTraits`, which could be used to provide ipv6 support. 
