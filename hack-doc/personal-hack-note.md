@@ -304,6 +304,10 @@ the corresponding l4 protocol will be retrieved and `_tcp.received`, `_udp.recei
 
 * seastar currently only supports ipv4. To allow possible extention to ipv6, the `net::tcp` structure accept a template parameter called `InetTraits`, which could be used to provide ipv6 support.
 
-* dsfsdfa
-  * asdfsdf
-  * asdfs
+* `tcp::listener`
+  * After construction, add a this pointer to `tcp::_listening`
+  * During deconstruction, delete the pointer from `tcp::_listening`
+  * Therefore, the user who tries to listen on a port for incoming TCP connection should be responsible for managing the lifetime of the `tcp::listener'. Once the corresponding `tcp::listener` is destroyed, no more incoming `tcb` will be accepted by the server.
+  * My perception on the ownership: master thread owns reactor, reactor owns tcp/ip stack, reactor also owns application code. Application code owns tcp listener. Application code is deconstructed first. So all the tcp listeners will be destroyed first. Then the reactor is free to destroy the tcp/ip stack.
+  * Has a `_q`, the connected `tcb` is placed in the `_q`, and then popped out for actual tcp processing.
+  *
