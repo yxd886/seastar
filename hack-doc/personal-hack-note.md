@@ -297,6 +297,89 @@ the corresponding l4 protocol will be retrieved and `_tcp.received`, `_udp.recei
 
 6. `handle_received_packet` function calls `l4->received`. The `l4` retrieved from a map, that is constructed when constructing `ipv4 _inet`.
 
+## seastar send path:
+
+* In `qp::poll_tx`,
+  * There is call: `_stats.tx.good.update_pkts_bunch(send(_tx_packetq));`.
+  * The `qp::send` implements the final send logic.
+  * For `dpdk_qp`, the `dpdk_qp::send` is called.
+
+* The `qp::poll_tx` is registered as a poller when constructing `dpdk_qp`.
+
+* For the path to process tcp/ip stack packets, `dpdk_qp is only registered with a single packet provider`, which is the following:
+```cpp
+interface::interface(std::shared_ptr<device> dev)
+    : _dev(dev)
+    , _rx(_dev->receive([this] (packet p) { return dispatch_packet(std::move(p)); }))
+    , _hw_address(_dev->hw_address())
+    , _hw_features(_dev->hw_features()) {
+    dev->local_queue().register_packet_provider([this, idx = 0u] () mutable {
+            std::experimental::optional<packet> p;
+            for (size_t i = 0; i < _pkt_providers.size(); i++) {
+                auto l3p = _pkt_providers[idx++]();
+                if (idx == _pkt_providers.size())
+                    idx = 0;
+                if (l3p) {
+                    auto l3pv = std::move(l3p.value());
+                    auto eh = l3pv.p.prepend_header<eth_hdr>();
+                    eh->dst_mac = l3pv.to;
+                    eh->src_mac = _hw_address;
+                    eh->eth_proto = uint16_t(l3pv.proto_num);
+                    *eh = hton(*eh);
+                    p = std::move(l3pv.p);
+                    return p;
+                }
+            }
+            return p;
+        });
+}
+```
+* The tcp/ip packet provider of `dpdk_qp` just read packets from the registered packet providers of l3, append appropriate ethernet header.
+
+* The packet provider of `interface::_inet` is actually: `ipv4::get_packet`. The arp also has a `get_packet` function registered as a packet provider.
+
+* To send l4 packets (packet providers of layer 3), the `ipv4::get_packet` performs similar operation as the packet provider of `dpdk_qp`. Especially, the `ipv4::send` function is called to perform fragmentation, then enqueue the packet to `ipv4::_packetq`. The `ipv4::get_packet` will eventually dequeue packest from `ipv4::_packetq` and sends the packet out.
+
+* For the packet provider of layer 4,  it is constructed when constructing `tcp`. Please see the following function:
+```cpp
+template <typename InetTraits>
+tcp<InetTraits>::tcp(inet_type& inet)
+    : _inet(inet)
+    , _e(_rd()) {
+    namespace sm = metrics;
+
+    _metrics.add_group("tcp", {
+        sm::make_derive("linearizations", [] { return tcp_packet_merger::linearizations(); },
+                        sm::description("Counts a number of times a buffer linearization was invoked during the buffers merge process. "
+                                        "Divide it by a total TCP receive packet rate to get an everage number of lineraizations per TCP packet."))
+    });
+
+    _inet.register_packet_provider([this, tcb_polled = 0u] () mutable {
+        std::experimental::optional<typename InetTraits::l4packet> l4p;
+        auto c = _poll_tcbs.size();
+        if (!_packetq.empty() && (!(tcb_polled % 128) || c == 0)) {
+            l4p = std::move(_packetq.front());
+            _packetq.pop_front();
+            _queue_space.signal(l4p.value().p.len());
+        } else {
+            while (c--) {
+                tcb_polled++;
+                lw_shared_ptr<tcb> tcb;
+                ethernet_address dst;
+                std::tie(tcb, dst) = std::move(_poll_tcbs.front());
+                _poll_tcbs.pop_front();
+                l4p = tcb->get_packet();
+                if (l4p) {
+                    l4p.value().e_dst = dst;
+                    break;
+                }
+            }
+        }
+        return l4p;
+    });
+}
+```
+
 # Compiling mica2 with dpdk version > 16.11
 * Add rte_hash to the library part of cmakelist file.
 
