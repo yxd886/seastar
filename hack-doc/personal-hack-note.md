@@ -310,4 +310,6 @@ the corresponding l4 protocol will be retrieved and `_tcp.received`, `_udp.recei
   * Therefore, the user who tries to listen on a port for incoming TCP connection should be responsible for managing the lifetime of the `tcp::listener'. Once the corresponding `tcp::listener` is destroyed, no more incoming `tcb` will be accepted by the server.
   * My perception on the ownership: master thread owns reactor, reactor owns tcp/ip stack, reactor also owns application code. Application code owns tcp listener. Application code is deconstructed first. So all the tcp listeners will be destroyed first. Then the reactor is free to destroy the tcp/ip stack.
   * Has a `_q`, the connected `tcb` is placed in the `_q`, and then popped out for actual tcp processing.
-  *
+  * The tcp/ip stack calls `tcp::add_connected_tcb` to add a newly connected `tcb` to the `_q`, then invokes corresponding processing.
+
+* For the `listener::accept()`, it should return a `future<connection>`. Inside it, we got to first check whether the `_q`. If the `_q` is not empty, we will got a ready future, then the corresponding connection is dequed and returned. Otherwise, we have a pending future. Only when the `_q` is enqueued a `tcb`, can everything continue.
