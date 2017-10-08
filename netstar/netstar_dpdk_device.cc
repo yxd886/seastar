@@ -2239,6 +2239,24 @@ std::unique_ptr<qp> dpdk_device::init_local_queue(boost::program_options::variab
 
 } // namespace netstar_dpdk
 
+std::unique_ptr<net::device> create_netstar_dpdk_net_device(
+                                    uint8_t port_idx,
+                                    uint8_t num_queues,
+                                    bool use_lro,
+                                    bool enable_fc) {
+
+    assert(dpdk::eal::initialized);
+
+    // Check that we have at least one DPDK-able port
+    if (rte_eth_dev_count() == 0) {
+        rte_exit(EXIT_FAILURE, "No Ethernet ports - bye\n");
+    } else {
+        printf("ports number: %d\n", rte_eth_dev_count());
+    }
+
+    return std::make_unique<netstar_dpdk::dpdk_device>(port_idx, num_queues, use_lro,
+                                               enable_fc);
+}
 
 } // namespace netstar
 
