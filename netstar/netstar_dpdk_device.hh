@@ -13,7 +13,6 @@
 
 namespace netstar{
 
-std::unique_ptr<seastar::net::device> create_netstar_dpdk_device();
 
 } // namespace netstar
 
