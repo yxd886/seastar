@@ -19,71 +19,62 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
-#include "core/app-template.hh"
-#include "core/future-util.hh"
 #include "core/reactor.hh"
-#include "net/api.hh"
-#include "netstar/netstar_dpdk_device.hh"
+#include "core/app-template.hh"
+#include "core/print.hh"
 
 using namespace seastar;
-using namespace net;
-using namespace std::chrono_literals;
 
-class client {
-private:
-    udp_channel _chan;
-    uint64_t n_sent {};
-    uint64_t n_received {};
-    uint64_t n_failed {};
-    timer<> _stats_timer;
-public:
-    void start(ipv4_addr server_addr) {
-        std::cout << "Sending to " << server_addr << std::endl;
+future<bool> test_smp_call() {
+    return smp::submit_to(1, [] {
+        return make_ready_future<int>(3);
+    }).then([] (int ret) {
+        return make_ready_future<bool>(ret == 3);
+    });
+}
 
-        _chan = engine().net().make_udp_channel();
+struct nasty_exception {};
 
-        _stats_timer.set_callback([this] {
-            std::cout << "Out: " << n_sent << " pps, \t";
-            std::cout << "Err: " << n_failed << " pps, \t";
-            std::cout << "In: " << n_received << " pps" << std::endl;
-            n_sent = 0;
-            n_received = 0;
-            n_failed = 0;
-        });
-        _stats_timer.arm_periodic(1s);
+future<bool> test_smp_exception() {
+    print("1\n");
+    return smp::submit_to(1, [] {
+        print("2\n");
+        auto x = make_exception_future<int>(nasty_exception());
+        print("3\n");
+        return x;
+    }).then_wrapped([] (future<int> result) {
+        print("4\n");
+        try {
+            result.get();
+            return make_ready_future<bool>(false); // expected an exception
+        } catch (nasty_exception&) {
+            // all is well
+            return make_ready_future<bool>(true);
+        } catch (...) {
+            // incorrect exception type
+            return make_ready_future<bool>(false);
+        }
+    });
+}
 
-        keep_doing([this, server_addr] {
-            return _chan.send(server_addr, "hello!\n")
-                .then_wrapped([this] (auto&& f) {
-                    try {
-                        f.get();
-                        n_sent++;
-                    } catch (...) {
-                        n_failed++;
-                    }
-                });
-        });
+int tests, fails;
 
-        keep_doing([this] {
-            return _chan.receive().then([this] (auto) {
-                n_received++;
-            });
-        });
-    }
-};
+future<>
+report(sstring msg, future<bool>&& result) {
+    return std::move(result).then([msg] (bool result) {
+        print("%s: %s\n", (result ? "PASS" : "FAIL"), msg);
+        tests += 1;
+        fails += !result;
+    });
+}
 
-namespace bpo = boost::program_options;
-
-int main(int ac, char ** av) {
-    auto ptr = netstar::create_netstar_dpdk_net_device();
-
-    client _client;
-    app_template app;
-    app.add_options()
-        ("server", bpo::value<std::string>(), "Server address")
-        ;
-    return app.run_deprecated(ac, av, [&_client, &app] {
-        auto&& config = app.configuration();
-        _client.start(config["server"].as<std::string>());
+int main(int ac, char** av) {
+    return app_template().run_deprecated(ac, av, [] {
+       return report("smp call", test_smp_call()).then([] {
+           return report("smp exception", test_smp_exception());
+       }).then([] {
+           print("\n%d tests / %d failures\n", tests, fails);
+           engine().exit(fails ? 1 : 0);
+       });
     });
 }
