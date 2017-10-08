@@ -23,6 +23,7 @@
 #include "core/future-util.hh"
 #include "core/reactor.hh"
 #include "net/api.hh"
+#include "netstar/netstar_dpdk_device.hh"
 
 using namespace seastar;
 using namespace net;
@@ -74,6 +75,9 @@ public:
 namespace bpo = boost::program_options;
 
 int main(int ac, char ** av) {
+    auto ptr = netstar::create_netstar_dpdk_device();
+    printf("creating netstar_dpdk_device\n");
+
     client _client;
     app_template app;
     app.add_options()
