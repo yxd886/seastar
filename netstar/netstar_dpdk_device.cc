@@ -1269,7 +1269,8 @@ public:
 
     virtual void rx_start() override;
     virtual future<> send(packet p) override {
-        abort();
+        _tx_packetq.push_back(std::move(p));
+        return make_ready_future<>();
     }
     virtual ~dpdk_qp() {}
 
