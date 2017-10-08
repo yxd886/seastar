@@ -75,6 +75,7 @@ public:
 namespace bpo = boost::program_options;
 
 int main(int ac, char ** av) {
+    auto ptr = netstar::create_netstar_dpdk_net_device();
 
     client _client;
     app_template app;
