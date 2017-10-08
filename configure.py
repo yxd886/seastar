@@ -331,6 +331,7 @@ libnet = [
     'net/dhcp.cc',
     'net/tls.cc',
     'net/dns.cc',
+    'netstar/netstar_dpdk_device.cc',
     ]
 
 core = [
