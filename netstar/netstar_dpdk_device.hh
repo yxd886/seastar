@@ -8,16 +8,12 @@
 #define _NETSTAR_DPDK_DEVICE_HH
 
 #include <memory>
+#include "net/net.hh"
+#include "core/sstring.hh"
 
 namespace netstar{
 
-class netstar_dpdk_device{
-    int _private_field;
-public:
-    explicit netstar_dpdk_device();
-};
-
-std::unique_ptr<netstar_dpdk_device> create_netstar_dpdk_device();
+std::unique_ptr<seastar::net::device> create_netstar_dpdk_device();
 
 } // namespace netstar
 
