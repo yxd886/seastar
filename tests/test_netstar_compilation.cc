@@ -23,11 +23,15 @@
 #include "core/app-template.hh"
 #include "core/print.hh"
 
+#include "netstar/netstar_dpdk_device.hh"
+
 using namespace seastar;
 
 int main(int ac, char** av) {
     return app_template().run_deprecated(ac, av, [] {
        printf("Thread %d: In the reactor loop\n", engine().cpu_id());
+       auto ptr = netstar::create_netstar_dpdk_net_device();
+       printf("Thread %d: netstar_dpdk_device is created\n", engine().cpu_id());
        engine().exit(0);
     });
 }
