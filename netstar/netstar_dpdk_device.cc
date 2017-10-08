@@ -7,7 +7,7 @@
 #include <cinttypes>
 #include "core/posix.hh"
 #include "core/vla.hh"
-#include "virtio-interface.hh"
+#include "net/virtio-interface.hh"
 #include "core/reactor.hh"
 #include "core/stream.hh"
 #include "core/circular_buffer.hh"
