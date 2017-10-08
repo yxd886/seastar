@@ -40,6 +40,10 @@
 #include <rte_cycles.h>
 #include <rte_memzone.h>
 
+using namespace seastar;
+
+namespace netstar{
+
 #if RTE_VERSION <= RTE_VERSION_NUM(2,0,0,16)
 
 static
@@ -64,10 +68,6 @@ void* as_cookie(struct rte_pktmbuf_pool_private& p) {
 #ifndef MARKER
 typedef void    *MARKER[0];   /**< generic marker for a point in a structure */
 #endif
-
-using namespace seastar;
-
-namespace netstar{
 
 } // namespace netstar
 
