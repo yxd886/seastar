@@ -41,6 +41,7 @@
 #include <rte_memzone.h>
 
 using namespace seastar;
+using namespace seastar::net;
 
 namespace netstar{
 
