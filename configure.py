@@ -266,6 +266,7 @@ tests = [
     'tests/tuple_utils_test',
     'tests/tls_echo_server',
     'tests/tls_simple_client',
+    'tests/test_netstar_compilation'
     ]
 
 apps = [
@@ -331,6 +332,9 @@ libnet = [
     'net/dhcp.cc',
     'net/tls.cc',
     'net/dns.cc',
+    ]
+
+libnetstar = [
     'netstar/netstar_dpdk_device.cc',
     ]
 
@@ -490,6 +494,7 @@ deps = {
     'tests/tuple_utils_test': ['tests/tuple_utils_test.cc'],
     'tests/tls_echo_server': ['tests/tls_echo_server.cc'] + core + libnet,
     'tests/tls_simple_client': ['tests/tls_simple_client.cc'] + core + libnet,
+    'tests/test_netstar_compilation': ['tests/test_netstar_compilation.cc'] + core + libnet + libnetstar,
 }
 
 boost_tests = [
