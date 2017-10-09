@@ -40,4 +40,6 @@
 
 3. In the `qp` constructor, append `port`+std::string(port_idx) to `_queue_name`.
 
-4. When constructing `qp` in `dpdk_qp`, explicitly pass in the `port_idx` to the constructor of `qp`. 
+4. When constructing `qp` in `dpdk_qp`, explicitly pass in the `port_idx` to the constructor of `qp`.
+
+5. Change the name of the the pkt buffer pool for dpdk_device. 
