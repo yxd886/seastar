@@ -63,13 +63,12 @@ int main(int ac, char** av) {
        sem->wait(smp::count).then([sdev] {
            sdev->link_ready().then([sdev] {
                printf("Finish constructing all the qp\n");
+               engine().exit(0);
            });
        });
 
 
        // auto snd_dev_ptr = netstar::create_netstar_dpdk_net_device(1, 4);
        // printf("Thread %d: netstar_dpdk_device is created\n", engine().cpu_id());
-
-       engine().exit(0);
     });
 }
