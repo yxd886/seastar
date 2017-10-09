@@ -31,3 +31,7 @@
 3. apps/load-balancer/*
 4. apps/abacus/*
 5. apps/halfback/*
+
+# Patches that we make to seastar
+
+1. In net/native-stack.cc, add a program option `dpdk-port-idx`, and pass the program option as an argument to `create_dpdk_net_device`.
