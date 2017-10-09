@@ -42,4 +42,4 @@
 
 4. When constructing `qp` in `dpdk_qp`, explicitly pass in the `port_idx` to the constructor of `qp`.
 
-5. Change the name of the the pkt buffer pool for dpdk_device. 
+5. Change the name of the tx/rx pkt buffer pool for dpdk_device. 
