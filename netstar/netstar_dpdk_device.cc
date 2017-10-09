@@ -1122,10 +1122,13 @@ build_mbuf_cluster:
         //
         static constexpr int gc_count = 1;
     public:
-        tx_buf_factory(uint8_t qid) {
+        tx_buf_factory(uint8_t qid, uint8_t port_idx) {
             using namespace memory;
 
-            sstring name = sstring(pktmbuf_pool_name) + to_sstring(qid) + "_tx";
+            sstring name = sstring(pktmbuf_pool_name) + sstring("_") +
+                           sstring("p") + to_sstring(port_idx) + sstring("q") + to_sstring(qid) +
+                           "_tx";
+
             printf("Creating Tx mbuf pool '%s' [%u mbufs] ...\n",
                    name.c_str(), mbufs_per_queue_tx);
 
@@ -1783,7 +1786,9 @@ template <bool HugetlbfsMemBackend>
 bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
 {
     using namespace memory;
-    sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + "_rx";
+    sstring name = sstring(pktmbuf_pool_name) + sstring("_") +
+                   sstring("p") + to_sstring(_dev->port_idx()) + sstring("q") + to_sstring(_qid) +
+                   "_rx";
 
     printf("Creating Rx mbuf pool '%s' [%u mbufs] ...\n",
            name.c_str(), mbufs_per_queue_rx);
@@ -1907,7 +1912,7 @@ dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
      : qp(true, stats_plugin_name, qid, dev->port_idx()), _dev(dev), _qid(qid),
        _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
-       _tx_buf_factory(qid),
+       _tx_buf_factory(qid, dev->port_idx()),
        _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))
 {
     if (!init_rx_mbuf_pool()) {
