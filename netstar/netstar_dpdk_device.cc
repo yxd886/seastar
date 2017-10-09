@@ -357,7 +357,7 @@ public:
         , _home_cpu(engine().cpu_id())
         , _use_lro(use_lro)
         , _enable_fc(enable_fc)
-        , _stats_plugin_name("network")
+        , _stats_plugin_name("netstar_network")
         , _stats_plugin_inst(std::string("port") + std::to_string(_port_idx))
         , _xstats(port_idx)
     {
@@ -1910,7 +1910,7 @@ void dpdk_device::check_port_link_status()
 template <bool HugetlbfsMemBackend>
 dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
-     : qp(true, stats_plugin_name, qid, dev->port_idx()), _dev(dev), _qid(qid),
+     : qp(true, stats_plugin_name, qid), _dev(dev), _qid(qid),
        _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
        _tx_buf_factory(qid, dev->port_idx()),
        _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))
