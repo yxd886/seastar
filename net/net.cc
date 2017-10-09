@@ -85,11 +85,10 @@ bool qp::poll_tx() {
 }
 
 qp::qp(bool register_copy_stats,
-       const std::string stats_plugin_name, uint8_t qid, uint8_t port_idx)
+       const std::string stats_plugin_name, uint8_t qid)
         : _tx_poller(reactor::poller::simple([this] { return poll_tx(); }))
         , _stats_plugin_name(stats_plugin_name)
-        , _queue_name(std::string("port")+std::to_string(port_idx)+std::string("_")+
-                      std::string("queue") + std::to_string(qid))
+        , _queue_name(std::string("queue") + std::to_string(qid))
 {
     namespace sm = metrics;
 

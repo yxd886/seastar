@@ -1925,7 +1925,7 @@ void dpdk_device::check_port_link_status()
 template <bool HugetlbfsMemBackend>
 dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
-     : qp(true, stats_plugin_name, qid, dev->port_idx()), _dev(dev), _qid(qid),
+     : qp(true, stats_plugin_name, qid), _dev(dev), _qid(qid),
        _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
        _tx_buf_factory(qid, dev->port_idx()),
        _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))

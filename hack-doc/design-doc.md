@@ -34,12 +34,4 @@
 
 # Patches that we make to seastar
 
-1. In net/native-stack.cc, add a program option `dpdk-port-idx`, and pass the program option as an argument to `create_dpdk_net_device`.
-
-2. Add `port_idx` argument to the `qp` constructor.
-
-3. In the `qp` constructor, append `port`+std::string(port_idx) to `_queue_name`.
-
-4. When constructing `qp` in `dpdk_qp`, explicitly pass in the `port_idx` to the constructor of `qp`.
-
-5. Change the name of the tx/rx pkt buffer pool for dpdk_device. 
+1. Change the name of the tx/rx pkt buffer pool for dpdk_device.
