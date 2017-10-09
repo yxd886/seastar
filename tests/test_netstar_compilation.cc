@@ -61,7 +61,7 @@ int main(int ac, char** av) {
        }
 
        sem->wait(smp::count).then([opts, sdev] {
-           sdev->link_ready().then([opts] {
+           sdev->link_ready().then([opts, sdev] {
                printf("Create device 0\n");
 
 
