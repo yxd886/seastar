@@ -35,3 +35,7 @@
 # Patches that we make to seastar
 
 1. Change the name of the tx/rx pkt buffer pool for dpdk_device.
+
+# About netstar::netstar_dpdk::dpdk_qp and netstar_dpdk_device
+
+* `netstar_dpdk_device` is able to poll the packets from the queue and
