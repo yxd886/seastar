@@ -33,7 +33,7 @@ class work_unit{
 public:
 
     template<typename... Args>
-    work_unit(Args&& args){
+    work_unit(Args&&... args){
         std::unique_ptr<Base> ptr = std::make_unique<Base>(std::forward<Args>(args)...);
         _work_unit_impl = ptr.get();
         engine().at_destroy([ptr = std::move(ptr)](){});
