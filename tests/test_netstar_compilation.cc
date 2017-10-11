@@ -129,13 +129,14 @@ int main(int ac, char** av) {
                });
            });
        });*/
-        auto server = std::make_unique<distributed<work_unit<tester>>>();
-        // auto server_ptr = server.release();
-        server->start().then([server=std::move(server)] () mutable {
-            // std::unique_ptr<distributed<work_unit<tester>>> server(server_ptr);
-            // engine().at_exit([server = std::move(server)] () mutable {
-            //     return server->stop();
-            // });
+        auto server = new distributed<work_unit<tester>>;
+        server->start().then([server] () {
+            engine().at_exit([server] () {
+                return server->stop().then([server](){
+                    delete server;
+                    return make_ready_future<>();
+                });
+            });
             return server->invoke_on_all([](work_unit<tester>& local_inst){
                 local_inst.get_impl()->call(1);
             });
