@@ -22,7 +22,7 @@
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
-
+#include "core/distributed.hh"
 #include "netstar/netstar_dpdk_device.hh"
 
 using namespace seastar;
