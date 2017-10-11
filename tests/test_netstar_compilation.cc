@@ -27,11 +27,29 @@
 
 using namespace seastar;
 
+template<class Base>
+class work_unit{
+    Base* _work_unit_impl;
+public:
+
+    template<typename... Args>
+    work_unit(Args&& args){
+        std::unique_ptr<Base> ptr = std::make_unique<Base>(std::forward<Args>(args)...);
+        _work_unit_impl = ptr.get();
+        engine().at_destroy([ptr = std::move(ptr)](){});
+    }
+
+    template<typename Ret, typename... FuncArgs, typename... Args>
+    Ret forward_to(Ret (Base::*func)(FuncArgs...), Args&&... args){
+        return ((*_work_unit_impl).*func)(std::forward<Args>(args)...);
+    }
+};
+
 int main(int ac, char** av) {
     app_template app;
 
     return app.run_deprecated(ac, av, [&app] {
-       auto& opts = app.configuration();
+       /*auto& opts = app.configuration();
        printf("Thread %d: In the reactor loop\n", engine().cpu_id());
 
        auto fst_dev_ptr = netstar::create_netstar_dpdk_net_device(0, smp::count);
@@ -97,10 +115,7 @@ int main(int ac, char** av) {
                    });
                });
            });
-       });
+       });*/
 
-
-       // auto snd_dev_ptr = netstar::create_netstar_dpdk_net_device(1, 4);
-       // printf("Thread %d: netstar_dpdk_device is created\n", engine().cpu_id());
     });
 }
