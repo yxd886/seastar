@@ -27,43 +27,11 @@
 
 using namespace seastar;
 
-struct tester{
-    ~tester(){
-        printf("Thread %d: tester object is destroyed\n", engine().cpu_id());
-    }
-    void call(int i){
-        printf("Thread %d: test object 's call method is called with integer %d \n",
-                engine().cpu_id(), i);
-    }
-};
-
-template<class Base>
-class work_unit{
-    Base* _work_unit_impl;
-public:
-
-    template<typename... Args>
-    work_unit(Args&&... args){
-        std::unique_ptr<Base> ptr = std::make_unique<Base>(std::forward<Args>(args)...);
-        _work_unit_impl = ptr.get();
-        engine().at_destroy([ptr = std::move(ptr)](){});
-    }
-
-    Base* get_impl(){
-        return _work_unit_impl;
-    }
-
-    future<> stop() {
-        printf("Thread %d: work_unit object is destroyed\n", engine().cpu_id());
-        return make_ready_future<>();
-    }
-};
-
 int main(int ac, char** av) {
     app_template app;
 
     return app.run_deprecated(ac, av, [&app] {
-       /*auto& opts = app.configuration();
+       auto& opts = app.configuration();
        printf("Thread %d: In the reactor loop\n", engine().cpu_id());
 
        auto fst_dev_ptr = netstar::create_netstar_dpdk_net_device(0, smp::count);
@@ -129,20 +97,6 @@ int main(int ac, char** av) {
                    });
                });
            });
-       });*/
-        auto server = new distributed<work_unit<tester>>;
-        server->start().then([server] () {
-            engine().at_exit([server] () {
-                return server->stop().then([server](){
-                    delete server;
-                    return make_ready_future<>();
-                });
-            });
-            return server->invoke_on_all([](work_unit<tester>& local_inst){
-                local_inst.get_impl()->call(1);
-            });
-        }).then([] {
-            engine().exit(0);
-        });
+       });
     });
 }
