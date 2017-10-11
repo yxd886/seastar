@@ -52,6 +52,10 @@ public:
     Base* get_impl(){
         return _work_unit_impl;
     }
+
+    future<> stop() {
+        return make_ready_future<>();
+    }
 };
 
 int main(int ac, char** av) {
