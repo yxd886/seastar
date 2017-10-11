@@ -29,10 +29,10 @@ using namespace seastar;
 
 struct tester{
     ~tester(){
-        printf("Thread %d: tester object is destroyed\n", engine().cpu_id());
+        c
     }
     void call(int i){
-        printf("Thread %d: test object 's call method is called with integer %d",
+        printf("Thread %d: test object 's call method is called with integer %d \n",
                 engine().cpu_id(), i);
     }
 };
@@ -54,6 +54,7 @@ public:
     }
 
     future<> stop() {
+        printf("Thread %d: work_unit object is destroyed\n", engine().cpu_id());
         return make_ready_future<>();
     }
 };
