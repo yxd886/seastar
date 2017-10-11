@@ -131,7 +131,8 @@ int main(int ac, char** av) {
        });*/
         auto server = std::make_unique<distributed<work_unit<tester>>>();
         server->start().then([server = std::move(server)] () mutable {
-            engine().at_exit([server = std::move(server)] () mutable {
+            auto new_server_ptr = std::move(server);
+            engine().at_exit([server = std::move(new_server_ptr)] () mutable {
                 return server->stop();
             });
             return server->invoke_on_all([](work_unit<tester>& local_inst){
