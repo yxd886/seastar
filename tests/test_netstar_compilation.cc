@@ -49,9 +49,8 @@ public:
         engine().at_destroy([ptr = std::move(ptr)](){});
     }
 
-    template<typename Ret, typename... FuncArgs, typename... Args>
-    Ret forward_to(Ret (Base::*func)(FuncArgs...), Args&&... args){
-        return ((*_work_unit_impl).*func)(std::forward<Args>(args)...);
+    Base* get_impl(){
+        return _work_unit_impl;
     }
 };
 
@@ -131,7 +130,9 @@ int main(int ac, char** av) {
             engine().at_exit([server = std::move(server)] {
                 return server->stop();
             });
-            return server->invoke_on_all(&work_unit<tester>::forward_to, &tester::call, 1);
+            return server->invoke_on_all([](work_unit<tester>& local_inst){
+                local_inst.get_impl()->call(1);
+            });
         }).then([] {
             engine().exit(0);
         });

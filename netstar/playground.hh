@@ -28,9 +28,8 @@ public:
         engine().at_destroy([ptr = std::move(ptr)](){});
     }
 
-    template<typename Ret, typename... FuncArgs, typename... Args>
-    Ret forward_to(Ret (Base::*func)(FuncArgs...), Args&&... args){
-        return ((*_work_unit_impl).*func)(std::forward<Args>(args)...);
+    Base* get_impl(){
+        return _work_unit_impl;
     }
 };
 
