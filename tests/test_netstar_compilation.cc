@@ -29,7 +29,7 @@ using namespace seastar;
 
 struct tester{
     ~tester(){
-        c
+        printf("Thread %d: tester object is destroyed\n", engine().cpu_id());
     }
     void call(int i){
         printf("Thread %d: test object 's call method is called with integer %d \n",
