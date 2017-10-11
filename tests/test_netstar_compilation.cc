@@ -27,6 +27,16 @@
 
 using namespace seastar;
 
+struct tester{
+    ~tester(){
+        printf("Thread %d: tester object is destroyed\n", engine().cpu_id());
+    }
+    void call(int i){
+        printf("Thread %d: test object 's call method is called with integer %d",
+                engine().cpu_id(), i);
+    }
+};
+
 template<class Base>
 class work_unit{
     Base* _work_unit_impl;
@@ -116,6 +126,6 @@ int main(int ac, char** av) {
                });
            });
        });*/
-
+        auto server = std::make_unique<distributed<work_unit<tester>>>();
     });
 }
