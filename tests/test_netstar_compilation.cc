@@ -127,5 +127,13 @@ int main(int ac, char** av) {
            });
        });*/
         auto server = std::make_unique<distributed<work_unit<tester>>>();
+        server->start().then([server = std::move(server)] () mutable {
+            engine().at_exit([server] {
+                return server->stop();
+            });
+            return server->invoke_on_all(&work_unit<tester>::forward_to, &tester::call, 1);
+        }).then([] {
+            engine().exit(0);
+        });
     });
 }
