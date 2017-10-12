@@ -35,3 +35,19 @@
 # Patches that we make to seastar
 
 1. Change the name of the tx/rx pkt buffer pool for dpdk_device.
+
+2. Add an `update_local_queue` public method to net::device
+
+# About netstar::netstar_dpdk::dpdk_qp and netstar_dpdk_device
+
+* `netstar_dpdk_device` is able to poll the packets from the queue and
+
+* We need a receive function, to receive packets from either the physical dpdk device, or packets bounced from other threads.
+
+* We need a send function, that can only be called from dpdk_qp.
+
+* We need a forward function, to send the packets to other threads for processing.
+
+* We need an unsafe_forward function without recording the free_on_cpu.
+
+# Initialization sequence.
