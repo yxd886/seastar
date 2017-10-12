@@ -337,6 +337,8 @@ libnet = [
 
 libnetstar = [
     'netstar/netstar_dpdk_device.cc',
+    'netstar/port.cc',
+    'netstar/env.cc',
     ]
 
 core = [
@@ -496,7 +498,7 @@ deps = {
     'tests/tls_echo_server': ['tests/tls_echo_server.cc'] + core + libnet,
     'tests/tls_simple_client': ['tests/tls_simple_client.cc'] + core + libnet,
     'tests/netstar/test_netstar_compilation': ['tests/netstar/test_netstar_compilation.cc'] + core + libnet + libnetstar,
-    'tests/netstar/test_work_unit': ['tests/test_work_unit.cc'] + core + libnet + libnetstar,
+    'tests/netstar/test_work_unit': ['tests/netstar/test_work_unit.cc'] + core + libnet + libnetstar,
 }
 
 boost_tests = [

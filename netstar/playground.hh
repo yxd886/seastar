@@ -16,13 +16,23 @@ using namespace seastar;
 
 namespace netstar{
 
+struct tester{
+    ~tester(){
+        printf("Thread %d: tester object is destroyed\n", engine().cpu_id());
+    }
+    void call(int i){
+        printf("Thread %d: test object 's call method is called with integer %d \n",
+                engine().cpu_id(), i);
+    }
+};
+
 template<class Base>
 class work_unit{
     Base* _work_unit_impl;
 public:
 
     template<typename... Args>
-    work_unit(Args&& args){
+    work_unit(Args&&... args){
         std::unique_ptr<Base> ptr = std::make_unique<Base>(std::forward<Args>(args)...);
         _work_unit_impl = ptr.get();
         engine().at_destroy([ptr = std::move(ptr)](){});
@@ -30,6 +40,11 @@ public:
 
     Base* get_impl(){
         return _work_unit_impl;
+    }
+
+    future<> stop() {
+        printf("Thread %d: work_unit object is destroyed\n", engine().cpu_id());
+        return make_ready_future<>();
     }
 };
 
