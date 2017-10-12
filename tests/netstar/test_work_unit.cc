@@ -33,7 +33,7 @@ int main(int ac, char** av) {
     app_template app;
 
     return app.run_deprecated(ac, av, [&app] {
-       auto& opts = app.configuration();
+       boost::program_options::variables_map& opts = app.configuration();
        printf("Thread %d: In the reactor loop\n", engine().cpu_id());
 
        // auto fst_dev_ptr = netstar::create_netstar_dpdk_net_device(0, smp::count);
