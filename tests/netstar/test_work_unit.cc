@@ -43,6 +43,7 @@ int main(int ac, char** av) {
            return env::create_netstar_port(create_netstar_dpdk_net_device(1, smp::count), opts);
        }).then([]{
            printf("All the devices are successfully created\n");
+           engine().exit(0);
        });
     });
 }
