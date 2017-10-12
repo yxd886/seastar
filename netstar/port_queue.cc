@@ -1,4 +1,5 @@
 #include "port_queue.hh"
+#include "net/proxy.hh"
 
 class netstar_queue{
     unsigned _failed_send_count;
@@ -64,8 +65,6 @@ public:
 
     subscription<net::packet>
     receive(std::function<future<> (net::packet)> next_packet) {
-        auto sub = _qp->_rx_stream.listen(std::move(next_packet));
-        _qp->rx_start();
-        return sub;
+        return _dev->receive(std::move(next_packet));
     }
 };
