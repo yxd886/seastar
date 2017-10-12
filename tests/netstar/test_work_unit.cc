@@ -27,6 +27,7 @@
 #include "netstar/env.hh"
 
 using namespace seastar;
+using namespace netstar;
 
 int main(int ac, char** av) {
     app_template app;
@@ -35,8 +36,13 @@ int main(int ac, char** av) {
        auto& opts = app.configuration();
        printf("Thread %d: In the reactor loop\n", engine().cpu_id());
 
-       auto fst_dev_ptr = netstar::create_netstar_dpdk_net_device(0, smp::count);
-       printf("Thread %d: netstar_dpdk_device is created\n", engine().cpu_id());
+       // auto fst_dev_ptr = netstar::create_netstar_dpdk_net_device(0, smp::count);
+       // printf("Thread %d: netstar_dpdk_device is created\n", engine().cpu_id());
 
+       return env::create_netstar_port(create_netstar_dpdk_net_device(0, smp::count), opts).then([opts]{
+           return env::create_netstar_port(create_netstar_dpdk_net_device(1, smp::count), opts);
+       }).then([]{
+           printf("All the devices are successfully created\n");
+       });
     });
 }
