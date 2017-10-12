@@ -337,6 +337,7 @@ libnet = [
 
 libnetstar = [
     'netstar/netstar_dpdk_device.cc',
+    'netstar/port_queue.cc',
     ]
 
 core = [
