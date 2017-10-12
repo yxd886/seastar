@@ -278,6 +278,10 @@ public:
         return hash % hw_queues_count();
     }
     void set_local_queue(std::unique_ptr<qp> dev);
+    void update_local_queue(qp* qp){
+        assert(!_queues[engine().cpu_id()]);
+        _queues[engine().cpu_id()] = qp;
+    }
     template <typename Func>
     unsigned forward_dst(unsigned src_cpuid, Func&& hashfn) {
         auto& qp = queue_for_cpu(src_cpuid);
