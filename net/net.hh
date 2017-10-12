@@ -278,6 +278,10 @@ public:
         return hash % hw_queues_count();
     }
     void set_local_queue(std::unique_ptr<qp> dev);
+    /*
+     * patch by djp
+     * add update_local_queue function
+     */
     void update_local_queue(qp* qp){
         assert(!_queues[engine().cpu_id()]);
         _queues[engine().cpu_id()] = qp;
