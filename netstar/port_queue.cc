@@ -2,4 +2,5 @@
 
 void netstar_queue::compile(){
     int i;
+    printf("%d\n", i);
 }
