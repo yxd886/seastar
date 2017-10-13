@@ -24,6 +24,7 @@
 #include "core/print.hh"
 #include "core/distributed.hh"
 #include "netstar/netstar_dpdk_device.hh"
+#include "netstar/env.hh"
 
 using namespace seastar;
 
