@@ -37,7 +37,7 @@ struct tester{
                 engine().cpu_id(), i);
     }
     future<> stop() {
-       printf("Thread %d: tester object is destroyed\n", engine().cpu_id());
+       printf("Thread %d: tester object is stopped\n", engine().cpu_id());
        return make_ready_future<>();
    }
 };
