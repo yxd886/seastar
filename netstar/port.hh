@@ -37,6 +37,15 @@ public:
     }
 };
 
+namespace env{
+
+static std::vector<std::unique_ptr<netstar_port>> ports;
+
+static future<> create_netstar_port(std::unique_ptr<net::device> device,
+                                    boost::program_options::variables_map& opts);
+
+} // namespace env
+
 } // namespace netstar
 
 #endif // _PORT_HH

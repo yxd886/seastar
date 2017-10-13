@@ -48,6 +48,24 @@ public:
     }
 };
 
+/*
+ * class work_unit{
+ * public:
+ *   future<> receive_packet(uint16_t port_id, packet pkt){
+ *      if(port_id = 0){
+ *          ports[1]->send(pkt);
+ *          return make_ready_future<>();
+ *      }
+ *      if(port_id = 1){
+ *          ports[0]->send(pkt);
+ *          return make_ready_future<>();
+ *      }
+ *   }
+ *   future<>
+ * }
+ *
+ */
+
 } // namespace netstar
 
 #endif // _PLAY_GROUND_HH
