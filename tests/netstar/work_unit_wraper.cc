@@ -96,10 +96,12 @@ int main(int ac, char** av) {
             return server.invoke_on_all([](tester& local_inst){
                 local_inst.call(1);
             });
-        }).then([] {
+        }).then([&server] {
             return server.invoke_on_all([&server](tester& local_inst){
                 local_inst.set_testers(server);
             });
+        }).then([] {
+            engine().exit(0);
         });
 
     });
