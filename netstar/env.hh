@@ -72,6 +72,16 @@ public:
         });
     }
 
+    template<typename... Args>
+    future<> invoke_on_all(future<> T::*func(Args...), Args... args){
+        return parallel_for_each(boost:irange<unsigned>(0, _reactor_saved_objects.size()), [this, func, args...](unsigned c){
+            return smp::submit_to(c, [this, func, args...]{
+                auto local_obj = _reactor_saved_objects[engine().cpu_id()];
+                return ((*local_obj).*func)(args...);
+            });
+        });
+    }
+
     template <typename Func>
     future<> invoke_on(unsigned core, Func&& func) {
         static_assert(std::is_same<futurize_t<std::result_of_t<Func(T&)>>, future<>>::value,
