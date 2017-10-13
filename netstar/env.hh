@@ -102,6 +102,16 @@ public:
         });
     }
 
+    template <typename Ret, typename... FuncArgs, typename... Args, typename FutureRet = futurize_t<Ret>>
+    FutureRet
+    invoke_on(unsigned id, Ret (Service::*func)(FuncArgs...), Args&&... args) {
+        using futurator = futurize<Ret>;
+        return smp::submit_to(id, [this, func, args = std::make_tuple(std::forward<Args>(args)...)] () mutable {
+            auto local_obj = _reactor_saved_objects[engine().cpu_id()];
+            return futurator::apply(std::mem_fn(func), std::tuple_cat(std::make_tuple<>(local_obj), std::move(args)));
+        });
+    }
+
 private:
     template<typename... Args>
     void init_reactor_saved_object(Args&&... args){
