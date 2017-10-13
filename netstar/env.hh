@@ -13,7 +13,12 @@ using std::vector;
 
 namespace netstar{
 
-namespace env{
+class no_per_core_obj : public std::exception {
+public:
+    virtual const char* what() const noexcept override {
+        return "per-core object does not exist";
+    }
+};
 
 template<class T>
 class per_core{
@@ -66,7 +71,7 @@ public:
                       "invoke_on_all()'s func must return void or future<>");
         return parallel_for_each(boost::irange<unsigned>(0, _reactor_saved_objects.size()), [this, &func] (unsigned c) {
             return smp::submit_to(c, [this, func] {
-                auto local_obj = _reactor_saved_objects[engine().cpu_id()];
+                auto local_obj = this->get_obj(engine().cpu_id());
                 return func(*local_obj);
             });
         });
@@ -76,7 +81,7 @@ public:
     future<> invoke_on_all(future<> (T::*func)(Args...), Args... args){
         return parallel_for_each(boost::irange<unsigned>(0, _reactor_saved_objects.size()), [this, func, args...](unsigned c){
             return smp::submit_to(c, [this, func, args...]{
-                auto local_obj = _reactor_saved_objects[engine().cpu_id()];
+                auto local_obj = this->get_obj(engine().cpu_id());
                 return ((*local_obj).*func)(args...);
             });
         });
@@ -86,7 +91,7 @@ public:
     future<> invoke_on_all(void (T::*func)(Args...), Args... args){
         return parallel_for_each(boost::irange<unsigned>(0, _reactor_saved_objects.size()), [this, func, args...](unsigned c){
             return smp::submit_to(c, [this, func, args...]{
-                auto local_obj = _reactor_saved_objects[engine().cpu_id()];
+                auto local_obj = this->get_obj(engine().cpu_id());
                 return ((*local_obj).*func)(args...);
             });
         });
@@ -97,7 +102,7 @@ public:
         static_assert(std::is_same<futurize_t<std::result_of_t<Func(T&)>>, future<>>::value,
                       "invoke_on_all()'s func must return void or future<>");
         return smp::submit_to(core, [this, func] {
-            auto local_obj = _reactor_saved_objects[engine().cpu_id()];
+            auto local_obj = this->get_obj(engine().cpu_id());
             return func(*local_obj);
         });
     }
@@ -107,9 +112,17 @@ public:
     invoke_on(unsigned id, Ret (T::*func)(FuncArgs...), Args&&... args) {
         using futurator = futurize<Ret>;
         return smp::submit_to(id, [this, func, args = std::make_tuple(std::forward<Args>(args)...)] () mutable {
-            auto local_obj = _reactor_saved_objects[engine().cpu_id()];
+            auto local_obj = this->get_obj(engine().cpu_id());
             return futurator::apply(std::mem_fn(func), std::tuple_cat(std::make_tuple<>(local_obj), std::move(args)));
         });
+    }
+
+    T* get_obj(unsigned core_id){
+        auto ret = _reactor_saved_objects[core_id];
+        if(!ret){
+            throw no_per_core_obj();
+        }
+        return ret;
     }
 
 private:
@@ -120,8 +133,6 @@ private:
         engine().at_destroy([obj = std::move(obj)] {});
     }
 };
-
-}
 
 } // namespace netstar
 
