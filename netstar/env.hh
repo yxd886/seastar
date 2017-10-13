@@ -59,6 +59,29 @@ public:
         });
     }
 
+    template <typename... Args>
+    future<> start_on(unsigned core_id, Args&&... args){
+        _reactor_saved_objects.resize(smp::count);
+        for(auto& obj : _reactor_saved_objects){
+            obj = nullptr;
+        }
+
+        return smp::submit_to(c, [this, args = std::make_tuple(std::forward<Args>(args)...)] () mutable {
+            apply([this] (Args... args) {
+                init_reactor_saved_object(std::forward<Args>(args)...);
+            } ,args);
+        }).then_wrapped([this] (future<> f) {
+            try {
+                f.get();
+                return make_ready_future<>();
+            } catch (...) {
+                return this->stop().then([e = std::current_exception()] () mutable {
+                    std::rethrow_exception(e);
+                });
+            }
+        });
+    }
+
     future<> stop() {
         return parallel_for_each(boost::irange<unsigned>(0, _reactor_saved_objects.size()), [this] (unsigned c) mutable {
             return smp::submit_to(c, [this] () mutable {
