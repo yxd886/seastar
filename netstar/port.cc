@@ -8,8 +8,6 @@ inline future<> netstar_port::send(net::packet p){
     return _queues[engine().cpu_id()]->send(std::move(p));
 }
 
-namespace fake_env{
-
 std::vector<std::unique_ptr<netstar_port>> port_env::ports;
 
 future<> port_env::create_netstar_port(std::unique_ptr<net::device> device,
@@ -32,7 +30,5 @@ future<> port_env::create_netstar_port(std::unique_ptr<net::device> device,
         return pport->link_ready();
     });
 }
-
-} // namespace fake_env
 
 } // namespace netstar

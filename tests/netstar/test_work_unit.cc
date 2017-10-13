@@ -39,8 +39,8 @@ int main(int ac, char** av) {
        // auto fst_dev_ptr = netstar::create_netstar_dpdk_net_device(0, smp::count);
        // printf("Thread %d: netstar_dpdk_device is created\n", engine().cpu_id());
 
-       return env::create_netstar_port(create_netstar_dpdk_net_device(0, smp::count), opts).then([opts] () mutable{
-           return env::create_netstar_port(create_netstar_dpdk_net_device(1, smp::count), opts);
+       return port_env::create_netstar_port(create_netstar_dpdk_net_device(0, smp::count), opts).then([opts] () mutable{
+           return port_env::create_netstar_port(create_netstar_dpdk_net_device(1, smp::count), opts);
        }).then([]{
            printf("All the devices are successfully created\n");
            engine().exit(0);
