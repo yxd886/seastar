@@ -43,7 +43,7 @@ struct tester{
    }
     void set_testers(netstar::per_core<tester>& testers){
         printf("Thread %d: testers is set.\n", engine().cpu_id());
-        this->testers = testers;
+        this->testers = std::ref(testers);
     }
 };
 
@@ -98,7 +98,7 @@ int main(int ac, char** av) {
             });
         }).then([&server] {
             return server.invoke_on_all([&server](tester& local_inst){
-                local_inst.set_testers(server);
+                local_inst.set_testers(std::ref(server));
             });
         }).then([] {
             engine().exit(0);
