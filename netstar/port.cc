@@ -8,7 +8,7 @@ inline future<> netstar_port::send(net::packet p){
     return _queues[engine().cpu_id()]->send(std::move(p));
 }
 
-namespace env{
+namespace fake_env{
 
 std::vector<std::unique_ptr<netstar_port>> ports;
 

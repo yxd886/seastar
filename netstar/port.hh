@@ -37,7 +37,7 @@ public:
     }
 };
 
-namespace env{
+namespace fake_env{
 
 static std::vector<std::unique_ptr<netstar_port>> ports;
 
