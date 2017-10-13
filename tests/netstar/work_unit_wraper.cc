@@ -41,7 +41,7 @@ struct tester{
        printf("Thread %d: tester object is stopped\n", engine().cpu_id());
        return make_ready_future<>();
    }
-    void set_testers(netstar::per_core<tester>& testers){
+    void set_objs_holder(netstar::per_core<tester>& testers){
         printf("Thread %d: testers is set.\n", engine().cpu_id());
         this->testers = std::ref(testers);
     }
@@ -95,10 +95,6 @@ int main(int ac, char** av) {
             });
             return server.invoke_on_all([](tester& local_inst){
                 local_inst.call(1);
-            });
-        }).then([&server] {
-            return server.invoke_on_all([&server](tester& local_inst){
-                local_inst.set_testers(std::ref(server));
             });
         }).then([] {
             engine().exit(0);

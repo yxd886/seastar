@@ -132,6 +132,7 @@ private:
     template<typename... Args>
     void init_reactor_saved_object(Args&&... args){
         std::unique_ptr<T> obj = std::make_unique<T>(std::forward<Args>(args)...);
+        obj->set_objs_holder(std::ref(*this));
         _reactor_saved_objects[engine().cpu_id()] = obj.get();
         engine().at_destroy([obj = std::move(obj)] {});
     }
