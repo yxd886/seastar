@@ -104,7 +104,7 @@ public:
 
     template <typename Ret, typename... FuncArgs, typename... Args, typename FutureRet = futurize_t<Ret>>
     FutureRet
-    invoke_on(unsigned id, Ret (Service::*func)(FuncArgs...), Args&&... args) {
+    invoke_on(unsigned id, Ret (T::*func)(FuncArgs...), Args&&... args) {
         using futurator = futurize<Ret>;
         return smp::submit_to(id, [this, func, args = std::make_tuple(std::forward<Args>(args)...)] () mutable {
             auto local_obj = _reactor_saved_objects[engine().cpu_id()];
