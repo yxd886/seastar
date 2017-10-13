@@ -65,7 +65,6 @@ public:
         for(auto& obj : _reactor_saved_objects){
             obj = nullptr;
         }
-
         return smp::submit_to(c, [this, args = std::make_tuple(std::forward<Args>(args)...)] () mutable {
             apply([this] (Args... args) {
                 init_reactor_saved_object(std::forward<Args>(args)...);
