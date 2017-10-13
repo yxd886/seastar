@@ -37,6 +37,9 @@ public:
     template <typename... Args>
     future<> start(Args&&... args){
         _reactor_saved_objects.resize(smp::count);
+        for(auto& obj : _reactor_saved_objects){
+            obj = nullptr;
+        }
         return parallel_for_each(boost::irange<unsigned>(0, _reactor_saved_objects.size()),
             [this, args = std::make_tuple(std::forward<Args>(args)...)] (unsigned c) mutable {
                 return smp::submit_to(c, [this, args] () mutable {
