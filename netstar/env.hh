@@ -5,7 +5,7 @@
 #include <experimental/optional>
 #include "core/reactor.hh"
 #include "core/apply.hh"
-#include "do_with.hh"
+#include "core/do_with.hh"
 #include <boost/iterator/counting_iterator.hpp>
 
 using namespace seastar;
