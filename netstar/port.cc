@@ -10,8 +10,6 @@ inline future<> netstar_port::send(net::packet p){
 
 namespace fake_env{
 
-std::vector<std::unique_ptr<netstar_port>> ports;
-
 future<> create_netstar_port(std::unique_ptr<net::device> device,
                                   boost::program_options::variables_map& opts){
     ports.push_back(std::make_unique<netstar_port>(std::move(device)));
