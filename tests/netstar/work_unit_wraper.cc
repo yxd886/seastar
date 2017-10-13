@@ -36,6 +36,10 @@ struct tester{
         printf("Thread %d: test object 's call method is called with integer %d \n",
                 engine().cpu_id(), i);
     }
+    future<> stop() {
+       printf("Thread %d: tester object is destroyed\n", engine().cpu_id());
+       return make_ready_future<>();
+   }
 };
 
 template<class Base>
@@ -62,10 +66,11 @@ public:
 
 int main(int ac, char** av) {
     app_template app;
-    distributed<work_unit<tester>> server;
+    // distributed<work_unit<tester>> server;
+    netstar::per_core<tester> server;
 
     return app.run_deprecated(ac, av, [&app, &server] {
-        server.start().then([&server] () {
+        /*server.start().then([&server] () {
             engine().at_exit([&server] () {
                 return server.stop().then([&server](){
                     return make_ready_future<>();
@@ -76,6 +81,19 @@ int main(int ac, char** av) {
             });
         }).then([] {
             engine().exit(0);
+        });*/
+        server.start().then([&server](){
+            engine().at_exit([&server] () {
+                return server.stop().then([](){
+                    return make_ready_future<>();
+                });
+            });
+            return server.invoke_on_all([](tester& local_inst){
+                local_inst.call(1);
+            });
+        }).then([] {
+            engine().exit(0);
         });
+
     });
 }
