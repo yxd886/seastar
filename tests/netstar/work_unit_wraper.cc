@@ -62,9 +62,9 @@ public:
 
 int main(int ac, char** av) {
     app_template app;
+    auto server = new distributed<work_unit<tester>>;
 
     return app.run_deprecated(ac, av, [&app] {
-        auto server = new distributed<work_unit<tester>>;
         server->start().then([server] () {
             engine().at_exit([server] () {
                 return server->stop().then([server](){
