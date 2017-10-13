@@ -24,12 +24,15 @@ template<class T>
 class per_core{
     vector<T*> _reactor_saved_objects;
 public:
+    // default constructor and deconstructors
     explicit per_core(){}
+    ~per_core(){}
+
+    // move/copy constructor/assignment are all deleted
     per_core(const per_core& other) = delete;
     per_core(per_core&& other)  = delete;
     per_core& operator=(const per_core& other) = delete;
     per_core& operator=(per_core&& other) = delete;
-    ~per_core();
 
     template <typename... Args>
     future<> start(Args&&... args){
