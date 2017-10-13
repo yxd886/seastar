@@ -96,7 +96,7 @@ int main(int ac, char** av) {
             return server.invoke_on_all([](tester& local_inst){
                 local_inst.call(1);
             });
-        }).then_wrapped([this] (future<> f) {
+        }).then_wrapped([] (future<> f) {
             try {
                 f.get();
                 return make_ready_future<>();
@@ -108,7 +108,7 @@ int main(int ac, char** av) {
             return server.invoke_on_all([&server](tester& local_inst){
                 local_inst.set_testers(&server);
             });
-        }).then_wrapped([this] (future<> f) {
+        }).then_wrapped([] (future<> f) {
             try {
                 f.get();
                 return make_ready_future<>();
