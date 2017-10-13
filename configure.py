@@ -267,7 +267,8 @@ tests = [
     'tests/tls_echo_server',
     'tests/tls_simple_client',
     'tests/netstar/test_netstar_compilation',
-    'tests/netstar/test_work_unit'
+    'tests/netstar/test_work_unit',
+    'tests/netstar/work_unit_wraper',
     ]
 
 apps = [
@@ -499,6 +500,7 @@ deps = {
     'tests/tls_simple_client': ['tests/tls_simple_client.cc'] + core + libnet,
     'tests/netstar/test_netstar_compilation': ['tests/netstar/test_netstar_compilation.cc'] + core + libnet + libnetstar,
     'tests/netstar/test_work_unit': ['tests/netstar/test_work_unit.cc'] + core + libnet + libnetstar,
+    'tests/netstar/work_unit_wraper': ['tests/netstar/work_unit_wraper.cc'] + core + libnet + libnetstar,
 }
 
 boost_tests = [
