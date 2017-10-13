@@ -62,17 +62,16 @@ public:
 
 int main(int ac, char** av) {
     app_template app;
-    auto server = new distributed<work_unit<tester>>;
+    distributed<work_unit<tester>> server;
 
-    return app.run_deprecated(ac, av, [&app, server] {
-        server->start().then([server] () {
-            engine().at_exit([server] () {
-                return server->stop().then([server](){
-                    delete server;
+    return app.run_deprecated(ac, av, [&app, &server] {
+        server.start().then([&server] () {
+            engine().at_exit([&server] () {
+                return server.stop().then([&server](){
                     return make_ready_future<>();
                 });
             });
-            return server->invoke_on_all([](work_unit<tester>& local_inst){
+            return server.invoke_on_all([](work_unit<tester>& local_inst){
                 local_inst.get_impl()->call(1);
             });
         }).then([] {
