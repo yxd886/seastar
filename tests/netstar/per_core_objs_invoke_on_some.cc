@@ -96,7 +96,7 @@ int main(int ac, char** av) {
                 return make_ready_future<>();
             }
         }).then([per_core_testers]{
-            return per_core_testers->invoke_on(0, &(tester::call), 1);
+            return per_core_testers->invoke_on(0, &tester::call, 1);
         });
         /*server.start_on(0).then([&server](){
             engine().at_exit([&server] () {
