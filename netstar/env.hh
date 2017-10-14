@@ -70,6 +70,9 @@ public:
         if(_reactor_saved_objects.size()==0){
             _reactor_saved_objects.resize(smp::count);
         }
+        else{
+            assert(_reactor_saved_objects.size()==smp::count);
+        }
         if(_reactor_saved_objects.at(core_id)){
             return make_exception_future<>(reconstructing_per_core_obj());
         }
@@ -161,7 +164,7 @@ public:
     }
 
     T* get_obj(unsigned core_id) const{
-        auto ret = _reactor_saved_objects.at(core_id);
+        auto ret = _reactor_saved_objects[core_id];
         if(!ret){
             throw no_per_core_obj();
         }
