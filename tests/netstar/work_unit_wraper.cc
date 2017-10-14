@@ -29,7 +29,7 @@
 using namespace seastar;
 
 struct tester{
-    netstar::per_core<tester>* testers = nullptr;
+    netstar::per_core_objs<tester>* per_core_testers = nullptr;
     ~tester(){
         printf("Thread %d: tester object is destroyed\n", engine().cpu_id());
     }
@@ -41,9 +41,9 @@ struct tester{
        printf("Thread %d: tester object is stopped\n", engine().cpu_id());
        return make_ready_future<>();
    }
-    void set_testers(netstar::per_core<tester>* testers){
+    void set_testers(netstar::per_core_objs<tester>* per_core_testers){
         printf("Thread %d: testers is set.\n", engine().cpu_id());
-        this->testers = testers;
+        this->per_core_testers = per_core_testers;
     }
 };
 
