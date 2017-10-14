@@ -96,7 +96,29 @@ int main(int ac, char** av) {
                 return make_ready_future<>();
             }
         }).then([per_core_testers]{
+            return per_core_testers->invoke_on(0, &tester::call, 0);
+        }).then([per_core_testers]{
             return per_core_testers->invoke_on(0, &tester::call, 1);
+        }).then([per_core_testers]{
+            return per_core_testers->invoke_on(0, &tester::call, 2);
+        }).then_wrapped([] (future<> f) {
+            try {
+                f.get();
+                return make_ready_future<>();
+            } catch (netstar::no_per_core_obj&) {
+                printf("Catch no_per_core_obj\n");
+                return make_ready_future<>();
+            }
+        }).then([per_core_testers]{
+            return per_core_testers->invoke_on(0, &tester::call, 100);
+        }).then_wrapped([] (future<> f) {
+            try {
+                f.get();
+                return make_ready_future<>();
+            } catch (netstar::no_per_core_obj&) {
+                printf("Catch no_per_core_obj\n");
+                return make_ready_future<>();
+            }
         });
         /*server.start_on(0).then([&server](){
             engine().at_exit([&server] () {
