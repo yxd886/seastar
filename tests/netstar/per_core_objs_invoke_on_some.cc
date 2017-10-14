@@ -98,9 +98,9 @@ int main(int ac, char** av) {
         }).then([per_core_testers]{
             return per_core_testers->invoke_on(0, &tester::call, 0);
         }).then([per_core_testers]{
-            return per_core_testers->invoke_on(0, &tester::call, 1);
+            return per_core_testers->invoke_on(1, &tester::call, 1);
         }).then([per_core_testers]{
-            return per_core_testers->invoke_on(0, &tester::call, 2);
+            return per_core_testers->invoke_on(2, &tester::call, 2);
         }).then_wrapped([] (future<> f) {
             try {
                 f.get();
@@ -110,7 +110,7 @@ int main(int ac, char** av) {
                 return make_ready_future<>();
             }
         }).then([per_core_testers]{
-            return per_core_testers->invoke_on(0, &tester::call, 100);
+            return per_core_testers->invoke_on(100, &tester::call, 100);
         }).then_wrapped([] (future<> f) {
             try {
                 f.get();
