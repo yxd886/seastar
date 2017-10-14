@@ -28,18 +28,18 @@ public:
 };
 
 template<class T>
-class per_core{
+class per_core_objs{
     vector<std::experimental::optional<T*>> _reactor_saved_objects;
 public:
     // default constructor and deconstructors
-    explicit per_core(){}
-    ~per_core(){}
+    explicit per_core_objs(){}
+    ~per_core_objs(){}
 
     // move/copy constructor/assignment are all deleted
-    per_core(const per_core& other) = delete;
-    per_core(per_core&& other)  = delete;
-    per_core& operator=(const per_core& other) = delete;
-    per_core& operator=(per_core&& other) = delete;
+    per_core_objs(const per_core_objs& other) = delete;
+    per_core_objs(per_core_objs&& other)  = delete;
+    per_core_objs& operator=(const per_core_objs& other) = delete;
+    per_core_objs& operator=(per_core_objs&& other) = delete;
 
     template <typename... Args>
     future<> start(Args&&... args){

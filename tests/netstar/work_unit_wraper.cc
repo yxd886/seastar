@@ -72,31 +72,23 @@ public:
 int main(int ac, char** av) {
     app_template app;
     // distributed<work_unit<tester>> server;
-    netstar::per_core<tester> server;
+    netstar::per_core_objs<tester> per_core_testers_o;
+    auto per_core_testers = & per_core_testers_o;
 
-    std::vector<int> v;
-    try{
-        v.at(0);
-    }
-    catch(...){
-        printf("Catch an exception thrown from accessing the vector.\n");
-        return 0;
-    }
-
-    return app.run_deprecated(ac, av, [&app, &server] {
-        /*server.start().then([&server] () {
-            engine().at_exit([&server] () {
-                return server.stop().then([&server](){
+    return app.run_deprecated(ac, av, [&app, per_core_testers] {
+        per_core_testers->start().then([per_core_testers] () {
+            engine().at_exit([per_core_testers] () {
+                return per_core_testers->stop().then([per_core_testers](){
                     return make_ready_future<>();
                 });
             });
-            return server.invoke_on_all([](work_unit<tester>& local_inst){
-                local_inst.get_impl()->call(1);
+            return per_core_testers->invoke_on_all([](tester& local_inst){
+                local_inst.call(1);
             });
         }).then([] {
             engine().exit(0);
-        });*/
-        server.start_on(0).then([&server](){
+        });
+        /*server.start_on(0).then([&server](){
             engine().at_exit([&server] () {
                 return server.stop().then([](){
                     return make_ready_future<>();
@@ -127,7 +119,7 @@ int main(int ac, char** av) {
             }
         }).then([] {
             engine().exit(0);
-        });
+        });*/
 
     });
 }
