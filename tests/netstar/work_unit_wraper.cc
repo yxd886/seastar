@@ -74,6 +74,15 @@ int main(int ac, char** av) {
     // distributed<work_unit<tester>> server;
     netstar::per_core<tester> server;
 
+    std::vector<int> v;
+    try{
+        v.at(0);
+    }
+    catch(...){
+        printf("Catch an exception thrown from accessing the vector.\n");
+        return 0;
+    }
+
     return app.run_deprecated(ac, av, [&app, &server] {
         /*server.start().then([&server] () {
             engine().at_exit([&server] () {

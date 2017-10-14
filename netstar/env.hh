@@ -145,7 +145,7 @@ public:
         });
     }
 
-    T* get_obj(unsigned core_id){
+    T* get_obj(unsigned core_id) const{
         auto ret = _reactor_saved_objects[core_id];
         if(!ret){
             throw no_per_core_obj();
