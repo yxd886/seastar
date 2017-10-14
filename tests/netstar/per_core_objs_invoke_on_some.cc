@@ -76,17 +76,27 @@ int main(int ac, char** av) {
     auto per_core_testers = & per_core_testers_o;
 
     return app.run_deprecated(ac, av, [&app, per_core_testers] {
-        per_core_testers->start().then([per_core_testers] () {
+        per_core_testers->start_on(0).then([per_core_testers] () {
             engine().at_exit([per_core_testers] () {
                 return per_core_testers->stop().then([per_core_testers](){
                     return make_ready_future<>();
                 });
             });
+            return per_core_testers->start_on(1);
+        }).then([per_core_testers] {
             return per_core_testers->invoke_on_all([](tester& local_inst){
                 local_inst.call(1);
             });
-        }).then([] {
-            engine().exit(0);
+        }).then_wrapped([] (future<> f) {
+            try {
+                f.get();
+                return make_ready_future<>();
+            } catch (...) {
+                printf("Catch an exception\n");
+                return make_ready_future<>();
+            }
+        }).then([per_core_testers]{
+            return per_core_testers->invoke_on(0, tester::call, 1);
         });
         /*server.start_on(0).then([&server](){
             engine().at_exit([&server] () {
