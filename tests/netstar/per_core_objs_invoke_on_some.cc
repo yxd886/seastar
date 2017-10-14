@@ -119,6 +119,16 @@ int main(int ac, char** av) {
                 printf("Catch no_per_core_obj\n");
                 return make_ready_future<>();
             }
+        }).then([per_core_testers]{
+            return per_core_testers->start_on(1);
+        }).then_wrapped([] (future<> f) {
+            try {
+                f.get();
+                return make_ready_future<>();
+            } catch (netstar::reconstructing_per_core_obj&) {
+                printf("Catch reconstructing_per_core_obj\n");
+                return make_ready_future<>();
+            }
         });
         /*server.start_on(0).then([&server](){
             engine().at_exit([&server] () {
