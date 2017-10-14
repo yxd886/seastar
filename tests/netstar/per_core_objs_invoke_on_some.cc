@@ -140,38 +140,5 @@ int main(int ac, char** av) {
         }).then([]{
             engine().exit(0);
         });
-        /*server.start_on(0).then([&server](){
-            engine().at_exit([&server] () {
-                return server.stop().then([](){
-                    return make_ready_future<>();
-                });
-            });
-            return server.invoke_on_all([](tester& local_inst){
-                local_inst.call(1);
-            });
-        }).then_wrapped([] (future<> f) {
-            try {
-                f.get();
-                return make_ready_future<>();
-            } catch (...) {
-                printf("Catch an exception\n");
-                return make_ready_future<>();
-            }
-        }).then([&server] {
-            return server.invoke_on_all([&server](tester& local_inst){
-                local_inst.set_testers(&server);
-            });
-        }).then_wrapped([] (future<> f) {
-            try {
-                f.get();
-                return make_ready_future<>();
-            } catch (...) {
-                printf("Catch an exception\n");
-                return make_ready_future<>();
-            }
-        }).then([] {
-            engine().exit(0);
-        });*/
-
     });
 }
