@@ -85,7 +85,7 @@ int main(int ac, char** av) {
             return per_core_testers->invoke_on_all([](tester& local_inst){
                 local_inst.call(1);
             });
-        }).then([]{
+        }).then([per_core_testers]{
            return per_core_testers->invoke_on_all([per_core_testers](tester& local_inst){
                local_inst.set_testers(per_core_testers);
            });
