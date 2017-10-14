@@ -129,6 +129,16 @@ int main(int ac, char** av) {
                 printf("Catch reconstructing_per_core_obj\n");
                 return make_ready_future<>();
             }
+        }).then([per_core_testers]{
+            return per_core_testers->invoke_on(0, [per_core_testers](tester& local_inst){
+                local_inst.set_testers(per_core_testers);
+            });
+        }).then([per_core_testers]{
+            return per_core_testers->invoke_on(1, [per_core_testers](tester& local_inst){
+                local_inst.set_testers(per_core_testers);
+            });
+        }).then([]{
+            engine().exit(0);
         });
         /*server.start_on(0).then([&server](){
             engine().at_exit([&server] () {
