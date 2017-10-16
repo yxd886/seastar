@@ -1,6 +1,7 @@
 #ifndef _WORK_UNIT_HH
 #define _WORK_UNIT_HH
 
+#include "core/future.hh"
 #include "port.hh"
 
 namespace netstar{
