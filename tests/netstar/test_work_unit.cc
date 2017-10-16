@@ -32,7 +32,17 @@ using namespace netstar;
 int main(int ac, char** av) {
     app_template app;
 
-    return app.run_deprecated(ac, av, [&app] {
+    per_core_objs<netstar_port> ports;
+    std::unique_ptr<net::device> dev;
+
+    return app.run_deprecated(ac, av, [&app, &dev, &ports] {
+        dev = create_netstar_dpdk_net_device(0, smp::count);
+        auto& opts = app.configuration();
+        return create_ports(&ports, opts, dev.get(), 0).then([]{
+            printf("All the devices are successfully created\n");
+            engine().exit(0);
+        });
+
        /*boost::program_options::variables_map& opts = app.configuration();
        printf("Thread %d: In the reactor loop\n", engine().cpu_id());
 
