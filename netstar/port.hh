@@ -13,7 +13,7 @@ using namespace seastar;
 
 namespace netstar{
 
-class netstar_port{
+class port{
     unsigned _failed_send_count;
     uint16_t _qid;
     uint16_t _port_id;
@@ -23,7 +23,7 @@ class netstar_port{
 public:
     static constexpr size_t max_sendq_length = 100;
 
-    explicit netstar_port(boost::program_options::variables_map opts,
+    explicit port(boost::program_options::variables_map opts,
                           net::device* dev,
                           uint16_t port_id) :
         _failed_send_count(0),
@@ -86,7 +86,7 @@ public:
     }
 };
 
-future<> create_ports(per_core_objs<netstar_port>* ports,
+future<> create_ports(per_core_objs<port>* ports,
                       boost::program_options::variables_map& opts,
                       net::device* dev,
                       uint16_t dev_port_id);

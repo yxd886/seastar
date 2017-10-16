@@ -4,7 +4,7 @@ using namespace seastar;
 
 namespace netstar{
 
-future<> create_ports(per_core_objs<netstar_port>* ports,
+future<> create_ports(per_core_objs<port>* ports,
                       boost::program_options::variables_map& opts,
                       net::device* dev,
                       uint16_t dev_port_id){

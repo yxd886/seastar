@@ -32,7 +32,7 @@ using namespace netstar;
 int main(int ac, char** av) {
     app_template app;
 
-    per_core_objs<netstar_port> ports;
+    per_core_objs<port> ports;
     std::unique_ptr<net::device> dev;
 
     return app.run_deprecated(ac, av, [&app, &dev, &ports] {
