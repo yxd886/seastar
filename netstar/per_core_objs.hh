@@ -173,6 +173,14 @@ public:
         return ret.value();
     }
 
+    inline T* local_obj() const{
+        auto ret = _reactor_saved_objects.at(engine().cpu_id());
+        if(!ret){
+            throw no_per_core_obj();
+        }
+        return ret.value();
+    }
+
 private:
     template<typename... Args>
     void init_reactor_saved_object(Args&&... args){

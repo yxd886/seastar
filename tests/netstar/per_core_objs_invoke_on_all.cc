@@ -19,7 +19,7 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
-#include "../../netstar/per_core_objs.hh"
+#include "netstar/per_core_objs.hh"
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
