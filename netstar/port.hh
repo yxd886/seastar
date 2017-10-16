@@ -64,10 +64,10 @@ public:
     }
 
     ~port(){}
-    port(const per_core_objs& other) = delete;
-    port(per_core_objs&& other)  = delete;
-    port& operator=(const per_core_objs& other) = delete;
-    port& operator=(per_core_objs&& other) = delete;
+    port(const port& other) = delete;
+    port(port&& other)  = delete;
+    port& operator=(const port& other) = delete;
+    port& operator=(port&& other) = delete;
 
     inline future<> send(net::packet p){
         if(_qid >= _dev->hw_queues_count() ||
@@ -102,10 +102,10 @@ public:
     ~ports_env(){}
 
     // move/copy constructor/assignment are all deleted
-    ports_env(const per_core_objs& other) = delete;
-    ports_env(per_core_objs&& other)  = delete;
-    ports_env& operator=(const per_core_objs& other) = delete;
-    ports_env& operator=(per_core_objs&& other) = delete;
+    ports_env(const ports_env& other) = delete;
+    ports_env(ports_env&& other)  = delete;
+    ports_env& operator=(const ports_env& other) = delete;
+    ports_env& operator=(ports_env&& other) = delete;
 
     future<> add_dpdk_device(boost::program_options::variables_map& opts,
                              uint16_t port_id){
