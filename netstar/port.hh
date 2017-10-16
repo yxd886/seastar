@@ -80,6 +80,10 @@ public:
     receive(std::function<future<> (net::packet)> next_packet) {
         return _dev->receive(std::move(next_packet));
     }
+
+    future<> stop(){
+        return make_ready_future<>();
+    }
 };
 
 future<> create_ports(per_core_objs<netstar_port>* ports,
