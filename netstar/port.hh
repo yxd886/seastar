@@ -64,10 +64,10 @@ public:
     }
 
     ~port(){}
-    port(const port& other) = delete;
-    port(port&& other)  = delete;
-    port& operator=(const port& other) = delete;
-    port& operator=(port&& other) = delete;
+    // port(const port& other) = delete;
+    // port(port&& other)  = delete;
+    // port& operator=(const port& other) = delete;
+    // port& operator=(port&& other) = delete;
 
     inline future<> send(net::packet p){
         if(_qid >= _dev->hw_queues_count() ||
