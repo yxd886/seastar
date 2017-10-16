@@ -186,20 +186,6 @@ future<> per_core_objs<T>::invoke_on(unsigned core, Func&& func) {
     });
 }
 
-template <typename T>
-template <typename Ret, typename... FuncArgs, typename... Args, typename FutureRet = futurize_t<Ret>>
-FutureRet
-per_core_objs<T>::invoke_on(unsigned core, Ret (T::*func)(FuncArgs...), Args&&... args) {
-    using futurator = futurize<Ret>;
-    if(core>=smp::count){
-        return futurator::make_exception_future(no_per_core_obj());
-    }
-    return smp::submit_to(core, [this, func, args = std::make_tuple(std::forward<Args>(args)...)] () mutable {
-        auto local_obj = this->get_obj(engine().cpu_id());
-        return futurator::apply(std::mem_fn(func), std::tuple_cat(std::make_tuple<>(local_obj), std::move(args)));
-    });
-}
-
 } // namespace netstar
 
 #endif
