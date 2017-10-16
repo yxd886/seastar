@@ -8,6 +8,7 @@
 #include "core/stream.hh"
 #include "net/proxy.hh"
 #include "per_core_objs.hh"
+#include "netstar_dpdk_device.hh"
 
 using namespace seastar;
 
@@ -100,8 +101,6 @@ class ports_env{
 public:
     explicit ports_env(){}
     ~ports_env(){}
-
-    // move/copy constructor/assignment are all deleted
     ports_env(const ports_env& other) = delete;
     ports_env(ports_env&& other)  = delete;
     ports_env& operator=(const ports_env& other) = delete;
