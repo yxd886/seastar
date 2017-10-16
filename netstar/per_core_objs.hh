@@ -114,8 +114,8 @@ public:
                       "invoke_on_all()'s func must return void or future<>");
         return parallel_for_each(boost::irange<unsigned>(0, _reactor_saved_objects.size()), [this, &func] (unsigned c) {
             return smp::submit_to(c, [this, func] {
-                auto local_obj = this->get_obj(engine().cpu_id());
-                return func(*local_obj);
+                auto& local_obj = this->get_obj(engine().cpu_id());
+                return func(local_obj);
             });
         });
     }
@@ -124,8 +124,8 @@ public:
     future<> invoke_on_all(future<> (T::*func)(Args...), Args... args){
         return parallel_for_each(boost::irange<unsigned>(0, _reactor_saved_objects.size()), [this, func, args...](unsigned c){
             return smp::submit_to(c, [this, func, args...]{
-                auto local_obj = this->get_obj(engine().cpu_id());
-                return ((*local_obj).*func)(args...);
+                auto& local_obj = this->get_obj(engine().cpu_id());
+                return ((local_obj).*func)(args...);
             });
         });
     }
@@ -134,8 +134,8 @@ public:
     future<> invoke_on_all(void (T::*func)(Args...), Args... args){
         return parallel_for_each(boost::irange<unsigned>(0, _reactor_saved_objects.size()), [this, func, args...](unsigned c){
             return smp::submit_to(c, [this, func, args...]{
-                auto local_obj = this->get_obj(engine().cpu_id());
-                return ((*local_obj).*func)(args...);
+                auto& local_obj = this->get_obj(engine().cpu_id());
+                return ((local_obj).*func)(args...);
             });
         });
     }
@@ -150,8 +150,8 @@ public:
             return make_exception_future<>(no_per_core_obj());
         }
         return smp::submit_to(core, [this, func] {
-            auto local_obj = this->get_obj(engine().cpu_id());
-            return func(*local_obj);
+            auto& local_obj = this->get_obj(engine().cpu_id());
+            return func(local_obj);
         });
     }
 
@@ -164,25 +164,25 @@ public:
             return futurator::make_exception_future(no_per_core_obj());
         }
         return smp::submit_to(core, [this, func, args = std::make_tuple(std::forward<Args>(args)...)] () mutable {
-            auto local_obj = this->get_obj(engine().cpu_id());
-            return futurator::apply(std::mem_fn(func), std::tuple_cat(std::make_tuple<>(local_obj), std::move(args)));
+            auto& local_obj = this->get_obj(engine().cpu_id());
+            return futurator::apply(std::mem_fn(func), std::tuple_cat(std::make_tuple<>(&local_obj), std::move(args)));
         });
     }
 
-    inline T* get_obj(unsigned core_id) const{
+    inline T& get_obj(unsigned core_id) const{
         auto ret = _reactor_saved_objects.at(core_id);
         if(!ret){
             throw no_per_core_obj();
         }
-        return ret.value();
+        return *(ret.value());
     }
 
-    inline T* local_obj() const{
+    inline T& local_obj() const{
         auto ret = _reactor_saved_objects.at(engine().cpu_id());
         if(!ret){
             throw no_per_core_obj();
         }
-        return ret.value();
+        return *(ret.value());
     }
 
 private:
