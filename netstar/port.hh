@@ -92,7 +92,7 @@ public:
     }
 
     uint16_t port_id(){
-        return port_id;
+        return _port_id;
     }
 };
 
