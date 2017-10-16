@@ -6,11 +6,19 @@
 
 namespace netstar{
 
+template<typename T>
 class work_unit{
+    static_assert(std::is_base_of<work_unit<T>, T>::value,
+                  "T does not inherit from work_unit<T>\n");
+
     std::vector<port*> _all_ports;
+    per_core_objs<T>* _all_objs;
 protected:
-    std::vector<port*>& all_ports(){
+    std::vector<port*>& ports(){
         return std::ref(_all_ports);
+    }
+    per_core_objs<T> objs(){
+        return std::ref(*_all_objs);
     }
     virtual future<> receive_from_port(uint16_t port_id, net::packet pkt) = 0;
     virtual future<> receive_forwarded(unsigned from_core, net::packet pkt) = 0;
