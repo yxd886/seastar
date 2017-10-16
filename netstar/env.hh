@@ -9,7 +9,6 @@
 #include <boost/iterator/counting_iterator.hpp>
 
 using namespace seastar;
-using std::vector;
 
 namespace netstar{
 
@@ -29,7 +28,7 @@ public:
 
 template<class T>
 class per_core_objs{
-    vector<std::experimental::optional<T*>> _reactor_saved_objects;
+    std::vector<std::experimental::optional<T*>> _reactor_saved_objects;
 public:
     // default constructor and deconstructors
     explicit per_core_objs(){}
