@@ -63,7 +63,13 @@ public:
         }
     }
 
-    future<> send(net::packet p){
+    ~port(){}
+    port(const per_core_objs& other) = delete;
+    port(per_core_objs&& other)  = delete;
+    port& operator=(const per_core_objs& other) = delete;
+    port& operator=(per_core_objs&& other) = delete;
+
+    inline future<> send(net::packet p){
         if(_qid >= _dev->hw_queues_count() ||
            _sendq.size() >= max_sendq_length){
             printf("WARNING: Send error! Siliently drop the packets\n");
@@ -83,6 +89,54 @@ public:
 
     future<> stop(){
         return make_ready_future<>();
+    }
+};
+
+class ports_env{
+    std::vector<per_core_objs<port>> _ports_vec;
+    std::vector<std::unique_ptr<net::device>> _devs_vec;
+    std::vector<uint16_t> _port_ids_vec;
+
+public:
+    explicit ports_env(){}
+    ~ports_env(){}
+
+    // move/copy constructor/assignment are all deleted
+    ports_env(const per_core_objs& other) = delete;
+    ports_env(per_core_objs&& other)  = delete;
+    ports_env& operator=(const per_core_objs& other) = delete;
+    ports_env& operator=(per_core_objs&& other) = delete;
+
+    future<> add_dpdk_device(boost::program_options::variables_map& opts,
+                             uint16_t port_id){
+        if(!port_check(opts, port_id)){
+            return make_exception_future<>(std::runtime_error("Fail port check.\n"));
+        }
+
+        _ports_vec.emplace_back();
+        _devs_vec.push_back(create_netstar_dpdk_net_device(port_id, smp::count));
+        _port_ids_vec.push_back(port_id);
+
+        auto ports = &(_ports_vec.back());
+        auto dev  = _devs_vec.back().get();
+
+        return ports->start(opts, dev, port_id).then([dev]{
+            return dev->link_ready();
+        });
+    }
+private:
+    bool port_check(boost::program_options::variables_map& opts, uint16_t port_id){
+        if(opts.count("network-stack") &&
+           opts["network-stack"].as<std::string>() == "native" &&
+           port_id == opts["dpdk-port-idx"].as<unsigned>()){
+            return false;
+        }
+        for(auto id : _port_ids_vec){
+            if(id == port_id){
+                return false;
+            }
+        }
+        return true;
     }
 };
 
