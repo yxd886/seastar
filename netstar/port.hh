@@ -8,7 +8,6 @@
 #include "core/stream.hh"
 #include "net/proxy.hh"
 #include "per_core_objs.hh"
-#include "netstar_dpdk_device.hh"
 
 using namespace seastar;
 
@@ -107,13 +106,15 @@ public:
     ports_env& operator=(ports_env&& other) = delete;
 
     future<> add_port(boost::program_options::variables_map& opts,
-                             uint16_t port_id){
+                      uint16_t port_id,
+                      std::function<std::unique_ptr<net::device>(uint16_t port_id,
+                                                                 uint16_t queue_num)> fn){
         if(!port_check(opts, port_id)){
             return make_exception_future<>(std::runtime_error("Fail port check.\n"));
         }
 
         _ports_vec.emplace_back();
-        _devs_vec.push_back(create_netstar_dpdk_net_device(port_id, smp::count));
+        _devs_vec.push_back(fn(port_id, smp::count));
         _port_ids_vec.push_back(port_id);
 
         auto ports = &(_ports_vec.back());
