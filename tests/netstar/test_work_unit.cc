@@ -32,13 +32,13 @@ using namespace netstar;
 int main(int ac, char** av) {
     app_template app;
 
-    per_core_objs<port> ports;
-    std::unique_ptr<net::device> dev;
+    ports_env ports;
 
-    return app.run_deprecated(ac, av, [&app, &dev, &ports] {
-        dev = create_netstar_dpdk_net_device(0, smp::count);
+    return app.run_deprecated(ac, av, [&app, &ports] {
         auto& opts = app.configuration();
-        return create_ports(&ports, opts, dev.get(), 0).then([]{
+        return ports.add_port(opts, 0, [](uint16_t port_id, uint16_t queue_num){
+            return create_netstar_dpdk_net_device(port_id, queue_num);
+        }).then([]{
             printf("All the devices are successfully created\n");
             engine().exit(0);
         });
