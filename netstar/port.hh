@@ -126,8 +126,8 @@ public:
         });
     }
 
-    per_core_objs<port>* get_ports(unsigned id){
-        return &(_ports_vec.at(id));
+    per_core_objs<port>& get_ports(unsigned id){
+        return std::ref(_ports_vec.at(id));
     }
 
 private:
