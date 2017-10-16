@@ -138,7 +138,19 @@ public:
     }
 
     template <typename Func>
-    future<> invoke_on(unsigned core, Func&& func);
+    inline
+    future<>
+    invoke_on(unsigned core, Func&& func) {
+        static_assert(std::is_same<futurize_t<std::result_of_t<Func(T&)>>, future<>>::value,
+                      "invoke_on_all()'s func must return void or future<>");
+        if(core>=smp::count){
+            return make_exception_future<>(no_per_core_obj());
+        }
+        return smp::submit_to(core, [this, func] {
+            auto local_obj = this->get_obj(engine().cpu_id());
+            return func(*local_obj);
+        });
+    }
 
     template <typename Ret, typename... FuncArgs, typename... Args, typename FutureRet = futurize_t<Ret>>
     inline
@@ -154,7 +166,7 @@ public:
         });
     }
 
-    T* get_obj(unsigned core_id) const{
+    inline T* get_obj(unsigned core_id) const{
         auto ret = _reactor_saved_objects.at(core_id);
         if(!ret){
             throw no_per_core_obj();
@@ -170,21 +182,6 @@ private:
         engine().at_destroy([obj = std::move(obj)] {});
     }
 };
-
-template <typename T>
-template <typename Func>
-inline
-future<> per_core_objs<T>::invoke_on(unsigned core, Func&& func) {
-    static_assert(std::is_same<futurize_t<std::result_of_t<Func(T&)>>, future<>>::value,
-                  "invoke_on_all()'s func must return void or future<>");
-    if(core>=smp::count){
-        return make_exception_future<>(no_per_core_obj());
-    }
-    return smp::submit_to(core, [this, func] {
-        auto local_obj = this->get_obj(engine().cpu_id());
-        return func(*local_obj);
-    });
-}
 
 } // namespace netstar
 
