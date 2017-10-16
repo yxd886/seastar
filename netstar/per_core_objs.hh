@@ -34,12 +34,6 @@ public:
     explicit per_core_objs(){}
     ~per_core_objs(){}
 
-    // move/copy constructor/assignment are all deleted
-    // per_core_objs(const per_core_objs& other) = delete;
-    // per_core_objs(per_core_objs&& other)  = delete;
-    // per_core_objs& operator=(const per_core_objs& other) = delete;
-    // per_core_objs& operator=(per_core_objs&& other) = delete;
-
     template <typename... Args>
     future<> start(Args&&... args){
         assert(_reactor_saved_objects.size()==0);

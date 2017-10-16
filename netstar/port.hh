@@ -106,7 +106,7 @@ public:
     ports_env& operator=(const ports_env& other) = delete;
     ports_env& operator=(ports_env&& other) = delete;
 
-    future<> add_dpdk_device(boost::program_options::variables_map& opts,
+    future<> add_port(boost::program_options::variables_map& opts,
                              uint16_t port_id){
         if(!port_check(opts, port_id)){
             return make_exception_future<>(std::runtime_error("Fail port check.\n"));
