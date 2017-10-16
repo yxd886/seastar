@@ -29,6 +29,7 @@
 using namespace seastar;
 
 struct tester{
+    tester(){}
     tester(const tester& other) = delete;
     tester(tester&& other)  = delete;
     tester& operator=(const tester& other) = delete;
