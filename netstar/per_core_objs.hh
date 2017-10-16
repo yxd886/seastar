@@ -151,7 +151,7 @@ public:
 
         // assert(core<smp::count && _reactor_saved_objects[core]);
         if(core>=smp::count || !_reactor_saved_objects[core]){
-            return futurator::make_exception_future(no_per_core_obj());
+            return make_exception_future<>(no_per_core_obj());
         }
 
         return smp::submit_to(core, [this, func] {
