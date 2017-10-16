@@ -120,7 +120,7 @@ public:
         _devs_vec.push_back(fn(port_id, queue_num));
         _port_ids_vec.push_back(port_id);
 
-        auto ports = _ports_vec.back();
+        auto& ports = _ports_vec.back();
         auto dev  = _devs_vec.back().get();
 
         return ports.start(opts, dev, port_id).then([dev]{
