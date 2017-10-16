@@ -19,12 +19,12 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
+#include "netstar/per_core_objs.hh"
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
 #include "core/distributed.hh"
 #include "netstar/netstar_dpdk_device.hh"
-#include "netstar/env.hh"
 
 using namespace seastar;
 

@@ -9,7 +9,6 @@
 #include <boost/iterator/counting_iterator.hpp>
 
 using namespace seastar;
-using std::vector;
 
 namespace netstar{
 
@@ -29,17 +28,11 @@ public:
 
 template<class T>
 class per_core_objs{
-    vector<std::experimental::optional<T*>> _reactor_saved_objects;
+    std::vector<std::experimental::optional<T*>> _reactor_saved_objects;
 public:
     // default constructor and deconstructors
     explicit per_core_objs(){}
     ~per_core_objs(){}
-
-    // move/copy constructor/assignment are all deleted
-    per_core_objs(const per_core_objs& other) = delete;
-    per_core_objs(per_core_objs&& other)  = delete;
-    per_core_objs& operator=(const per_core_objs& other) = delete;
-    per_core_objs& operator=(per_core_objs&& other) = delete;
 
     template <typename... Args>
     future<> start(Args&&... args){
@@ -138,7 +131,9 @@ public:
     }
 
     template <typename Func>
-    future<> invoke_on(unsigned core, Func&& func) {
+    inline
+    future<>
+    invoke_on(unsigned core, Func&& func) {
         static_assert(std::is_same<futurize_t<std::result_of_t<Func(T&)>>, future<>>::value,
                       "invoke_on_all()'s func must return void or future<>");
         if(core>=smp::count){
@@ -151,6 +146,7 @@ public:
     }
 
     template <typename Ret, typename... FuncArgs, typename... Args, typename FutureRet = futurize_t<Ret>>
+    inline
     FutureRet
     invoke_on(unsigned core, Ret (T::*func)(FuncArgs...), Args&&... args) {
         using futurator = futurize<Ret>;
@@ -163,8 +159,16 @@ public:
         });
     }
 
-    T* get_obj(unsigned core_id) const{
+    inline T* get_obj(unsigned core_id) const{
         auto ret = _reactor_saved_objects.at(core_id);
+        if(!ret){
+            throw no_per_core_obj();
+        }
+        return ret.value();
+    }
+
+    inline T* local_obj() const{
+        auto ret = _reactor_saved_objects.at(engine().cpu_id());
         if(!ret){
             throw no_per_core_obj();
         }
