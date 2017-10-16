@@ -172,6 +172,7 @@ private:
 
 template <typename T>
 template <typename Func>
+inline
 future<> per_core_objs<T>::invoke_on(unsigned core, Func&& func) {
     static_assert(std::is_same<futurize_t<std::result_of_t<Func(T&)>>, future<>>::value,
                   "invoke_on_all()'s func must return void or future<>");
