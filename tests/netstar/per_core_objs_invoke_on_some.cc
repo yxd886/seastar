@@ -89,18 +89,6 @@ int main(int ac, char** av) {
                 });
             });
             return per_core_testers->start_on(1);
-        }).then([per_core_testers] {
-            return per_core_testers->invoke_on_all([](tester& local_inst){
-                local_inst.call(1);
-            });
-        }).then_wrapped([] (future<> f) {
-            try {
-                f.get();
-                return make_ready_future<>();
-            } catch (...) {
-                printf("Catch an exception\n");
-                return make_ready_future<>();
-            }
         }).then([per_core_testers]{
             return per_core_testers->invoke_on(0, &tester::call, 0);
         }).then([per_core_testers]{
