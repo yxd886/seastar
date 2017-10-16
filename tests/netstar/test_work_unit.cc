@@ -19,7 +19,7 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
-/*#include "core/reactor.hh"
+#include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
 #include "core/distributed.hh"
@@ -33,7 +33,7 @@ int main(int ac, char** av) {
     app_template app;
 
     return app.run_deprecated(ac, av, [&app] {
-       boost::program_options::variables_map& opts = app.configuration();
+       /*boost::program_options::variables_map& opts = app.configuration();
        printf("Thread %d: In the reactor loop\n", engine().cpu_id());
 
        return port_env::create_netstar_port(create_netstar_dpdk_net_device(0, smp::count), opts).then([opts] () mutable{
@@ -41,6 +41,6 @@ int main(int ac, char** av) {
        }).then([]{
            printf("All the devices are successfully created\n");
            engine().exit(0);
-       });
+       });*/
     });
-}*/
+}
