@@ -90,6 +90,10 @@ public:
     future<> stop(){
         return make_ready_future<>();
     }
+
+    uint16_t port_id(){
+        return port_id;
+    }
 };
 
 class ports_env{
