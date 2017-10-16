@@ -31,16 +31,15 @@ using namespace netstar;
 
 int main(int ac, char** av) {
     app_template app;
+    ports_env all_ports;
 
-    ports_env ports;
-
-    return app.run_deprecated(ac, av, [&app, &ports] {
+    return app.run_deprecated(ac, av, [&app, &all_ports] {
         auto& opts = app.configuration();
-        return ports.add_port(opts, 0, smp::count,
+        return all_ports.add_port(opts, 0, smp::count,
             [](uint16_t port_id, uint16_t queue_num){
                 return create_netstar_dpdk_net_device(port_id, queue_num);
-        }).then([&opts, &ports]{
-            return ports.add_port(opts, 1, smp::count,
+        }).then([&opts, &all_ports]{
+            return all_ports.add_port(opts, 1, smp::count,
                 [](uint16_t port_id, uint16_t queue_num){
                     return create_netstar_dpdk_net_device(port_id, queue_num);
             });
@@ -48,15 +47,5 @@ int main(int ac, char** av) {
             printf("All the devices are successfully created\n");
             engine().exit(0);
         });
-
-       /*boost::program_options::variables_map& opts = app.configuration();
-       printf("Thread %d: In the reactor loop\n", engine().cpu_id());
-
-       return port_env::create_netstar_port(create_netstar_dpdk_net_device(0, smp::count), opts).then([opts] () mutable{
-           return port_env::create_netstar_port(create_netstar_dpdk_net_device(1, smp::count), opts);
-       }).then([]{
-           printf("All the devices are successfully created\n");
-           engine().exit(0);
-       });*/
     });
 }

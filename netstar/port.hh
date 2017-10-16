@@ -125,6 +125,11 @@ public:
             return dev->link_ready();
         });
     }
+
+    per_core_objs<port>* get_ports(unsigned id){
+        return &(_ports_vec.at(id));
+    }
+
 private:
     bool port_check(boost::program_options::variables_map& opts, uint16_t port_id){
         if(opts.count("network-stack") &&
@@ -140,11 +145,6 @@ private:
         return true;
     }
 };
-
-future<> create_ports(per_core_objs<port>* ports,
-                      boost::program_options::variables_map& opts,
-                      net::device* dev,
-                      uint16_t dev_port_id);
 
 } // namespace netstar
 
