@@ -30,7 +30,12 @@ template<class T>
 class per_core_objs{
     std::vector<std::experimental::optional<T*>> _reactor_saved_objects;
 public:
-    // default constructor and deconstructors
+    static_assert(!(std::is_copy_constructible<T>::value) &&
+                  !(std::is_move_constructible<T>::value) &&
+                  !(std::is_copy_assignable<T>::value)    &&
+                  !(std::is_move_assignable<T>::value),
+                  "pre_core_obj can neither be copy/move constructed, nor be copy/move assigned.\n");
+
     explicit per_core_objs(){}
     ~per_core_objs(){}
 
