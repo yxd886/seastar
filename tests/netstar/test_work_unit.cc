@@ -36,8 +36,14 @@ int main(int ac, char** av) {
 
     return app.run_deprecated(ac, av, [&app, &ports] {
         auto& opts = app.configuration();
-        return ports.add_port(opts, 0, [](uint16_t port_id, uint16_t queue_num){
-            return create_netstar_dpdk_net_device(port_id, queue_num);
+        return ports.add_port(opts, 0, smp::count,
+            [](uint16_t port_id, uint16_t queue_num){
+                return create_netstar_dpdk_net_device(port_id, queue_num);
+        }).then([&opts, &ports]{
+            return ports.add_port(opts, 1, smp::count,
+                [](uint16_t port_id, uint16_t queue_num){
+                    return create_netstar_dpdk_net_device(port_id, queue_num);
+            });
         }).then([]{
             printf("All the devices are successfully created\n");
             engine().exit(0);

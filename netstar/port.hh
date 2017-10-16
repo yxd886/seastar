@@ -107,6 +107,7 @@ public:
 
     future<> add_port(boost::program_options::variables_map& opts,
                       uint16_t port_id,
+                      uint16_t queue_num,
                       std::function<std::unique_ptr<net::device>(uint16_t port_id,
                                                                  uint16_t queue_num)> fn){
         if(!port_check(opts, port_id)){
@@ -114,7 +115,7 @@ public:
         }
 
         _ports_vec.emplace_back();
-        _devs_vec.push_back(fn(port_id, smp::count));
+        _devs_vec.push_back(fn(port_id, queue_num));
         _port_ids_vec.push_back(port_id);
 
         auto ports = &(_ports_vec.back());
