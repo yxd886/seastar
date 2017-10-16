@@ -43,7 +43,7 @@ return app.run_deprecated(ac, av, [&app] {
 
 If we accidentally remove the last `sdev` in the last lambda, a segfault happens.
 
-* So if we encounter segfault, we should consider whether some objects are accidentally released before we call the continuation. 
+* So if we encounter segfault, we should consider whether some objects are accidentally released before we call the continuation.
 
 My personal hack notes
 ----------------------
