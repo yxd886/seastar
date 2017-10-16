@@ -36,6 +36,9 @@ public:
                    !(std::is_move_assignable<T>::value) ),
                   "pre_core_obj can neither be copy/move constructed, nor be copy/move assigned.\n");
 
+    static_assert(!(std::is_copy_constructible<T>::value), "no copy construtible\n");
+    static_assert((std::is_copy_constructible<T>::value), "copy construtible\n");
+
     explicit per_core_objs(){}
     ~per_core_objs(){}
 
