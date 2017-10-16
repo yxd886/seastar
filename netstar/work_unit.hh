@@ -9,7 +9,11 @@ namespace netstar{
 class work_unit{
     std::vector<port*> _all_ports;
 protected:
+    std::vector<port*>& all_ports(){
+        return std::ref(_all_ports);
+    }
     virtual future<> receive_from_port(uint16_t port_id, net::packet pkt) = 0;
+    virtual future<> receive_forwarded(unsigned from_core, net::packet pkt) = 0;
 public:
     void add_port(per_core_objs<port>& ports){
         auto local_port = ports.local_obj();
@@ -19,8 +23,16 @@ public:
         (*local_port).receive([this, port_id](net::packet pkt){
             return receive_from_port(port_id, std::move(pkt));
         });
-        // ports->local_obj()->receive()
     }
+    inline void send_from_port(uint16_t port_id, net::packet pkt){
+        assert(port_id<_all_ports.size());
+        (*_all_ports[port_id]).send(std::move(pkt));
+    }
+
+    /*template<typename T>
+    inline void forward_to(per_core_objs<T>* work_units){
+        static_assert(std::is_base_of<work_unit, B>::value)
+    }*/
 };
 
 } // namespace netstar
