@@ -12,7 +12,7 @@ protected:
     virtual future<> receive_from_port(uint16_t port_id, net::packet pkt) = 0;
 public:
     void add_port(per_core_objs<port>& ports){
-        auto& local_port = ports.local_obj();
+        auto local_port = ports.local_obj();
         _all_ports.push_back(&local_port);
         auto port_id = _all_ports.size()-1;
 
