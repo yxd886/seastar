@@ -25,7 +25,7 @@
 #include "core/print.hh"
 #include "core/distributed.hh"
 #include "netstar/netstar_dpdk_device.hh"
-#include "netstar/work_unit.hh"
+// #include "netstar/work_unit.hh"
 
 using namespace seastar;
 

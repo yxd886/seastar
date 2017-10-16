@@ -114,9 +114,7 @@ public:
                       uint16_t queue_num,
                       std::function<std::unique_ptr<net::device>(uint16_t port_id,
                                                                  uint16_t queue_num)> fn){
-        if(!port_check(opts, port_id)){
-            return make_exception_future<>(std::runtime_error("Fail port check.\n"));
-        }
+        assert(port_check(opts, port_id));
 
         _ports_vec.emplace_back();
         _devs_vec.push_back(fn(port_id, queue_num));
@@ -131,7 +129,8 @@ public:
     }
 
     per_core_objs<port>& get_ports(unsigned id){
-        return std::ref(_ports_vec.at(id));
+        assert(id<_ports_vec.size());
+        return std::ref(_ports_vec[id]);
     }
 
 private:
