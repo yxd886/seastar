@@ -13,10 +13,10 @@ protected:
 public:
     void add_port(per_core_objs<port>& ports){
         auto local_port = ports.local_obj();
-        _all_ports.push_back(&local_port);
+        _all_ports.push_back(local_port);
         auto port_id = _all_ports.size()-1;
 
-        local_port.receive([this, port_id](net::packet pkt){
+        (*local_port).receive([this, port_id](net::packet pkt){
             return receive_from_port(port_id, std::move(pkt));
         });
         // ports->local_obj()->receive()
