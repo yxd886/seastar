@@ -17,7 +17,7 @@ public:
         auto port_id = _all_ports.size()-1;
 
         local_port.receive([this, port_id](net::packet pkt){
-            return receive_from_port(port_id, std::move(pkt))();
+            return receive_from_port(port_id, std::move(pkt));
         });
         // ports->local_obj()->receive()
     }
