@@ -52,7 +52,16 @@ struct stats_timer {
         _stats_timer.arm_periodic(1s);
         _pkt = build_pkt("sdfklajdfljsaqlkjlkjasdlfkdjsflkjasdlfkjasldfjkalkdjflakjdflksdjoqurlkjsalfkjsaldfjlsakdfjlaskjdfl \\"
                 "alkdsjflksajdflkajdlfjaslkdfjlaksdjflaksjdfalskdjflkjjladkjflasjdflaksjdflkajslfdkjadlsfkjalskjfdlsakdjflka \\"
-                "aslkdjflskdjflaksjdflaksjdflkajsldfkjl");
+                "aslkdjflskdjflaksjdflaksjdflkajsldfkjl \\"
+                "sdfklajdfljsaqlkjlkjasdlfkdjsflkjasdlfkjasldfjkalkdjflakjdflksdjoqurlkjsalfkjsaldfjlsakdfjlaskjdfl \\"
+                                "alkdsjflksajdflkajdlfjaslkdfjlaksdjflaksjdfalskdjflkjjladkjflasjdflaksjdflkajslfdkjadlsfkjalskjfdlsakdjflka \\"
+                                "aslkdjflskdjflaksjdflaksjdflkajsldfkjl \\"
+                "sdfklajdfljsaqlkjlkjasdlfkdjsflkjasdlfkjasldfjkalkdjflakjdflksdjoqurlkjsalfkjsaldfjlsakdfjlaskjdfl \\"
+                                "alkdsjflksajdflkajdlfjaslkdfjlaksdjflaksjdfalskdjflkjjladkjflasjdflaksjdflkajslfdkjadlsfkjalskjfdlsakdjflka \\"
+                                "aslkdjflskdjflaksjdflaksjdflkajsldfkjl \\"
+                "sdfklajdfljsaqlkjlkjasdlfkdjsflkjasdlfkjasldfjkalkdjflakjdflksdjoqurlkjsalfkjsaldfjlsakdfjlaskjdfl \\"
+                                "alkdsjflksajdflkajdlfjaslkdfjlaksdjflaksjdfalskdjflkjjladkjflasjdflaksjdflkajslfdkjadlsfkjalskjfdlsakdjflka \\"
+                                "aslkdjflskdjflaksjdflaksjdflkajsldfkjl \\");
 
         keep_doing([this, qp](){
            net::packet pkt(_pkt.frag(0));
