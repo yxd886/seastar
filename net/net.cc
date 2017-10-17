@@ -77,7 +77,7 @@ bool qp::poll_tx() {
         } while (work && _tx_packetq.size() < 128);
     }
     if (!_tx_packetq.empty()) {
-        printf("Got a packet to send\n");
+        // printf("Got a packet to send\n");
         _stats.tx.good.update_pkts_bunch(send(_tx_packetq));
         return true;
     }
