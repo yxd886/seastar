@@ -50,8 +50,9 @@ struct stats_timer {
             n_failed = 0;
         });
         _stats_timer.arm_periodic(1s);
-        char data[600] = {};
-        _pkt = build_pkt(data);
+        _pkt = build_pkt("sdfklajdfljsaqlkjlkjasdlfkdjsflkjasdlfkjasldfjkalkdjflakjdflksdjoqurlkjsalfkjsaldfjlsakdfjlaskjdfl \\"
+                "alkdsjflksajdflkajdlfjaslkdfjlaksdjflaksjdfalskdjflkjjladkjflasjdflaksjdflkajslfdkjadlsfkjalskjfdlsakdjflka \\"
+                "aslkdjflskdjflaksjdflaksjdflkajsldfkjl");
 
         keep_doing([this, qp](){
            net::packet pkt(_pkt.frag(0));
