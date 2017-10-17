@@ -60,12 +60,14 @@ namespace net {
 inline
 bool qp::poll_tx() {
     if (_tx_packetq.size() < 16) {
+        if(_pkt_providers.size()>0){
+            printf("There %d pkt providers\n", _pkt_providers.size());
+        }
         // refill send queue from upper layers
         uint32_t work;
         do {
             work = 0;
             for (auto&& pr : _pkt_providers) {
-                printf("called\n");
                 auto p = pr();
                 if (p) {
                     work++;
