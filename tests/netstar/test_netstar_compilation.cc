@@ -42,6 +42,13 @@ struct stats_timer {
             n_failed = 0;
         });
         _stats_timer.arm_periodic(1s);
+
+        keep_doing([this, qp](){
+           const char* buf = "hello!";
+           auto pkt = net::packet::from_static_data(buf, strlen(buf));
+           qp->proxy_send(std::move(pkt));
+           this->n_sent+=1;
+        });
     }
 private:
     timer<> _stats_timer;
