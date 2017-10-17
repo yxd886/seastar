@@ -50,7 +50,8 @@ struct stats_timer {
             n_failed = 0;
         });
         _stats_timer.arm_periodic(1s);
-        _pkt = build_pkt("hello\n");
+        char data[600] = {};
+        _pkt = build_pkt(data);
 
         keep_doing([this, qp](){
            net::packet pkt(_pkt.frag(0));
