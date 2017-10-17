@@ -35,18 +35,13 @@ private:
     uint64_t n_received {};
     uint64_t n_failed {};
     timer<> _stats_timer;
-    int _id;
 public:
-    client(int id){
-        _id = id;
-    }
     void start(ipv4_addr server_addr) {
         std::cout << "Sending to " << server_addr << std::endl;
 
         _chan = engine().net().make_udp_channel();
 
         _stats_timer.set_callback([this] {
-            std::cout << "Client: " << _id << ", \t";
             std::cout << "Out: " << n_sent << " pps, \t";
             std::cout << "Err: " << n_failed << " pps, \t";
             std::cout << "In: " << n_received << " pps" << std::endl;
@@ -57,17 +52,6 @@ public:
         _stats_timer.arm_periodic(1s);
 
         keep_doing([this, server_addr] {
-            for(auto i = 0; i<15; i++){
-                _chan.send(server_addr, "hello!\n")
-                   .then_wrapped([this] (auto&& f) {
-                       try {
-                           f.get();
-                           n_sent++;
-                       } catch (...) {
-                           n_failed++;
-                       }
-                   });
-            }
             return _chan.send(server_addr, "hello!\n")
                 .then_wrapped([this] (auto&& f) {
                     try {
@@ -90,15 +74,13 @@ public:
 namespace bpo = boost::program_options;
 
 int main(int ac, char ** av) {
-    client _client1(1);
-    client _client2(2);
+    client _client;
     app_template app;
     app.add_options()
         ("server", bpo::value<std::string>(), "Server address")
         ;
-    return app.run_deprecated(ac, av, [&_client1, &_client2, &app] {
+    return app.run_deprecated(ac, av, [&_client, &app] {
         auto&& config = app.configuration();
-        _client1.start(config["server"].as<std::string>());
-        // _client2.start(config["server"].as<std::string>());
+        _client.start(config["server"].as<std::string>());
     });
 }

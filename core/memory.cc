@@ -1354,7 +1354,6 @@ void configure(std::vector<resource::memory> m, bool mbind,
     if (hugetlbfs_path) {
         cpu_mem.init_virt_to_phys_map();
     }
-    printf("Am I here?\n");
 }
 
 statistics stats() {
