@@ -79,7 +79,7 @@ public:
 namespace bpo = boost::program_options;
 
 int main(int ac, char ** av) {
-    client _client;
+    client _client(1);
     app_template app;
     app.add_options()
         ("server", bpo::value<std::string>(), "Server address")
