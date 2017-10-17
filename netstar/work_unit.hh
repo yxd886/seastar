@@ -25,6 +25,7 @@ protected:
     per_core_objs<T>* objs(){
         return _all_objs;
     }
+
     virtual future<> receive_from_port(uint16_t port_id, net::packet pkt) = 0;
     virtual future<> receive_forwarded(unsigned from_core, net::packet pkt) = 0;
 public:
@@ -32,19 +33,16 @@ public:
         _receive_fn_configured (false),
         _all_objs(objs) {}
 
-    void configure_ports(ports_env* env, unsigned first_pos, unsigned last_pos){
-        auto new_port = ports.local_obj();
-        for(auto existing_port : _all_ports){
-            if((*existing_port).port_id() == (*new_port).port_id()) {
-                throw std::runtime_error("The port has already been added before\n");
-            }
+    void configure_ports(ports_env& env, unsigned first_pos, unsigned last_pos){
+        assert(first_pos<last_pos &&
+               last_pos<env.count() &&
+               _all_ports.size() == 0);
+        for(auto i = first_pos; i<=last_pos; i++){
+            assert(!env.check_assigned_to_core(i, engine().cpu_id()));
+            auto& ports = env.get_ports(i);
+            _all_ports.push_back(&ports.local_obj());
+            env.set_port_on_core(i, engine().cpu_id());
         }
-        _all_ports.push_back(new_port);
-        /*auto port_id = _all_ports.size()-1;
-
-        (*local_port).receive([this, port_id](net::packet pkt){
-            return receive_from_port(port_id, std::move(pkt));
-        });*/
     }
 
     void configure_receive_fn(uint16_t port_id,
