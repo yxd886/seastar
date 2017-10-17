@@ -234,8 +234,7 @@ future<ethernet_address> ipv4::get_l2_dst_address(ipv4_address to) {
         dst = _gw_address;
     }
 
-    // return _arp.lookup(dst);
-    return make_ready_future<ethernet_address>(ethernet_address({0x52,0x54,0x00,0x11,0xfe,0x22}));
+    return _arp.lookup(dst);
 }
 
 void ipv4::send(ipv4_address to, ip_protocol_num proto_num, packet p, ethernet_address e_dst) {
