@@ -48,6 +48,7 @@ struct stats_timer {
            auto pkt = net::packet::from_static_data(buf, strlen(buf));
            qp->proxy_send(std::move(pkt));
            this->n_sent+=1;
+           return make_ready_future<>();
         });
     }
 private:
