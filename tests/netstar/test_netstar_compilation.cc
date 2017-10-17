@@ -43,7 +43,7 @@ struct stats_timer {
         });
         _stats_timer.arm_periodic(1s);
 
-        keep_doing([this, qp](){
+        // keep_doing([this, qp](){
            const char* buf = "hello!";
            auto pkt = net::packet::from_static_data(buf, strlen(buf));
            if(qp->peek_size() < 1024){
@@ -54,8 +54,8 @@ struct stats_timer {
                this->n_failed+=1;
            }
 
-           return make_ready_future<>();
-        });
+        //   return make_ready_future<>();
+        //});
     }
 private:
     timer<> _stats_timer;
