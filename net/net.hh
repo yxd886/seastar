@@ -251,6 +251,17 @@ public:
     size_t peek_size(){
         return _proxy_packetq.size();
     }
+    void force_register_pkt_provider(){
+        register_packet_provider([this] {
+            std::experimental::optional<packet> p;
+            if (!_proxy_packetq.empty()) {
+                printf("Get a packet from proxy packet queuen\n");
+                p = std::move(_proxy_packetq.front());
+                _proxy_packetq.pop_front();
+            }
+            return p;
+        });
+    }
     void register_packet_provider(packet_provider_type func) {
         _pkt_providers.push_back(std::move(func));
     }

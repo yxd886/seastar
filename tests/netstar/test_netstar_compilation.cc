@@ -91,6 +91,7 @@ int main(int ac, char** av) {
                    }
                    cpu_weights[qid] = opts["hw-queue-weight"].as<float>();
                    qp->configure_proxies(cpu_weights);
+                   qp->force_register_pkt_provider();
                    sdev->set_local_queue(std::move(qp));
                } else {
                    abort();
