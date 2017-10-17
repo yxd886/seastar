@@ -84,8 +84,8 @@ struct stats_timer {
            iph->ttl = 64;
            iph->ip_proto = (uint8_t)net::ip_protocol_num::udp;
            iph->csum = 0;
-           iph->src_ip = ipv4_src_addr.ip;
-           iph->dst_ip = ipv4_dst_addr.ip;
+           iph->src_ip = net::ipv4_address(ipv4_src_addr.ip);
+           iph->dst_ip = net::ipv4_address(ipv4_dst_addr.ip);
            *iph = net::hton(*iph);
            net::checksummer ip_csum;
            ip_csum.sum(reinterpret_cast<char*>(iph), sizeof(*iph));
