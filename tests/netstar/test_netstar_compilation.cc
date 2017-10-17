@@ -30,6 +30,7 @@
 #include "net/net.hh"
 #include "net/packet.hh"
 #include "net/byteorder.hh"
+#include "core/semaphore.hh"
 
 using namespace seastar;
 using namespace std::chrono_literals;
@@ -53,19 +54,20 @@ struct stats_timer {
 
         keep_doing([this, qp](){
            net::packet pkt(_pkt.frag(0));
-           if(qp->peek_size() < 1024){
+           auto len = pkt.len();
+
+           return _user_queue_space.wait(len).then([qp, this, len, pkt=std::move(pkt)] () mutable{
+               pkt = packet(std::move(pkt), make_deleter([this, len] { this->complete_send(len); }));
                qp->proxy_send(std::move(pkt));
                this->n_sent+=1;
-           }
-           else{
-               this->n_failed+=1;
-           }
-           return make_ready_future<>();
+           });
         });
     }
+    void complete_send(size_t len) { _user_queue_space.signal(len); }
 private:
     timer<> _stats_timer;
     net::packet _pkt;
+    semaphore _user_queue_space = {212992};
     net::packet build_pkt(const char* buf){
         ipv4_addr ipv4_src_addr("10.1.2.4:666");
         ipv4_addr ipv4_dst_addr("10.1.2.4:666");
