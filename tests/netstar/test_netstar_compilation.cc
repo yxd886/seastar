@@ -50,18 +50,13 @@ struct stats_timer {
             n_failed = 0;
         });
         _stats_timer.arm_periodic(1s);
-        _pkt = build_pkt("sdfklajdfljsaqlkjlkjasdlfkdjsflkjasdlfkjasldfjkalkdjflakjdflksdjoqurlkjsalfkjsaldfjlsakdfjlaskjdfl \\"
-                "alkdsjflksajdflkajdlfjaslkdfjlaksdjflaksjdfalskdjflkjjladkjflasjdflaksjdflkajslfdkjadlsfkjalskjfdlsakdjflka \\"
-                "aslkdjflskdjflaksjdflaksjdflkajsldfkjl \\"
-                "sdfklajdfljsaqlkjlkjasdlfkdjsflkjasdlfkjasldfjkalkdjflakjdflksdjoqurlkjsalfkjsaldfjlsakdfjlaskjdfl \\"
-                                "alkdsjflksajdflkajdlfjaslkdfjlaksdjflaksjdfalskdjflkjjladkjflasjdflaksjdflkajslfdkjadlsfkjalskjfdlsakdjflka \\"
-                                "aslkdjflskdjflaksjdflaksjdflkajsldfkjl \\"
-                "sdfklajdfljsaqlkjlkjasdlfkdjsflkjasdlfkjasldfjkalkdjflakjdflksdjoqurlkjsalfkjsaldfjlsakdfjlaskjdfl \\"
-                                "alkdsjflksajdflkajdlfjaslkdfjlaksdjflaksjdfalskdjflkjjladkjflasjdflaksjdflkajslfdkjadlsfkjalskjfdlsakdjflka \\"
-                                "aslkdjflskdjflaksjdflaksjdflkajsldfkjl \\"
-                "sdfklajdfljsaqlkjlkjasdlfkdjsflkjasdlfkjasldfjkalkdjflakjdflksdjoqurlkjsalfkjsaldfjlsakdfjlaskjdfl \\"
-                                "alkdsjflksajdflkajdlfjaslkdfjlaksdjflaksjdfalskdjflkjjladkjflasjdflaksjdflkajslfdkjadlsfkjalskjfdlsakdjflka \\"
-                                "aslkdjflskdjflaksjdflaksjdflkajsldfkjl \\");
+        _pkt = build_pkt(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\"
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\"
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\"
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\"
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\"
+                "aaaaaaaaaaaa");
 
         keep_doing([this, qp](){
            net::packet pkt(_pkt.frag(0));
