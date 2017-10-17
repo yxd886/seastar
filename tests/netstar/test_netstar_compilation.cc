@@ -57,7 +57,7 @@ struct stats_timer {
            auto len = pkt.len();
 
            return _user_queue_space.wait(len).then([qp, this, len, pkt=std::move(pkt)] () mutable{
-               pkt = packet(std::move(pkt), make_deleter([this, len] { this->complete_send(len); }));
+               pkt = net::packet(std::move(pkt), make_deleter([this, len] { this->complete_send(len); }));
                qp->proxy_send(std::move(pkt));
                this->n_sent+=1;
            });
