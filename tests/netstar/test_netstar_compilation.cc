@@ -35,7 +35,7 @@ int main(int ac, char** av) {
     return app.run_deprecated(ac, av, [&app, &life_holder, &fst_qp] {
        auto& opts = app.configuration();
 
-       life_holder = netstar::create_netstar_dpdk_net_device(0, 1);
+       life_holder = netstar::create_netstar_dpdk_net_device(0, smp::count);
        auto sem = std::make_shared<semaphore>(0);
        auto sdev = life_holder.get();
 
