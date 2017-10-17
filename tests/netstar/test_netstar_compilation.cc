@@ -49,8 +49,7 @@ struct stats_timer {
             n_failed = 0;
         });
         _stats_timer.arm_periodic(1s);
-        auto pkt = build_pkt("hello\n");
-        _pkt = std::move(pkt);
+        _pkt = build_pkt("hello\n");
 
         // keep_doing([this, qp](){
 
