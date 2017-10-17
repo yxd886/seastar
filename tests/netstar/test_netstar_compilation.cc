@@ -52,8 +52,9 @@ int main(int ac, char** av) {
     app_template app;
     std::unique_ptr<net::device> life_holder;
     net::qp* fst_qp;
+    stats_timer timer;
 
-    return app.run_deprecated(ac, av, [&app, &life_holder, &fst_qp] {
+    return app.run_deprecated(ac, av, [&app, &life_holder, &fst_qp, &timer] {
        auto& opts = app.configuration();
 
        life_holder = netstar::create_netstar_dpdk_net_device(0, smp::count);
@@ -83,10 +84,10 @@ int main(int ac, char** av) {
            });
        }
 
-       sem->wait(smp::count).then([opts, sdev] {
-           sdev->link_ready().then([opts, sdev] {
+       sem->wait(smp::count).then([opts, sdev, &timer] {
+           sdev->link_ready().then([opts, sdev, &timer] {
                printf("Create device 0\n");
-               engine().exit(0);
+               timer.start();
            });
        });
     });
