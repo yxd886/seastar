@@ -51,8 +51,7 @@ struct stats_timer {
         _stats_timer.arm_periodic(1s);
         _pkt = build_pkt("hello\n");
 
-        // keep_doing([this, qp](){
-
+        keep_doing([this, qp](){
            net::packet pkt(_pkt.frag(0));
            if(qp->peek_size() < 1024){
                qp->proxy_send(std::move(pkt));
@@ -61,9 +60,8 @@ struct stats_timer {
            else{
                this->n_failed+=1;
            }
-
-        //   return make_ready_future<>();
-        //});
+           return make_ready_future<>();
+        });
     }
 private:
     timer<> _stats_timer;
