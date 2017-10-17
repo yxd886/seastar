@@ -33,6 +33,7 @@ struct stats_timer {
     uint64_t n_received {};
     uint64_t n_failed {};
     void start(net::qp* qp) {
+        assert(engine().cpu_id() == 0);
         _stats_timer.set_callback([this] {
             std::cout << "Out: " << n_sent << " pps, \t";
             std::cout << "Err: " << n_failed << " pps, \t";
