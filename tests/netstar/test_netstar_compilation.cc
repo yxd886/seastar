@@ -117,6 +117,7 @@ private:
         *eh = net::hton(*eh);
 
         pkt.linearize();
+        std::cout<< "pkt.nr_framgs() = " << pkt.nr_frags() <<std::endl;
         assert(pkt.nr_frags() == 1);
         return pkt;
     }
