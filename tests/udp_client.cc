@@ -57,6 +57,17 @@ public:
         _stats_timer.arm_periodic(1s);
 
         keep_doing([this, server_addr] {
+            for(auto i = 0; i<2; i++){
+                _chan.send(server_addr, "hello!\n")
+                   .then_wrapped([this] (auto&& f) {
+                       try {
+                           f.get();
+                           n_sent++;
+                       } catch (...) {
+                           n_failed++;
+                       }
+                   });
+            }
             return _chan.send(server_addr, "hello!\n")
                 .then_wrapped([this] (auto&& f) {
                     try {
@@ -88,6 +99,6 @@ int main(int ac, char ** av) {
     return app.run_deprecated(ac, av, [&_client1, &_client2, &app] {
         auto&& config = app.configuration();
         _client1.start(config["server"].as<std::string>());
-        _client2.start(config["server"].as<std::string>());
+        // _client2.start(config["server"].as<std::string>());
     });
 }
