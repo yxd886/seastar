@@ -248,6 +248,9 @@ public:
     void proxy_send(packet p) {
         _proxy_packetq.push_back(std::move(p));
     }
+    size_t peek_size(){
+        return _proxy_packetq.size();
+    }
     void register_packet_provider(packet_provider_type func) {
         _pkt_providers.push_back(std::move(func));
     }

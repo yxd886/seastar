@@ -46,8 +46,14 @@ struct stats_timer {
         keep_doing([this, qp](){
            const char* buf = "hello!";
            auto pkt = net::packet::from_static_data(buf, strlen(buf));
-           qp->proxy_send(std::move(pkt));
-           this->n_sent+=1;
+           if(qp->peek_size() < 1024){
+               qp->proxy_send(std::move(pkt));
+               this->n_sent+=1;
+           }
+           else{
+               this->n_failed+=1;
+           }
+
            return make_ready_future<>();
         });
     }
