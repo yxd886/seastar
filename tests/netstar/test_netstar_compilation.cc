@@ -51,53 +51,7 @@ struct stats_timer {
         _stats_timer.arm_periodic(1s);
 
         // keep_doing([this, qp](){
-           ipv4_addr ipv4_src_addr("10.1.2.4:666");
-           ipv4_addr ipv4_dst_addr("10.1.2.4:666");
-
-           const char* buf = "hello!";
-           auto pkt = net::packet::from_static_data(buf, strlen(buf));
-
-           auto hdr = pkt.prepend_header<net::udp_hdr>();
-           hdr->src_port = ipv4_src_addr.port;
-           hdr->dst_port = ipv4_dst_addr.port;
-           hdr->len = pkt.len();
-           *hdr = net::hton(*hdr);
-
-           net::checksummer csum;
-           net::ipv4_traits::udp_pseudo_header_checksum(csum, ipv4_src_addr, ipv4_dst_addr, pkt.len());
-           csum.sum(pkt);
-           hdr->cksum = csum.get();
-
-           net::offload_info oi;
-           oi.needs_csum = false;
-           oi.protocol = net::ip_protocol_num::udp;
-           pkt.set_offload_info(oi);
-
-           auto iph = pkt.prepend_header<net::ip_hdr>();
-           iph->ihl = sizeof(*iph) / 4;
-           iph->ver = 4;
-           iph->dscp = 0;
-           iph->ecn = 0;
-           iph->len = pkt.len();
-           iph->id = 0;
-           iph->frag = 0;
-           iph->ttl = 64;
-           iph->ip_proto = (uint8_t)net::ip_protocol_num::udp;
-           iph->csum = 0;
-           iph->src_ip = net::ipv4_address(ipv4_src_addr.ip);
-           iph->dst_ip = net::ipv4_address(ipv4_dst_addr.ip);
-           *iph = net::hton(*iph);
-           net::checksummer ip_csum;
-           ip_csum.sum(reinterpret_cast<char*>(iph), sizeof(*iph));
-           iph->csum = csum.get();
-
-           auto eh = pkt.prepend_header<net::eth_hdr>();
-           net::ethernet_address eth_src{0x52, 0x54, 0x00, 0xfe, 0x22, 0x11};
-           net::ethernet_address eth_dst{0x52, 0x54, 0x00, 0xfe, 0x22, 0x42};
-           eh->dst_mac = eth_dst;
-           eh->src_mac = eth_src;
-           eh->eth_proto = uint16_t(net::eth_protocol_num::ipv4);
-           *eh = net::hton(*eh);
+           auto pkt = build_pkt("hello\n");
 
            if(qp->peek_size() < 1024){
                qp->proxy_send(std::move(pkt));
@@ -112,6 +66,55 @@ struct stats_timer {
     }
 private:
     timer<> _stats_timer;
+    net::packet build_pkt(const char* buf){
+        ipv4_addr ipv4_src_addr("10.1.2.4:666");
+        ipv4_addr ipv4_dst_addr("10.1.2.4:666");
+        auto pkt = net::packet::from_static_data(buf, strlen(buf));
+
+        auto hdr = pkt.prepend_header<net::udp_hdr>();
+        hdr->src_port = ipv4_src_addr.port;
+        hdr->dst_port = ipv4_dst_addr.port;
+        hdr->len = pkt.len();
+        *hdr = net::hton(*hdr);
+
+        net::checksummer csum;
+        net::ipv4_traits::udp_pseudo_header_checksum(csum, ipv4_src_addr, ipv4_dst_addr, pkt.len());
+        csum.sum(pkt);
+        hdr->cksum = csum.get();
+
+        net::offload_info oi;
+        oi.needs_csum = false;
+        oi.protocol = net::ip_protocol_num::udp;
+        pkt.set_offload_info(oi);
+
+        auto iph = pkt.prepend_header<net::ip_hdr>();
+        iph->ihl = sizeof(*iph) / 4;
+        iph->ver = 4;
+        iph->dscp = 0;
+        iph->ecn = 0;
+        iph->len = pkt.len();
+        iph->id = 0;
+        iph->frag = 0;
+        iph->ttl = 64;
+        iph->ip_proto = (uint8_t)net::ip_protocol_num::udp;
+        iph->csum = 0;
+        iph->src_ip = net::ipv4_address(ipv4_src_addr.ip);
+        iph->dst_ip = net::ipv4_address(ipv4_dst_addr.ip);
+        *iph = net::hton(*iph);
+        net::checksummer ip_csum;
+        ip_csum.sum(reinterpret_cast<char*>(iph), sizeof(*iph));
+        iph->csum = csum.get();
+
+        auto eh = pkt.prepend_header<net::eth_hdr>();
+        net::ethernet_address eth_src{0x52, 0x54, 0x00, 0xfe, 0x22, 0x11};
+        net::ethernet_address eth_dst{0x52, 0x54, 0x00, 0xfe, 0x22, 0x42};
+        eh->dst_mac = eth_dst;
+        eh->src_mac = eth_src;
+        eh->eth_proto = uint16_t(net::eth_protocol_num::ipv4);
+        *eh = net::hton(*eh);
+
+        return pkt;
+    }
 };
 
 
@@ -143,7 +146,7 @@ int main(int ac, char** av) {
                    }
                    cpu_weights[qid] = opts["hw-queue-weight"].as<float>();
                    qp->configure_proxies(cpu_weights);
-                   qp->force_register_pkt_provider();
+                   qp->force_register_proxy_pkt_provider();
                    sdev->set_local_queue(std::move(qp));
                } else {
                    abort();
