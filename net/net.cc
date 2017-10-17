@@ -60,9 +60,6 @@ namespace net {
 inline
 bool qp::poll_tx() {
     if (_tx_packetq.size() < 16) {
-        if(_pkt_providers.size()>0){
-            printf("There more than 1 pkt providers\n");
-        }
         // refill send queue from upper layers
         uint32_t work;
         do {
