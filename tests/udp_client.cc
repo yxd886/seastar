@@ -57,7 +57,7 @@ public:
         _stats_timer.arm_periodic(1s);
 
         keep_doing([this, server_addr] {
-            for(auto i = 0; i<2; i++){
+            for(auto i = 0; i<15; i++){
                 _chan.send(server_addr, "hello!\n")
                    .then_wrapped([this] (auto&& f) {
                        try {
