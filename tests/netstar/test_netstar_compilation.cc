@@ -25,6 +25,11 @@
 #include "core/distributed.hh"
 #include "netstar/netstar_dpdk_device.hh"
 #include "net/udp.hh"
+#include "net/ip_checksum.hh"
+#include "net/ip.hh"
+#include "net/net.hh"
+#include "net/packet.hh"
+#include "net/byteorder.hh"
 
 using namespace seastar;
 using namespace std::chrono_literals;
@@ -81,7 +86,7 @@ struct stats_timer {
            iph->csum = 0;
            iph->src_ip = ipv4_src_addr.ip;
            iph->dst_ip = ipv4_dst_addr.ip;
-           *iph = hton(*iph);
+           *iph = net::hton(*iph);
            net::checksummer ip_csum;
            ip_csum.sum(reinterpret_cast<char*>(iph), sizeof(*iph));
            iph->csum = csum.get();
@@ -92,7 +97,7 @@ struct stats_timer {
            eh->dst_mac = eth_dst;
            eh->src_mac = eth_src;
            eh->eth_proto = uint16_t(net::eth_protocol_num::ipv4);
-           *eh = hton(*eh);
+           *eh = net::hton(*eh);
 
            if(qp->peek_size() < 1024){
                qp->proxy_send(std::move(pkt));
