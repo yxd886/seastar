@@ -113,6 +113,8 @@ private:
         eh->eth_proto = uint16_t(net::eth_protocol_num::ipv4);
         *eh = net::hton(*eh);
 
+        pkt.linearize();
+        assert(pkt.nr_frags() == 1);
         return pkt;
     }
 };
