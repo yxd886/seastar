@@ -118,6 +118,7 @@ private:
 
         pkt.linearize();
         std::cout<< "pkt.nr_framgs() = " << pkt.nr_frags() <<std::endl;
+        std::cout<<"pkt.len() = "<< pkt.len() <<std::endl;
         assert(pkt.nr_frags() == 1);
         return pkt;
     }
