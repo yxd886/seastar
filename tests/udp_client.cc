@@ -79,13 +79,15 @@ public:
 namespace bpo = boost::program_options;
 
 int main(int ac, char ** av) {
-    client _client(1);
+    client _client1(1);
+    client _client2(2);
     app_template app;
     app.add_options()
         ("server", bpo::value<std::string>(), "Server address")
         ;
-    return app.run_deprecated(ac, av, [&_client, &app] {
+    return app.run_deprecated(ac, av, [&_client1, &_client2, &app] {
         auto&& config = app.configuration();
-        _client.start(config["server"].as<std::string>());
+        _client1.start(config["server"].as<std::string>());
+        _client2.start(config["server"].as<std::string>());
     });
 }
