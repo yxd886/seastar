@@ -32,7 +32,7 @@ struct stats_timer {
     uint64_t n_sent {};
     uint64_t n_received {};
     uint64_t n_failed {};
-    void start() {
+    void start(net::qp* qp) {
         _stats_timer.set_callback([this] {
             std::cout << "Out: " << n_sent << " pps, \t";
             std::cout << "Err: " << n_failed << " pps, \t";
@@ -67,6 +67,7 @@ int main(int ac, char** av) {
                if (qid < sdev->hw_queues_count()) {
                    auto qp = sdev->init_local_queue(opts, qid);
                    if(qid == 0){
+                       printf("fst_qp is set\n");
                        fst_qp = qp.get();
                    }
                    std::map<unsigned, float> cpu_weights;
@@ -84,10 +85,10 @@ int main(int ac, char** av) {
            });
        }
 
-       sem->wait(smp::count).then([opts, sdev, &timer] {
-           sdev->link_ready().then([opts, sdev, &timer] {
+       sem->wait(smp::count).then([opts, sdev, &timer, &fst_qp] {
+           sdev->link_ready().then([opts, sdev, &timer, &fst_qp] {
                printf("Create device 0\n");
-               timer.start();
+               timer.start(fst_qp);
            });
        });
     });
