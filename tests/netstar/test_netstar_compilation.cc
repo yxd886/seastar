@@ -26,6 +26,27 @@
 #include "netstar/netstar_dpdk_device.hh"
 
 using namespace seastar;
+using namespace std::chrono_literals;
+
+struct stats_timer {
+    uint64_t n_sent {};
+    uint64_t n_received {};
+    uint64_t n_failed {};
+    void start() {
+        _stats_timer.set_callback([this] {
+            std::cout << "Out: " << n_sent << " pps, \t";
+            std::cout << "Err: " << n_failed << " pps, \t";
+            std::cout << "In: " << n_received << " pps" << std::endl;
+            n_sent = 0;
+            n_received = 0;
+            n_failed = 0;
+        });
+        _stats_timer.arm_periodic(1s);
+    }
+private:
+    timer<> _stats_timer;
+};
+
 
 int main(int ac, char** av) {
     app_template app;
