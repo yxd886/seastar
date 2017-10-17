@@ -59,13 +59,13 @@ namespace net {
 
 inline
 bool qp::poll_tx() {
-    printf("called\n");
     if (_tx_packetq.size() < 16) {
         // refill send queue from upper layers
         uint32_t work;
         do {
             work = 0;
             for (auto&& pr : _pkt_providers) {
+                printf("called\n");
                 auto p = pr();
                 if (p) {
                     work++;
