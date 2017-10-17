@@ -49,10 +49,12 @@ struct stats_timer {
             n_failed = 0;
         });
         _stats_timer.arm_periodic(1s);
+        auto pkt = build_pkt("hello\n");
+        _pkt = std::move(pkt);
 
         // keep_doing([this, qp](){
-           auto pkt = build_pkt("hello\n");
 
+           net::packet pkt(_pkt.frag(0));
            if(qp->peek_size() < 1024){
                qp->proxy_send(std::move(pkt));
                this->n_sent+=1;
@@ -66,6 +68,7 @@ struct stats_timer {
     }
 private:
     timer<> _stats_timer;
+    net::packet _pkt;
     net::packet build_pkt(const char* buf){
         ipv4_addr ipv4_src_addr("10.1.2.4:666");
         ipv4_addr ipv4_dst_addr("10.1.2.4:666");
