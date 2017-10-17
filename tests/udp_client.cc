@@ -35,13 +35,18 @@ private:
     uint64_t n_received {};
     uint64_t n_failed {};
     timer<> _stats_timer;
+    int _id;
 public:
+    client(int id){
+        _id = id;
+    }
     void start(ipv4_addr server_addr) {
         std::cout << "Sending to " << server_addr << std::endl;
 
         _chan = engine().net().make_udp_channel();
 
         _stats_timer.set_callback([this] {
+            std::cout << "Client: " << _id << ", \t";
             std::cout << "Out: " << n_sent << " pps, \t";
             std::cout << "Err: " << n_failed << " pps, \t";
             std::cout << "In: " << n_received << " pps" << std::endl;
