@@ -90,12 +90,17 @@ public:
     future<> stop(){
         return make_ready_future<>();
     }
+
+    uint16_t port_id(){
+        return _port_id;
+    }
 };
 
 class ports_env{
     std::vector<per_core_objs<port>> _ports_vec;
     std::vector<std::unique_ptr<net::device>> _devs_vec;
     std::vector<uint16_t> _port_ids_vec;
+    std::vector<std::vector<bool>> _core_book_keeping;
 
 public:
     explicit ports_env(){}
@@ -110,25 +115,37 @@ public:
                       uint16_t queue_num,
                       std::function<std::unique_ptr<net::device>(uint16_t port_id,
                                                                  uint16_t queue_num)> fn){
-        if(!port_check(opts, port_id)){
-            return make_exception_future<>(std::runtime_error("Fail port check.\n"));
-        }
+        assert(port_check(opts, port_id));
 
         _ports_vec.emplace_back();
         _devs_vec.push_back(fn(port_id, queue_num));
         _port_ids_vec.push_back(port_id);
+        _core_book_keeping.push_back(std::vector<bool>(smp::count, false));
 
-        auto ports = &(_ports_vec.back());
+        auto& ports = _ports_vec.back();
         auto dev  = _devs_vec.back().get();
 
-        return ports->start(opts, dev, port_id).then([dev]{
+        return ports.start(opts, dev, port_id).then([dev]{
             return dev->link_ready();
         });
     }
-
-    per_core_objs<port>* get_ports(unsigned id){
-        return &(_ports_vec.at(id));
+    per_core_objs<port>& get_ports(unsigned id){
+        assert(id<_ports_vec.size());
+        return std::ref(_ports_vec[id]);
     }
+    size_t count(){
+        return _ports_vec.size();
+    }
+
+    bool check_assigned_to_core(uint16_t port_id, uint16_t core_id){
+        assert(port_id<_core_book_keeping.size() && core_id<smp::count);
+        return _core_book_keeping[port_id][core_id];
+    }
+    void set_port_on_core(uint16_t port_id, uint16_t core_id){
+        assert(port_id<_core_book_keeping.size() && core_id<smp::count);
+        _core_book_keeping[port_id][core_id] = true;
+    }
+
 
 private:
     bool port_check(boost::program_options::variables_map& opts, uint16_t port_id){

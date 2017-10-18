@@ -445,3 +445,11 @@ tcp<InetTraits>::tcp(inet_type& inet)
   * The tcp/ip stack calls `tcp::add_connected_tcb` to add a newly connected `tcb` to the `_q`, then invokes corresponding processing.
 
 * For the `listener::accept()`, it should return a `future<connection>`. Inside it, we got to first check whether the `_q`. If the `_q` is not empty, we will got a ready future, then the corresponding connection is dequed and returned. Otherwise, we have a pending future. Only when the `_q` is enqueued a `tcb`, can everything continue.
+
+# Some tips when run seastar on bare-metal server
+
+* To run seastar in a vm, we must set intel_iommu=on
+
+* To run seastar on bare-metal server, we better set intel_iommu=off, otherwise there might be a wired bug.
+
+* It seems that the so-called hack performed by seastar will not bring any performance gain, so we'll never use it.
