@@ -248,6 +248,20 @@ public:
     void proxy_send(packet p) {
         _proxy_packetq.push_back(std::move(p));
     }
+    /*
+     * patch by djp
+     * add force_register_proxy_pkt_provider(), used for testing.
+     */
+    void force_register_proxy_pkt_provider(){
+        register_packet_provider([this] {
+            std::experimental::optional<packet> p;
+            if (!_proxy_packetq.empty()) {
+                p = std::move(_proxy_packetq.front());
+                _proxy_packetq.pop_front();
+            }
+            return p;
+        });
+    }
     void register_packet_provider(packet_provider_type func) {
         _pkt_providers.push_back(std::move(func));
     }
