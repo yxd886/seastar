@@ -116,8 +116,7 @@ public:
                       "invoke_on_all()'s func must return void or future<>");
         return parallel_for_each(boost::irange<unsigned>(0, _reactor_saved_objects.size()), [this, &func] (unsigned c) {
             return smp::submit_to(c, [this, func] {
-                auto& local_obj = this->get_obj(engine().cpu_id());
-                return func(local_obj);
+                return func(this->local_obj());
             });
         });
     }
@@ -126,8 +125,7 @@ public:
     future<> invoke_on_all(future<> (T::*func)(Args...), Args... args){
         return parallel_for_each(boost::irange<unsigned>(0, _reactor_saved_objects.size()), [this, func, args...](unsigned c){
             return smp::submit_to(c, [this, func, args...]{
-                auto& local_obj = this->get_obj(engine().cpu_id());
-                return ((local_obj).*func)(args...);
+                return ((this->local_obj()).*func)(args...);
             });
         });
     }
@@ -136,8 +134,7 @@ public:
     future<> invoke_on_all(void (T::*func)(Args...), Args... args){
         return parallel_for_each(boost::irange<unsigned>(0, _reactor_saved_objects.size()), [this, func, args...](unsigned c){
             return smp::submit_to(c, [this, func, args...]{
-                auto& local_obj = this->get_obj(engine().cpu_id());
-                return ((local_obj).*func)(args...);
+                return ((this->local_obj()).*func)(args...);
             });
         });
     }
@@ -155,8 +152,7 @@ public:
         }
 
         return smp::submit_to(core, [this, func] {
-            auto& local_obj = this->get_obj(engine().cpu_id());
-            return func(local_obj);
+            return func(this->local_obj());
         });
     }
 
@@ -172,7 +168,7 @@ public:
         }
 
         return smp::submit_to(core, [this, func, args = std::make_tuple(std::forward<Args>(args)...)] () mutable {
-            auto& local_obj = this->get_obj(engine().cpu_id());
+            auto& local_obj = this->local_obj();
             return futurator::apply(std::mem_fn(func), std::tuple_cat(std::make_tuple<>(&local_obj), std::move(args)));
         });
     }
