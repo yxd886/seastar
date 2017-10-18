@@ -77,7 +77,6 @@ bool qp::poll_tx() {
         } while (work && _tx_packetq.size() < 128);
     }
     if (!_tx_packetq.empty()) {
-        // printf("Got a packet to send\n");
         _stats.tx.good.update_pkts_bunch(send(_tx_packetq));
         return true;
     }
@@ -184,7 +183,6 @@ void qp::configure_proxies(const std::map<unsigned, float>& cpu_weights) {
     register_packet_provider([this] {
         std::experimental::optional<packet> p;
         if (!_proxy_packetq.empty()) {
-            printf("Get a packet from proxy packet queuen\n");
             p = std::move(_proxy_packetq.front());
             _proxy_packetq.pop_front();
         }
