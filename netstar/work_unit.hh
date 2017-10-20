@@ -72,7 +72,7 @@ public:
         return (*_all_ports.at(port_id)).send(std::move(pkt));
     }
 
-    /*inline future<> forward_to(unsigned dst_core, net::packet pkt){
+    inline future<> forward_to(unsigned dst_core, net::packet pkt){
         auto src_core = engine().cpu_id();
         auto& peer = _all_objs->get_obj(dst_core);
         _send_queue_length += 1;
@@ -80,7 +80,7 @@ public:
         smp::submit_to(dst_core, [this, &peer, src_core, pkt = std::move(pkt)] () mutable {
            peer.receive_forwarded(src_core, pkt.free_on_cpu(src_core, [this]{_send_queue_length -= 1;}));
         });
-    }*/
+    }
 };
 
 } // namespace netstar
