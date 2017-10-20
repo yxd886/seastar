@@ -12,12 +12,12 @@ class work_unit{
     static_assert(std::is_base_of<work_unit<T>, T>::value,
                   "T does not inherit from work_unit<T>\n");
     using sub = subscription<net::packet>;
-    using optional = std::experimental::optional;
+    using sub_option = std::experimental::optional<sub>;
 
     unsigned _send_queue_length;
     per_core_objs<T>* _all_objs;
     std::vector<port*> _all_ports;
-    std::vector<optional<sub>> _all_subs;
+    std::vector<sub_option> _all_subs;
 protected:
     std::vector<port*>& ports(){
         return std::ref(_all_ports);
