@@ -35,6 +35,7 @@
 
 using namespace seastar;
 using namespace netstar;
+using namespace std::chrono_literals;
 
 class simple_send_work_unit : public work_unit<simple_send_work_unit>{
 public:
