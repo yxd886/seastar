@@ -65,8 +65,6 @@ public:
 
         keep_doing([this](){
            net::packet pkt(_pkt.frag(0));
-           auto len = pkt.len();
-
            return this->send_from_port(0, std::move(pkt));
         });
     }
