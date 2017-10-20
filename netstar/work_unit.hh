@@ -34,8 +34,7 @@ protected:
         printf("WARNING: Siliently drop the received forwarded packet.\n");
     }
 
-    explicit work_unit(per_core_objs<T*>* objs):
-            _send_queue_length(0), _all_objs(objs) {}
+    explicit work_unit(per_core_objs<T*>* objs): _all_objs(objs) {}
 public:
     void configure_ports(ports_env& env, unsigned first_pos, unsigned last_pos){
         assert(first_pos<last_pos && last_pos<env.count() && _all_ports.size() == 0);

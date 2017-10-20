@@ -25,9 +25,16 @@
 #include "core/distributed.hh"
 #include "netstar/netstar_dpdk_device.hh"
 #include "netstar/port.hh"
+#include "work_unit.hh"
 
 using namespace seastar;
 using namespace netstar;
+
+class simple_send_work_unit : public work_unit<simple_send_work_unit>{
+public:
+    explicit simple_send_work_unit(per_core_objs<simple_send_work_unit>* all_objs) :
+        work_unit<simple_send_work_unit>(all_objs) {}
+};
 
 int main(int ac, char** av) {
     app_template app;
