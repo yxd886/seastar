@@ -28,9 +28,11 @@ protected:
 
     virtual future<> receive_from_port(uint16_t port_id, net::packet pkt) {
         printf("WARNING: Siliently drop the received packet.\n");
+        return make_ready_future<>();
     }
     virtual future<> receive_forwarded(unsigned from_core, net::packet pkt) {
         printf("WARNING: Siliently drop the received forwarded packet.\n");
+        return make_ready_future<>();
     }
 
     explicit work_unit(per_core_objs<T*>* objs):
