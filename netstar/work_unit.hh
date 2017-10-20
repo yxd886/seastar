@@ -14,10 +14,10 @@ class work_unit{
     using sub = subscription<net::packet>;
     using sub_option = std::experimental::optional<sub>;
 
-    unsigned _send_queue_length;
     per_core_objs<T>* _all_objs;
     std::vector<port*> _all_ports;
     std::vector<sub_option> _all_subs;
+    semaphore _send_queue_length = {100};
 protected:
     std::vector<port*>& ports(){
         return std::ref(_all_ports);
@@ -73,12 +73,13 @@ public:
     }
 
     inline future<> forward_to(unsigned dst_core, net::packet pkt){
-        auto src_core = engine().cpu_id();
-        auto& peer = _all_objs->get_obj(dst_core);
-        _send_queue_length += 1;
+        return _send_queue_length.wait(1).then([this, dst_core, pkt = std::move(pkt)] () mutable{
+           auto src_core = engine().cpu_id();
+           auto& peer = _all_objs->get_obj(dst_core);
 
-        return smp::submit_to(dst_core, [this, &peer, src_core, pkt = std::move(pkt)] () mutable {
-           peer.receive_forwarded(src_core, pkt.free_on_cpu(src_core, [this]{_send_queue_length -= 1;}));
+           smp::submit_to(dst_core, [this, &peer, src_core, pkt = std::move(pkt)] () mutable {
+               peer.receive_forwarded(src_core, pkt.free_on_cpu(src_core, [this]{ _send_queue_length.signal(1);}));
+           });
         });
     }
 };
