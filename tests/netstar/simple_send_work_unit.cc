@@ -152,6 +152,10 @@ int main(int ac, char** av) {
             return all_objs.invoke_on_all([&all_ports](simple_send_work_unit& wu){
                 wu.configure_ports(all_ports, 0, 1);
             });
+        }).then([&all_objs]{
+            return all_objs.invoke_on(0, [](simple_send_work_unit& wu){
+                wu.send_from_port_0();
+            });
         });
     });
 }
