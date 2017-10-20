@@ -62,9 +62,8 @@ int main(int ac, char** av) {
             });
         }).then([&all_objs]{
             return all_objs.start(&all_objs);
-        }).then([]{
-            printf("Initialization finish\n");
-            engine().exit(0);
+        }).then([&all_ports, &all_objs]{
+            return all_objs.invoke_on_all(&simple_send_work_unit::configure_ports, std::ref(all_ports), 0, 1);
         });
     });
 }
