@@ -35,6 +35,11 @@ public:
     explicit simple_send_work_unit(per_core_objs<simple_send_work_unit>* all_objs) :
         work_unit<simple_send_work_unit>(all_objs) {}
 
+    simple_send_work_unit(const simple_send_work_unit& other) = delete;
+    simple_send_work_unit(simple_send_work_unit&& other)  = delete;
+    simple_send_work_unit& operator=(const simple_send_work_unit& other) = delete;
+    simple_send_work_unit& operator=(simple_send_work_unit&& other) = delete;
+
     future<> stop(){
         return make_ready_future<>();
     }
