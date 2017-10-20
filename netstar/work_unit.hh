@@ -70,7 +70,6 @@ public:
     inline future<> send_from_port(uint16_t port_id, net::packet pkt){
         return (*_all_ports.at(port_id)).send(std::move(pkt));
     }
-
     inline future<> forward_to(unsigned dst_core, net::packet pkt){
         return _send_queue_length.wait(1).then([this, dst_core, pkt = std::move(pkt)] () mutable{
            auto src_core = engine().cpu_id();

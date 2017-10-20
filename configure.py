@@ -270,6 +270,7 @@ tests = [
     'tests/netstar/create_two_ports',
     'tests/netstar/per_core_objs_invoke_on_some',
     'tests/netstar/per_core_objs_invoke_on_all',
+    'tests/netstar/simple_send_work_unit',
     ]
 
 apps = [
@@ -502,6 +503,7 @@ deps = {
     'tests/netstar/create_two_ports': ['tests/netstar/create_two_ports.cc'] + core + libnet + libnetstar,
     'tests/netstar/per_core_objs_invoke_on_some': ['tests/netstar/per_core_objs_invoke_on_some.cc'] + core + libnet + libnetstar,
     'tests/netstar/per_core_objs_invoke_on_all': ['tests/netstar/per_core_objs_invoke_on_all.cc'] + core + libnet + libnetstar,
+    'tests/netstar/simple_send_work_unit': ['tests/netstar/simple_send_work_unit.cc'] + core + libnet + libnetstar,
 }
 
 boost_tests = [
