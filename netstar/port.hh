@@ -8,6 +8,7 @@
 #include "core/stream.hh"
 #include "net/proxy.hh"
 #include "per_core_objs.hh"
+#include "core/semaphore.hh"
 
 using namespace seastar;
 
@@ -20,6 +21,7 @@ class port{
     net::device* _dev;
     std::unique_ptr<net::qp> _qp;
     circular_buffer<net::packet> _sendq;
+    semaphore _queue_space = {212992};
 public:
     static constexpr size_t max_sendq_length = 100;
 
@@ -77,11 +79,14 @@ public:
             return make_ready_future<>();
         }
         else{
-            _sendq.push_back(std::move(p));
-            return make_ready_future<>();
+            auto len = p.len();
+            p = net::packet(std::move(p), make_deleter([this, len] { complete_send(len); }));
+
+            return _queue_space.wait(len).then([this, p = std::move(p)] () mutable {
+                _sendq.push_back(std::move(p));
+            });
         }
     }
-
     subscription<net::packet>
     receive(std::function<future<> (net::packet)> next_packet) {
         return _dev->receive(std::move(next_packet));
@@ -93,6 +98,10 @@ public:
 
     uint16_t port_id(){
         return _port_id;
+    }
+private:
+    inline void complete_send(unsigned len){
+        _queue_space.signal(len);
     }
 };
 
@@ -139,10 +148,12 @@ public:
 
     bool check_assigned_to_core(uint16_t port_id, uint16_t core_id){
         assert(port_id<_core_book_keeping.size() && core_id<smp::count);
+
         return _core_book_keeping[port_id][core_id];
     }
     void set_port_on_core(uint16_t port_id, uint16_t core_id){
         assert(port_id<_core_book_keeping.size() && core_id<smp::count);
+
         _core_book_keeping[port_id][core_id] = true;
     }
 
