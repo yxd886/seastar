@@ -80,7 +80,7 @@ public:
         }
         else{
             auto len = p.len();
-            p = net::packet(std::move(p), make_deleter([this, len] { complete_send(len); }));
+            p = net::packet(std::move(p), make_deleter([this, len] { _queue_space.signal(len); }));
 
             return _queue_space.wait(len).then([this, p = std::move(p)] () mutable {
                 _sendq.push_back(std::move(p));
@@ -98,10 +98,6 @@ public:
 
     uint16_t port_id(){
         return _port_id;
-    }
-private:
-    inline void complete_send(unsigned len){
-        _queue_space.signal(len);
     }
 };
 
