@@ -23,8 +23,6 @@ class port{
     circular_buffer<net::packet> _sendq;
     semaphore _queue_space = {212992};
 public:
-    static constexpr size_t max_sendq_length = 100;
-
     explicit port(boost::program_options::variables_map opts,
                           net::device* dev,
                           uint16_t port_id) :
@@ -72,8 +70,7 @@ public:
     port& operator=(port&& other) = delete;
 
     inline future<> send(net::packet p){
-        if(_qid >= _dev->hw_queues_count() ||
-           _sendq.size() >= max_sendq_length){
+        if(_qid >= _dev->hw_queues_count()){
             printf("WARNING: Send error! Siliently drop the packets\n");
             _failed_send_count += 1;
             return make_ready_future<>();
