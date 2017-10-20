@@ -9,8 +9,6 @@ namespace netstar{
 
 template<typename T>
 class work_unit{
-    // static_assert(std::is_base_of<work_unit<T>, T>::value,
-    //               "T does not inherit from work_unit<T>\n");
     using sub = subscription<net::packet>;
     using sub_option = std::experimental::optional<sub>;
 

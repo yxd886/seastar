@@ -39,8 +39,9 @@ public:
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
+    per_core_objs<simple_send_work_unit> all_objs;
 
-    return app.run_deprecated(ac, av, [&app, &all_ports] {
+    return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs] {
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 0, smp::count,
             [](uint16_t port_id, uint16_t queue_num){
@@ -50,8 +51,10 @@ int main(int ac, char** av) {
                 [](uint16_t port_id, uint16_t queue_num){
                     return create_netstar_dpdk_net_device(port_id, queue_num);
             });
+        }).then([&all_objs]{
+            return all_objs.start(&all_objs);
         }).then([]{
-            printf("All the devices are successfully created\n");
+            printf("Initialization finish\n");
             engine().exit(0);
         });
     });
