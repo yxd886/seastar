@@ -32,6 +32,8 @@ using namespace netstar;
 
 class simple_send_work_unit;
 
+class work_unit<simple_send_work_unit>;
+
 class simple_send_work_unit : public work_unit<simple_send_work_unit>{
 public:
     explicit simple_send_work_unit(per_core_objs<simple_send_work_unit>* all_objs) :
