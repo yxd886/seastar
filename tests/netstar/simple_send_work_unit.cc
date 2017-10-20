@@ -64,11 +64,15 @@ public:
         _pkt = build_pkt(
                 "aaaaaaaaaaaaaaaaaaaaa");
 
-        keep_doing([this](){
-           net::packet pkt(_pkt.frag(0));
-           return this->send_from_port(0, std::move(pkt)).then([this]{
-               _n_sent+=1;
-           });
+        //keep_doing([this](){
+           // net::packet pkt(_pkt.frag(0));
+           // return this->send_from_port(0, std::move(pkt)).then([this]{
+           //     _n_sent+=1;
+           // });
+        //});
+        net::packet pkt(_pkt.frag(0));
+        this->send_from_port(0, std::move(pkt)).then([this]{
+            _n_sent+=1;
         });
     }
 
