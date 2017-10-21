@@ -82,7 +82,7 @@ public:
         auto len = p.len();
         return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
             // auto qs = _queue_space;
-            p = net::packet(std::move(p), make_deleter([this, len] { _queue_space->signal(len); }));
+            p = net::packet(std::move(p), make_deleter([this, len] { _queue_space.signal(len); }));
             _sendq.push_back(std::move(p));
         });
     }
