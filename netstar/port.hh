@@ -76,8 +76,8 @@ public:
             return make_ready_future<>();
         }
         else{
-            return _queue_space.wait(p.len()).then([this, p = std::move(p)] () mutable {
-                auto len = p.len();
+            auto len = p.len();
+            return _queue_space.wait(len).then([this, len, p = std::move(p)] () mutable {
                 p = net::packet(std::move(p), make_deleter([this, len] { _queue_space.signal(len); }));
                 _sendq.push_back(std::move(p));
             });
