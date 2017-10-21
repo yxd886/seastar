@@ -45,6 +45,8 @@ If we accidentally remove the last `sdev` in the last lambda, a segfault happens
 
 * So if we encounter segfault, we should consider whether some objects are accidentally released before we call the continuation.
 
+* After associating a continuation with a promise, when the promise is deconstructed, the variables captured by the continuation will also be deconstructed. So make sure that when these variables are deconstructed, they do not mess the code up. Reason about the life time of the captured variables carefully.
+
 My personal hack notes
 ----------------------
 
