@@ -21,7 +21,7 @@ class port{
     net::device* _dev;
     std::unique_ptr<net::qp> _qp;
     circular_buffer<net::packet> _sendq;
-    semaphore _queue_space = {212992};
+    std::unique_ptr<semaphore> _queue_space;
 public:
     explicit port(boost::program_options::variables_map opts,
                           net::device* dev,
@@ -61,9 +61,14 @@ public:
                 return p;
             });
         }
+
+        _queue_space = std::make_unique<semaphore>(212992);
     }
 
-    ~port(){}
+    ~port(){
+        engine().at_destroy([qs = std::move(_queue_space){}]);
+    }
+
     port(const port& other) = delete;
     port(port&& other)  = delete;
     port& operator=(const port& other) = delete;
@@ -77,8 +82,8 @@ public:
         }
         else{
             auto len = p.len();
-            return _queue_space.wait(len).then([this, len, p = std::move(p)] () mutable {
-                p = net::packet(std::move(p), make_deleter([this, len] { _queue_space.signal(len); }));
+            return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
+                p = net::packet(std::move(p), make_deleter([this, len] { _queue_space->signal(len); }));
                 _sendq.push_back(std::move(p));
             });
         }
