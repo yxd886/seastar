@@ -66,7 +66,7 @@ public:
     }
 
     ~port(){
-        engine().at_destroy([qs = std::move(_queue_space){}]);
+        engine().at_destroy([qs = std::move(_queue_space)]{});
     }
 
     port(const port& other) = delete;
