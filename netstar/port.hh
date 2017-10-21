@@ -9,6 +9,7 @@
 #include "net/proxy.hh"
 #include "per_core_objs.hh"
 #include "core/semaphore.hh"
+#include "core/shared_ptr.hh"
 
 using namespace seastar;
 
@@ -21,7 +22,7 @@ class port{
     net::device* _dev;
     std::unique_ptr<net::qp> _qp;
     circular_buffer<net::packet> _sendq;
-    std::unique_ptr<semaphore> _queue_space;
+    lw_shared_ptr<semaphore> _queue_space;
 public:
     explicit port(boost::program_options::variables_map opts,
                           net::device* dev,
@@ -62,11 +63,12 @@ public:
             });
         }
 
-        _queue_space = std::make_unique<semaphore>(212992);
+        _queue_space = make_lw_shared<semaphore>(212992);
     }
 
     ~port(){
-        engine().at_destroy([qs = std::move(_queue_space)]{});
+        // auto queue_space_sptr = _queue_space;
+        // engine().at_destroy([queue_space_sptr = std::move(queue_space_sptr)]{});
     }
 
     port(const port& other) = delete;
@@ -83,7 +85,8 @@ public:
         else{
             auto len = p.len();
             return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
-                p = net::packet(std::move(p), make_deleter([this, len] { _queue_space->signal(len); }));
+                auto qs = _queue_space;
+                p = net::packet(std::move(p), make_deleter([qs = std::move(qs), len] { qs->signal(len); }));
                 _sendq.push_back(std::move(p));
             });
         }
