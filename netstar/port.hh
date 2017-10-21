@@ -22,7 +22,8 @@ class port{
     net::device* _dev;
     std::unique_ptr<net::qp> _qp;
     circular_buffer<net::packet> _sendq;
-    lw_shared_ptr<semaphore> _queue_space;
+     // lw_shared_ptr<semaphore> _queue_space;
+    semaphore _queue_space = {212992};
 public:
     explicit port(boost::program_options::variables_map opts,
                           net::device* dev,
@@ -63,7 +64,7 @@ public:
             });
         }
 
-        _queue_space = make_lw_shared<semaphore>(212992);
+        // _queue_space = make_lw_shared<semaphore>(212992);
     }
 
     ~port(){
@@ -77,19 +78,13 @@ public:
     port& operator=(port&& other) = delete;
 
     inline future<> send(net::packet p){
-        if(_qid >= _dev->hw_queues_count()){
-            printf("WARNING: Send error! Siliently drop the packets\n");
-            _failed_send_count += 1;
-            return make_ready_future<>();
-        }
-        else{
-            auto len = p.len();
-            return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
-                auto qs = _queue_space;
-                p = net::packet(std::move(p), make_deleter([qs = std::move(qs), len] { qs->signal(len); }));
-                _sendq.push_back(std::move(p));
-            });
-        }
+        assert(_qid < _dev->hw_queues_count());
+        auto len = p.len();
+        return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
+            // auto qs = _queue_space;
+            p = net::packet(std::move(p), make_deleter([this, len] { _queue_space->signal(len); }));
+            _sendq.push_back(std::move(p));
+        });
     }
     subscription<net::packet>
     receive(std::function<future<> (net::packet)> next_packet) {
