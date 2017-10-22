@@ -53,6 +53,7 @@ public:
 
     void send_from_port_0(){
         _stats_timer.set_callback([this] {
+            std::cout << "Thread: " << engine().cpu_id() << ", \t";
             std::cout << "Out: " << _n_sent << " pps, \t";
             std::cout << "Err: " << _n_failed << " pps, \t";
             std::cout << "In: " << _n_received << " pps" << std::endl;
