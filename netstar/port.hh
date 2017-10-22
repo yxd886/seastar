@@ -71,7 +71,7 @@ public:
 
     ~port(){
         // auto queue_space_sptr = _queue_space;
-        // engine().at_destroy([queue_space_sptr = std::move(queue_space_sptr)]{});
+        engine().at_destroy([queue_space_sptr = std::move(_queue_space)]{});
         // _sendq.~circular_buffer();
         // _qp.~unique_ptr();
         // _queue_space.~unique_ptr();
