@@ -22,8 +22,6 @@ class port{
     net::device* _dev;
     std::unique_ptr<net::qp> _qp;
     circular_buffer<net::packet> _sendq;
-    // lw_shared_ptr<semaphore> _queue_space;
-    // semaphore _queue_space = {212992};
     std::unique_ptr<semaphore> _queue_space;
 public:
     explicit port(boost::program_options::variables_map opts,
@@ -65,16 +63,21 @@ public:
             });
         }
 
-        // _queue_space = make_lw_shared<semaphore>(212992);
         _queue_space = std::make_unique<semaphore>(212992);
     }
 
     ~port(){
-        // auto queue_space_sptr = _queue_space;
+        // Extend the life time of _queue_space.
+        // When port is deconstructed, both _sendq and _qp contain some packets with a customized deletor like this:
+        // [qs = _queue_space.get(), len] { qs->signal(len); }.
+        // These packets will also be deconstructed when deconstructing the port.
+        // Therefore we must ensure that _queue_space lives until the port is completely deconstructed.
+        // What we have done here is to move the _queue_space into a fifo, that will be called later after the port.
+        // Because the we use per_core_objs to construct the port, the port is actually placed in a position that
+        // is closer to the head of the fifo. So we guarantee that _queue_space lives until port is fully deconstructed.
+        // However, we do have to ensure that the port is constructed only by per_core_objs, otherwise this hack
+        // doesn't work and abort seastar exit processs.
         engine().at_destroy([queue_space_sptr = std::move(_queue_space)]{});
-        // _sendq.~circular_buffer();
-        // _qp.~unique_ptr();
-        // _queue_space.~unique_ptr();
     }
 
     port(const port& other) = delete;
@@ -86,7 +89,6 @@ public:
         assert(_qid < _dev->hw_queues_count());
         auto len = p.len();
         return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
-            // auto qs = _queue_space;
             p = net::packet(std::move(p), make_deleter([qs = _queue_space.get(), len] { qs->signal(len); }));
             _sendq.push_back(std::move(p));
         });
