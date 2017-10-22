@@ -77,6 +77,7 @@ public:
         // is closer to the head of the fifo. So we guarantee that _queue_space lives until port is fully deconstructed.
         // However, we do have to ensure that the port is constructed only by per_core_objs, otherwise this hack
         // doesn't work and abort seastar exit processs.
+        // BTW: This hack saves about 100000pkts/s send rate, which I think to be important.
         engine().at_destroy([queue_space_sptr = std::move(_queue_space)]{});
     }
 
