@@ -162,6 +162,14 @@ int main(int ac, char** av) {
             return all_objs.invoke_on(1, [](simple_send_work_unit& wu){
                 wu.send_from_port_0();
             });
+        }).then([&all_objs]{
+            return all_objs.invoke_on(2, [](simple_send_work_unit& wu){
+                wu.send_from_port_0();
+            });
+        }).then([&all_objs]{
+            return all_objs.invoke_on(3, [](simple_send_work_unit& wu){
+                wu.send_from_port_0();
+            });
         });
     });
 }
