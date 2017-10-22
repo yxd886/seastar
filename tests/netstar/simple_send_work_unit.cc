@@ -70,10 +70,27 @@ public:
            _n_sent+=1;
            return this->send_from_port(0, std::move(pkt));
         });
-        /*net::packet pkt(_pkt.frag(0));
-        this->send_from_port(0, std::move(pkt)).then([this]{
-            _n_sent+=1;
-        });*/
+    }
+
+    void send_from_port_1(){
+        _stats_timer.set_callback([this] {
+            std::cout << "Thread: " << engine().cpu_id() << ", \t";
+            std::cout << "Out: " << _n_sent << " pps, \t";
+            std::cout << "Err: " << _n_failed << " pps, \t";
+            std::cout << "In: " << _n_received << " pps" << std::endl;
+            _n_sent = 0;
+            _n_received = 0;
+            _n_failed = 0;
+        });
+        _stats_timer.arm_periodic(1s);
+        _pkt = build_pkt(
+                "aaaaaaaaaaaaaaaaaaaaa");
+
+        keep_doing([this](){
+           net::packet pkt(_pkt.frag(0));
+           _n_sent+=1;
+           return this->send_from_port(1, std::move(pkt));
+        });
     }
 
 private:
@@ -169,6 +186,18 @@ int main(int ac, char** av) {
         }).then([&all_objs]{
             return all_objs.invoke_on(3, [](simple_send_work_unit& wu){
                 wu.send_from_port_0();
+            });
+        }).then([&all_objs]{
+            return all_objs.invoke_on(4, [](simple_send_work_unit& wu){
+                wu.send_from_port_1();
+            });
+        }).then([&all_objs]{
+            return all_objs.invoke_on(5, [](simple_send_work_unit& wu){
+                wu.send_from_port_1();
+            });
+        }).then([&all_objs]{
+            return all_objs.invoke_on(6, [](simple_send_work_unit& wu){
+                wu.send_from_port_1();
             });
         });
     });
