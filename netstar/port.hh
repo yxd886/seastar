@@ -22,9 +22,9 @@ class port{
     net::device* _dev;
     std::unique_ptr<net::qp> _qp;
     circular_buffer<net::packet> _sendq;
-     // lw_shared_ptr<semaphore> _queue_space;
+    lw_shared_ptr<semaphore> _queue_space;
     // semaphore _queue_space = {212992};
-    std::unique_ptr<semaphore> _queue_space;
+    // std::unique_ptr<semaphore> _queue_space;
 public:
     explicit port(boost::program_options::variables_map opts,
                           net::device* dev,
@@ -65,16 +65,16 @@ public:
             });
         }
 
-        // _queue_space = make_lw_shared<semaphore>(212992);
-        _queue_space = std::make_unique<semaphore>(212992);
+        _queue_space = make_lw_shared<semaphore>(212992);
+        // _queue_space = std::make_unique<semaphore>(212992);
     }
 
     ~port(){
         // auto queue_space_sptr = _queue_space;
         // engine().at_destroy([queue_space_sptr = std::move(queue_space_sptr)]{});
-        _sendq.~circular_buffer();
-        _qp.~unique_ptr();
-        _queue_space.~unique_ptr();
+        // _sendq.~circular_buffer();
+        // _qp.~unique_ptr();
+        // _queue_space.~unique_ptr();
     }
 
     port(const port& other) = delete;
@@ -87,7 +87,7 @@ public:
         auto len = p.len();
         return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
             // auto qs = _queue_space;
-            p = net::packet(std::move(p), make_deleter([qs = _queue_space.get(), len] { qs->signal(len); }));
+            p = net::packet(std::move(p), make_deleter([qs = _queue_space, len] { qs->signal(len); }));
             _sendq.push_back(std::move(p));
         });
     }
