@@ -85,7 +85,7 @@ public:
     inline future<> send(net::packet p){
         assert(_qid < _dev->hw_queues_count());
         auto len = p.len();
-        return _queue_space.wait(len).then([this, len, p = std::move(p)] () mutable {
+        return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
             // auto qs = _queue_space;
             p = net::packet(std::move(p), make_deleter([qs = _queue_space.get(), len] { qs->signal(len); }));
             _sendq.push_back(std::move(p));
