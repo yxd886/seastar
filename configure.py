@@ -271,6 +271,7 @@ tests = [
     'tests/netstar/per_core_objs_invoke_on_some',
     'tests/netstar/per_core_objs_invoke_on_all',
     'tests/netstar/simple_send_work_unit',
+    'tests/netstar/play_ground.cc'
     ]
 
 apps = [
@@ -509,6 +510,7 @@ deps = {
     'tests/netstar/per_core_objs_invoke_on_some': ['tests/netstar/per_core_objs_invoke_on_some.cc'] + core + libnet + libnetstar,
     'tests/netstar/per_core_objs_invoke_on_all': ['tests/netstar/per_core_objs_invoke_on_all.cc'] + core + libnet + libnetstar,
     'tests/netstar/simple_send_work_unit': ['tests/netstar/simple_send_work_unit.cc'] + core + libnet + libnetstar,
+    'tests/netstar/play_ground': ['tests/netstar/play_ground.cc'] + core + libnet + libnetstar,
 }
 
 boost_tests = [
