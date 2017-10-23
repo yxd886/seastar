@@ -100,7 +100,7 @@ int main(int ac, char** av) {
         assert(b5.buf_len() == sizeof(snd_obj));
         auto& o5 = b5.data<snd_obj>();
         assert(o5.i == 5);
-        assert(o5.j == 5);
+        assert(o5.j == 6);
 
         // test fill in with a smaller object
 
