@@ -341,7 +341,16 @@ libnet = [
 libnetstar = [
     'netstar/netstar_dpdk_device.cc',
     'netstar/port.cc',
+    'netstar/mica/util/config.cc',
+	'netstar/mica/util/cityhash/city_mod.cc',
+	'netstar/mica/util/lcore.cc',
+	'netstar/mica/util/stopwatch.cc',
+	'netstar/mica/util/zipf.cc'
     ]
+    
+micautil = [
+	
+]
 
 core = [
     'core/reactor.cc',
