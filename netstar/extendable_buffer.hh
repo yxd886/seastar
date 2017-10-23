@@ -22,7 +22,7 @@ public:
         _data_len(other._data_len) {
         other._data_len = 0;
     }
-    extendable_buffer& operator=(extendable_buffer& other){
+    extendable_buffer& operator=(extendable_buffer&& other){
         if(this != &other){
             _buffer = std::move(other._buffer);
             _data_len = other._data_len;
