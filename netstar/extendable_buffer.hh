@@ -62,7 +62,7 @@ public:
     // OK, this API is very useful, but extremely dangerous to call.
     // Make sure that you know what is saved in this buffer!!
     template<typename T>
-    T& data(){
+    const T& data(){
         static_assert(std::is_pod<T>::value, "The provided object is not a plain-old-datatype.\n");
         assert(sizeof(T) == _data_len);
 
@@ -70,6 +70,7 @@ public:
         return *obj_ptr;
     }
 
+    // This seems only to be used by test.
     size_t buf_len(){
         return _buffer.size();
     }
