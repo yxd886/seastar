@@ -12,6 +12,7 @@ public:
     explicit extendable_buffer(size_t initial_buf_size) :
         _buffer(initial_buf_size),
         _data_len(0) {}
+    extendable_buffer() : _buffer(), _data_len(0) {}
 
     extendable_buffer(const extendable_buffer& other) = delete;
     extendable_buffer& operator=(const extendable_buffer& other) = delete;
@@ -37,12 +38,31 @@ public:
         std::copy_n(src, size, _buffer.get_write());
         _data_len = size;
     }
+    template<typename T>
+    void fill_data(T& obj){
+        static_assert(std::is_pod<T>::value, "The provided object is not a plain-old-datatype.\n");
+        if(_buffer.size() < sizeof(T)){
+            _buffer = temporary_buffer<char>(sizeof(T));
+        }
+        std::copy_n(reinterpret_cast<char*>(&obj), sizeof(T), _buffer.get_write());
+    }
 
     size_t data_len(){
         return _data_len;
     }
     const char* data(){
         return _buffer.get();
+    }
+
+    // OK, this API is very useful, but extremely dangerous to call.
+    // Make sure that you know what is saved in this buffer!!
+    template<typename T>
+    T& data(){
+        static_assert(std::is_pod<T>::value, "The provided object is not a plain-old-datatype.\n");
+        assert(sizeof(T) == _data_len);
+
+        auto obj_ptr = reinterpret_cast<T*>(_buffer.get_write());
+        return *obj_ptr;
     }
 };
 
