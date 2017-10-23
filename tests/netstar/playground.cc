@@ -85,6 +85,8 @@ int main(int ac, char** av) {
         // test fill in larger object
         extendable_buffer b5(sizeof(fst_obj));
         b5.fill_data(o1);
+        assert(b5.data_len() == sizeof(fst_obj));
+        assert(b5.buf_len() == sizeof(fst_obj));
         snd_obj o4;
         o4.x[0] = 'a';
         o4.x[1] = 'e';
@@ -94,7 +96,13 @@ int main(int ac, char** av) {
         o4.i = 5;
         o4.j = 6;
         b5.fill_data(o4);
+        assert(b5.data_len() == sizeof(snd_obj));
+        assert(b5.buf_len() == sizeof(snd_obj));
+        auto& o5 = b5.data<snd_obj>();
+        assert(o5.i == 5);
+        assert(o5.j == 5);
 
+        // test fill in with a smaller object
 
         return make_ready_future<>().then([]{
            printf("Test complete!\n");
