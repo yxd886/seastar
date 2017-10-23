@@ -69,6 +69,10 @@ public:
         auto obj_ptr = reinterpret_cast<T*>(_buffer.get_write());
         return *obj_ptr;
     }
+
+    size_t buf_len(){
+        return _buffer.size();
+    }
 };
 
 #endif

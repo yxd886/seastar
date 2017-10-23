@@ -36,22 +36,36 @@ struct wtf{
     char x[5];
 };
 
+struct fst_obj{
+    char x[5];
+};
+
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
 
     return app.run_deprecated(ac, av, [&app, &all_ports] {
+        fst_obj o1;
+        o1.x[0] = 'f';
+        o1.x[1] = 'u';
+        o1.x[2] = 'c';
+        o1.x[3] = 'k';
+        o1.x[4] = 'y';
+
         // test move assignment.
         extendable_buffer b1;
-        extendable_buffer b2(5);
+        extendable_buffer b2(sizeof(fst_obj));
+        assert(b2.buf_len() == sizeof(fst_obj));
+        b2.fill_data(o1);
         b1 = std::move(b2);
-        assert(b1.data_len() == 5);
+        assert(b1.data_len() == sizeof(fst_obj));
         assert(b2.data_len() == 0);
 
         // test move construction.
-        extendable_buffer b3(6);
+        extendable_buffer b3(sizeof(fst_obj));
+        b3.fill_data(o1);
         extendable_buffer b4(std::move(b3));
-        assert(b4.data_len() == 6);
+        assert(b4.data_len() == sizeof(fst_obj));
         assert(b3.data_len() == 0);
 
         // test
