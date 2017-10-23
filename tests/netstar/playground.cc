@@ -30,12 +30,6 @@
 using namespace seastar;
 using namespace netstar;
 
-struct wtf{
-    int i;
-    int j;
-    char x[5];
-};
-
 struct fst_obj{
     char x[5];
 };
@@ -60,6 +54,13 @@ int main(int ac, char** av) {
         b1 = std::move(b2);
         assert(b1.data_len() == sizeof(fst_obj));
         assert(b2.data_len() == 0);
+        assert(b2.buf_len() == 0);
+        auto& o2 = b1.data<fst_obj>();
+        assert(o2.x[0] = 'f');
+        assert(o2.x[1] = 'u');
+        assert(o2.x[2] = 'c');
+        assert(o2.x[3] = 'k');
+        assert(o2.x[4] = 'y');
 
         // test move construction.
         extendable_buffer b3(sizeof(fst_obj));
@@ -67,6 +68,13 @@ int main(int ac, char** av) {
         extendable_buffer b4(std::move(b3));
         assert(b4.data_len() == sizeof(fst_obj));
         assert(b3.data_len() == 0);
+        assert(b3.buf_len() == 0);
+        auto& o3 = b1.data<fst_obj>();
+        assert(o3.x[0] = 'f');
+        assert(o3.x[1] = 'u');
+        assert(o3.x[2] = 'c');
+        assert(o3.x[3] = 'k');
+        assert(o3.x[4] = 'y');
 
         // test
         // extendable_buffer b5();
