@@ -34,6 +34,12 @@ struct fst_obj{
     char x[5];
 };
 
+struct snd_obj{
+    char x[5];
+    int i;
+    int j;
+};
+
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
@@ -56,11 +62,11 @@ int main(int ac, char** av) {
         assert(b2.data_len() == 0);
         assert(b2.buf_len() == 0);
         auto& o2 = b1.data<fst_obj>();
-        assert(o2.x[0] = 'f');
-        assert(o2.x[1] = 'u');
-        assert(o2.x[2] = 'c');
-        assert(o2.x[3] = 'k');
-        assert(o2.x[4] = 'y');
+        assert(o2.x[0] == 'f');
+        assert(o2.x[1] == 'u');
+        assert(o2.x[2] == 'c');
+        assert(o2.x[3] == 'k');
+        assert(o2.x[4] == 'y');
 
         // test move construction.
         extendable_buffer b3(sizeof(fst_obj));
@@ -70,16 +76,25 @@ int main(int ac, char** av) {
         assert(b3.data_len() == 0);
         assert(b3.buf_len() == 0);
         auto& o3 = b1.data<fst_obj>();
-        assert(o3.x[0] = 'f');
-        assert(o3.x[1] = 'u');
-        assert(o3.x[2] = 'c');
-        assert(o3.x[3] = 'k');
-        assert(o3.x[4] = 'y');
+        assert(o3.x[0] == 'f');
+        assert(o3.x[1] == 'u');
+        assert(o3.x[2] == 'c');
+        assert(o3.x[3] == 'k');
+        assert(o3.x[4] == 'y');
 
-        // test
-        // extendable_buffer b5();
-        // wtf obj;
-        // b5.fill_data<wtf>(obj);
+        // test fill in larger object
+        extendable_buffer b5(sizeof(fst_obj));
+        b5.fill_data(o1);
+        snd_obj o4;
+        o4.x[0] = 'a';
+        o4.x[1] = 'e';
+        o4.x[2] = 'i';
+        o4.x[3] = 'o';
+        o4.x[4] = 'u';
+        o4.i = 5;
+        o4.j = 6;
+        b5.fill_data(o4);
+
 
         return make_ready_future<>().then([]{
            printf("Test complete!\n");
