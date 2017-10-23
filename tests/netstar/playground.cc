@@ -30,12 +30,33 @@
 using namespace seastar;
 using namespace netstar;
 
+struct wtf{
+    int i;
+    int j;
+    char x[5];
+};
+
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
 
     return app.run_deprecated(ac, av, [&app, &all_ports] {
+        // test move assignment.
         extendable_buffer b1;
         extendable_buffer b2(5);
+        b1 = std::move(b2);
+        assert(b1.data_len() == 5);
+        assert(b2.data_len() == 0);
+
+        // test move construction.
+        extendable_buffer b3(6);
+        extendable_buffer b4(std::move(b3));
+        assert(b4.data_len() == 6);
+        assert(b3.data_len() == 0);
+
+        // test
+        // extendable_buffer b5();
+        // wtf obj;
+        // b5.fill_data<wtf>(obj);
     });
 }

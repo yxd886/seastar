@@ -19,11 +19,14 @@ public:
 
     extendable_buffer(extendable_buffer&& other) :
         _buffer(std::move(other._buffer)),
-        _data_len(other._data_len) {}
+        _data_len(other._data_len) {
+        other._data_len = 0;
+    }
     extendable_buffer& operator=(extendable_buffer& other){
         if(this != &other){
             _buffer = std::move(other._buffer);
             _data_len = other._data_len;
+            other._data_len = 0;
         }
         return *this;
     }
@@ -45,12 +48,14 @@ public:
             _buffer = temporary_buffer<char>(sizeof(T));
         }
         std::copy_n(reinterpret_cast<char*>(&obj), sizeof(T), _buffer.get_write());
+        _data_len = sizeof(T);
     }
 
     size_t data_len(){
         return _data_len;
     }
     const char* data(){
+        assert(_data_len!=0);
         return _buffer.get();
     }
 
