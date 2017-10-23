@@ -2,6 +2,7 @@
 #define _EXTENDABLE_BUFFER
 
 #include "core/temporary_buffer.hh"
+#include "net/packet.hh"
 
 using namespace seastar;
 
@@ -73,6 +74,10 @@ public:
     // This seems only to be used by test.
     size_t buf_len(){
         return _buffer.size();
+    }
+
+    net::fragment fragment(){
+        return net::fragment {_buffer.get_write(), _data_len};
     }
 };
 
