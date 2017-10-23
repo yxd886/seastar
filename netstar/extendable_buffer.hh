@@ -1,7 +1,7 @@
 #ifndef _EXTENDABLE_BUFFER
 #define _EXTENDABLE_BUFFER
 
-#include "temporary_buffer.hh"
+#include "core/temporary_buffer.hh"
 
 using namespace seastar;
 
