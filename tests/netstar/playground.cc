@@ -72,8 +72,10 @@ int main(int ac, char** av) {
         // extendable_buffer b5();
         // wtf obj;
         // b5.fill_data<wtf>(obj);
-    }).then([]{
-        printf("Test finish!\n");
-        engine().exit(0);
+
+        return make_ready_future<>().then([]{
+           printf("Test complete!\n");
+           engine().exit(0);
+        });
     });
 }
