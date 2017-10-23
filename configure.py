@@ -271,7 +271,7 @@ tests = [
     'tests/netstar/per_core_objs_invoke_on_some',
     'tests/netstar/per_core_objs_invoke_on_all',
     'tests/netstar/simple_send_work_unit',
-    'tests/netstar/play_ground.cc'
+    'tests/netstar/play_ground'
     ]
 
 apps = [
