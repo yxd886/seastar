@@ -103,6 +103,15 @@ int main(int ac, char** av) {
         assert(o5.j == 6);
 
         // test fill in with a smaller object
+        b5.fill_data(o1);
+        assert(b5.buf_len() == sizeof(snd_obj));
+        assert(b5.data_len() == sizeof(fst_obj));
+        auto& o6 = b5.data<fst_obj>();
+        assert(o6.x[0] == 'f');
+        assert(o6.x[1] == 'u');
+        assert(o6.x[2] == 'c');
+        assert(o6.x[3] == 'k');
+        assert(o6.x[4] == 'y');
 
         return make_ready_future<>().then([]{
            printf("Test complete!\n");
