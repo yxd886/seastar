@@ -7,7 +7,7 @@
 
 using namespace seastar;
 
-
+namespace netstar {
 
 class extendable_buffer{
     temporary_buffer<char> _buffer;
@@ -83,5 +83,7 @@ public:
         return net::fragment {_buffer.get_write(), _data_len};
     }
 };
+
+} // namespace netstar
 
 #endif
