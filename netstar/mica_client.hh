@@ -11,8 +11,10 @@
 
 #include <experimental/optional>
 #include <utility>
+#include <chrono>
 
 using namespace seastar;
+using namespace std::chrono_literals;
 
 namespace netstar {
 
@@ -90,7 +92,7 @@ public:
                 }
                 else{
                     _epoch++;
-                    _to.arm();
+                    _to.arm(1s);
                     // continue to work
                     // apis I haven't figure out yet.
                 }
