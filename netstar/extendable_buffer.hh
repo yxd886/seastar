@@ -14,7 +14,7 @@ class extendable_buffer{
     size_t _data_len;
 public:
     explicit extendable_buffer(size_t initial_buf_size) :
-        _buffer(initial_buf_size),
+        _buffer(roundup<8>(initial_buf_size)),
         _data_len(0) {}
     extendable_buffer() : _buffer(), _data_len(0) {}
 
@@ -39,18 +39,22 @@ public:
         _data_len = 0;
     }
     void fill_data(const char* src, size_t size){
-        if(_buffer.size() < size){
-            _buffer = temporary_buffer<char>(size);
+        auto round_up_size = roundup<8>(size);
+        if(_buffer.size() < round_up_size){
+            _buffer = temporary_buffer<char>(round_up_size);
         }
+
         std::copy_n(src, size, _buffer.get_write());
         _data_len = size;
     }
     template<typename T>
     void fill_data(T& obj){
         static_assert(std::is_pod<T>::value, "The provided object is not a plain-old-datatype.\n");
-        if(_buffer.size() < sizeof(T)){
-            _buffer = temporary_buffer<char>(sizeof(T));
+        auto round_up_size = roundup<8>(sizeof(T));
+        if(_buffer.size() < round_up_size){
+            _buffer = temporary_buffer<char>(round_up_size);
         }
+
         std::copy_n(reinterpret_cast<char*>(&obj), sizeof(T), _buffer.get_write());
         _data_len = sizeof(T);
     }
@@ -80,7 +84,7 @@ public:
     }
 
     net::fragment fragment(){
-        return net::fragment {_buffer.get_write(), _data_len};
+        return net::fragment {_buffer.get_write(), roundup<8>(_data_len)};
     }
 };
 

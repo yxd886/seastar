@@ -55,7 +55,7 @@ int main(int ac, char** av) {
         // test move assignment.
         extendable_buffer b1;
         extendable_buffer b2(sizeof(fst_obj));
-        assert(b2.buf_len() == sizeof(fst_obj));
+        assert(b2.buf_len() == roundup<8>(sizeof(fst_obj)));
         b2.fill_data(o1);
         b1 = std::move(b2);
         assert(b1.data_len() == sizeof(fst_obj));
@@ -86,7 +86,7 @@ int main(int ac, char** av) {
         extendable_buffer b5(sizeof(fst_obj));
         b5.fill_data(o1);
         assert(b5.data_len() == sizeof(fst_obj));
-        assert(b5.buf_len() == sizeof(fst_obj));
+        assert(b5.buf_len() == roundup<8>(sizeof(fst_obj)));
         snd_obj o4;
         o4.x[0] = 'a';
         o4.x[1] = 'e';
@@ -97,14 +97,14 @@ int main(int ac, char** av) {
         o4.j = 6;
         b5.fill_data(o4);
         assert(b5.data_len() == sizeof(snd_obj));
-        assert(b5.buf_len() == sizeof(snd_obj));
+        assert(b5.buf_len() == roundup<8>(sizeof(snd_obj)));
         auto& o5 = b5.data<snd_obj>();
         assert(o5.i == 5);
         assert(o5.j == 6);
 
         // test fill in with a smaller object
         b5.fill_data(o1);
-        assert(b5.buf_len() == sizeof(snd_obj));
+        assert(b5.buf_len() == roundup<8>(sizeof(snd_obj)));
         assert(b5.data_len() == sizeof(fst_obj));
         auto& o6 = b5.data<fst_obj>();
         assert(o6.x[0] == 'f');
@@ -115,6 +115,8 @@ int main(int ac, char** av) {
 
         return make_ready_future<>().then([]{
            printf("Test complete!\n");
+           std::cout<<roundup<8>(sizeof(fst_obj))<<std::endl;
+           std::cout<<roundup<8>(sizeof(snd_obj))<<std::endl;
            engine().exit(0);
         });
     });
