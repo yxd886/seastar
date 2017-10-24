@@ -10,6 +10,15 @@
 #include <cstdint>
 #include <utility>
 
+#include "net/packet.hh"
+#include "net/udp.hh"
+#include "net/ip_checksum.hh"
+#include "net/ip.hh"
+#include "net/net.hh"
+#include "net/byteorder.hh"
+
+using namespace seastar;
+
 namespace netstar{
 
 struct server_id{

@@ -5,18 +5,26 @@
 #include "netstar/work_unit.hh"
 #include "netstar/extendable_buffer.hh"
 #include "netstar/mica_def.hh"
+
 #include "net/packet.hh"
+#include "net/udp.hh"
+#include "net/ip_checksum.hh"
+#include "net/ip.hh"
+#include "net/net.hh"
+#include "net/byteorder.hh"
+
 #include "core/future.hh"
 #include "core/chunked_fifo.hh"
 
+#include <string>
 #include <experimental/optional>
 #include <utility>
 #include <chrono>
 
+namespace netstar {
+
 using namespace seastar;
 using namespace std::chrono_literals;
-
-namespace netstar {
 
 class mica_client {
 public:
@@ -51,6 +59,15 @@ public:
             _lcore_id(lcore_id{0}),
             _port_id(port_id{0}),
             _is_concurrent_assembler(true) {}
+
+    private:
+        net::packet build_requet_batch_header(std::string src_mac,
+                                              std::string dst_mac,
+                                              std::string src_ip,
+                                              std::string dst_ip,
+                                              uint16_t udp_src_port,
+                                              uint16_t udp_dst_port);
+
 
 
     };

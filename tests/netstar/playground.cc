@@ -26,7 +26,7 @@
 #include "netstar/netstar_dpdk_device.hh"
 #include "netstar/port.hh"
 #include "netstar/extendable_buffer.hh"
-#include "netstar/mica_client.hh"
+// #include "netstar/mica_client.hh"
 
 using namespace seastar;
 using namespace netstar;
@@ -36,6 +36,5 @@ int main(int ac, char** av) {
     ports_env all_ports;
 
     return app.run_deprecated(ac, av, [&app, &all_ports] {
-
     });
 }
