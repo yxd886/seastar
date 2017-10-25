@@ -9,7 +9,7 @@ using namespace seastar;
 
 namespace netstar {
 
-// A buffer whose buffer size is the data size rounded up to 8
+// A buffer whose buffer size is at least the data size rounded up to 8
 // This is primarily used to store key and value for mica.
 // Because mica needs to round the size of the keys and values that
 // it sends to 8.

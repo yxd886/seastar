@@ -60,15 +60,38 @@ public:
         }
 
         void new_action(Operation op, extendable_buffer key, extendable_buffer val){
+            // an assertion to make sure that the request_descriptor is in correct state.
+            // If this method is called, the rd must be popped out from
+            // the fifo. When the rd is popped out from the fifo, it is either in
+            // initialized state, or be recycled. This means that:
+            // 1. _pr contains nothing and associate with no continuation
+            // 2. _retry_count is cleared and is zero
+            // 3. _to timer is not armed.
             assert(!_pr && _retry_count == 0 && !_to.armed());
+
             _key_buf = std::move(key);
             _val_buf = std::move(val);
+            // some assertions adopted form mica source code
+            assert(_key_buf.data_len() < (1 << 8));
+            assert(_val_buf.data_len() < (1 << 24));
 
-            mica::util::hash(_key_buf.data(), _key_buf.data_len());
-
-
+            // set up the request header
+            _rq_hd.operation = op;
+            _rq_hd.result = Result::kSuccess;
+            _rq_hd.key_hash =  mica::util::hash(_key_buf.data(), _key_buf.data_len());;
+            adjust_request_header_opaque();
+            // _rq_hd.opaque = (static_cast<uint32_t>(_rd_index) << 16) |
+            //                  static_cast<uint32_t>(_epoch);
+            _rq_hd.reserved0 = 0;
+            _rq_hd.kv_length_vec =
+                static_cast<uint32_t>((_key_buf.data_len() << 24) | _val_buf.data_len());
         }
+
     private:
+        void adjust_request_header_opaque(){
+            _rq_hd.opaque = (static_cast<uint32_t>(_rd_index) << 16) |
+                             static_cast<uint32_t>(_epoch);
+        }
         void recycle(){
             _epoch++;
             _retry_count = 0;
