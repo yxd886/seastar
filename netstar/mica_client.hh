@@ -87,6 +87,14 @@ public:
                 static_cast<uint32_t>((_key_buf.data_len() << 24) | _val_buf.data_len());
         }
 
+        future<> obtain_future(){
+            // This is called after new_action is called. So we
+            // perform the same assertion.
+            assert(!_pr && _retry_count == 0 && !_to.armed());
+            _pr = promise<>();
+            return _pr->get_future();
+        }
+
     private:
         void adjust_request_header_opaque(){
             _rq_hd.opaque = (static_cast<uint32_t>(_rd_index) << 16) |
