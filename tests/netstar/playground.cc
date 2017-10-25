@@ -34,7 +34,25 @@ using namespace netstar;
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
+    mica_client::request_descriptor c(1, []{printf("timer called!\n");});
 
-    return app.run_deprecated(ac, av, [&app, &all_ports] {
+    return app.run_deprecated(ac, av, [&app, &all_ports, &c] {
+        int i = 10;
+
+        extendable_buffer b1(5);
+        extendable_buffer b2(5);
+
+        b1.fill_data(i);
+        b2.fill_data(i);
+
+        c.new_action(Operation::kSet, std::move(b1), std::move(b2));
+        c.obtain_future().then_wrapped([](auto&&f){
+            try{
+                f.get();
+            }
+            catch(kill_flow&){
+                printf("Catch kill_flow exception\n");
+            }
+        });
     });
 }
