@@ -343,10 +343,7 @@ libnet = [
 libnetstar = [
     'netstar/netstar_dpdk_device.cc',
     'netstar/port.cc',
-    'netstar/mica_client.cc'
-    ]
-    
-micautil = [
+    'netstar/mica_client.cc',
     'mica/util/cityhash/city_mod.cc',
     ]
 
@@ -511,7 +508,7 @@ deps = {
     'tests/netstar/per_core_objs_invoke_on_some': ['tests/netstar/per_core_objs_invoke_on_some.cc'] + core + libnet + libnetstar,
     'tests/netstar/per_core_objs_invoke_on_all': ['tests/netstar/per_core_objs_invoke_on_all.cc'] + core + libnet + libnetstar,
     'tests/netstar/simple_send_work_unit': ['tests/netstar/simple_send_work_unit.cc'] + core + libnet + libnetstar,
-    'tests/netstar/playground': ['tests/netstar/playground.cc'] + core + libnet + libnetstar + micautil,
+    'tests/netstar/playground': ['tests/netstar/playground.cc'] + core + libnet + libnetstar
     'tests/netstar/extendable_buffer_test': ['tests/netstar/extendable_buffer_test.cc'] + core + libnet + libnetstar,
 }
 
