@@ -209,13 +209,8 @@ public:
     // The request_assembler should be
     // launched for each partition of a server
     class request_assembler{
-        // properties
-        server_id _server_id;
-        partition_id _partition_id;
-        endpoint_id _remote_eid;
-        lcore_id _lcore_id;
-        port_id _port_id;
-        bool _is_concurrent_assembler;
+        endpoint_info _remote_ei;
+        endpoint_info _local_ei;
 
         // the packet to use
         net::packet _output_pkt;
@@ -232,23 +227,15 @@ public:
         // a vector of request descriptors
         std::vector<request_descriptor>& _rds;
     public:
-        explicit request_assembler(server_id sid,
-                                   partition_id partid,
-                                   endpoint_id eid,
-                                   lcore_id lcid,
-                                   port_id pid,
-                                   std::vector<request_descriptor>& rds) :
-            _server_id(sid), _partition_id(partid), _remote_eid(eid),
-            _lcore_id(lcid), _port_id(pid), _is_concurrent_assembler(false),
-            _rds(rds), _remaining_size(max_req_len), _req_count(0){}
-        explicit request_assembler(std::vector<request_descriptor>& rds) :
-            _server_id(server_id{0}),
-            _partition_id(partition_id{0}),
-            _remote_eid(std::make_pair(lcore_id{0},port_id{0})),
-            _lcore_id(lcore_id{0}),
-            _port_id(port_id{0}),
-            _is_concurrent_assembler(true),
-            _rds(rds), _remaining_size(max_req_len), _req_count(0){}
+        explicit request_assembler(endpoint_info remote_ei,
+                endpoint_info local_ei,
+                std::vector<request_descriptor>& rds) :
+                _remote_ei(remote_ei), _local_ei(local_ei),
+                _remaining_size(max_req_len), _req_count(0),
+                _rds(rds) {
+
+        }
+
 
     private:
         net::packet build_requet_batch_header(std::string src_mac,
