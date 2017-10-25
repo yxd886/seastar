@@ -48,7 +48,7 @@ public:
         extendable_buffer _val_buf;
 
         // the associated promise with this request
-        std::experimental::optional<promise<net::packet>> _pr;
+        std::experimental::optional<> _pr;
 
     public:
         explicit request_descriptor(unsigned rd_index) :
@@ -57,7 +57,7 @@ public:
         }
 
         void new_action(Operation op, extendable_buffer key, extendable_buffer val){
-            assert(!pr && _retry_count == 0 && !_to.armed());
+            assert(!_pr && _retry_count == 0 && !_to.armed());
             _key_buf = std::move(key);
             _val_buf = std::move(val);
 
