@@ -34,24 +34,6 @@ struct endpoint_info{
             eth_addr(eaddr), ip_addr(ipaddr), udp_port(u_port), lcore_port_pair(lp_pair) {}
 };
 
-struct server_id{
-    uint16_t val;
-};
-
-struct lcore_id{
-    uint16_t val;
-};
-
-struct port_id{
-    uint16_t val;
-};
-
-struct partition_id{
-    uint16_t val;
-};
-
-using endpoint_id = std::pair<lcore_id, port_id>;
-
 struct RequestBatchHeader {
     // 0
     uint8_t header[sizeof(ether_hdr) + sizeof(ipv4_hdr) + sizeof(udp_hdr)];

@@ -214,6 +214,8 @@ public:
 
         // the packet to use
         net::packet _output_pkt;
+        net::fragment _batch_header_frag;
+
         // fragments to append
         std::vector<net::fragment> _frags;
         // remaining request packet size
@@ -233,15 +235,15 @@ public:
                 _remote_ei(remote_ei), _local_ei(local_ei),
                 _remaining_size(max_req_len), _req_count(0),
                 _rds(rds) {
-
+            _output_pkt = build_requet_batch_header();
+            _batch_header_frag = _output_pkt.frag(0);
+            _frags.reserve(10);
+            // _to.set_callback();
         }
 
 
     private:
         net::packet build_requet_batch_header();
-
-
-
     };
 };
 
