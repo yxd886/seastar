@@ -64,6 +64,9 @@ public:
             _key_buf = std::move(key);
             _val_buf = std::move(val);
 
+            auto key_hash = mica::util::hash(_key_buf.data(), _key_buf.data_len());
+
+
         }
     private:
         void recycle(){
