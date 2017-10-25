@@ -48,7 +48,7 @@ public:
         extendable_buffer _val_buf;
 
         // the associated promise with this request
-        std::experimental::optional<> _pr;
+        std::experimental::optional<promise<>> _pr;
 
     public:
         explicit request_descriptor(unsigned rd_index) :
