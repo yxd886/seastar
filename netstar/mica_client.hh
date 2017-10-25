@@ -28,12 +28,19 @@ namespace netstar {
 using namespace seastar;
 using namespace std::chrono_literals;
 
+class kill_flow : public std::exception {
+public:
+    virtual const char* what() const noexcept override {
+        return "killflow";
+    }
+};
+
 class mica_client {
 public:
 
     class request_descriptor{
         // index of the request descriptor from the vector.
-        const unsigned _rd_index;
+        const uint16_t _rd_index;
         // record the epoch of the request descriptor, increase by 1 after each recycle
         uint16_t _epoch;
 
@@ -115,6 +122,13 @@ public:
             // The retry count should not exceed the maximum value.
             // the _pr must be associated with some continuations.
             assert(_to.armed() && _retry_count < 4 && _pr);
+
+            if(res_hd.result != Result::kSuccess){
+                // If the operation fails, we force the flow down.
+                _pr->set_exception(kill_flow());
+            }
+
+            _pr->set_value();
         }
 
     private:
