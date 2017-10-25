@@ -27,8 +27,8 @@
 // possible hash functions, by using SIMD instructions, or by
 // compromising on hash quality.
 
-// #include "config.h"
-#include "city.h"
+#include "config.h"
+#include <city.h>
 
 #include <algorithm>
 #include <string.h>  // for memcpy and memset
@@ -513,7 +513,7 @@ uint128 CityHash128(const char *s, size_t len) {
 }
 
 #ifdef __SSE4_2__
-#include "citycrc.h"
+#include <citycrc.h>
 #include <nmmintrin.h>
 
 // Requires len >= 240.

@@ -348,7 +348,6 @@ libnetstar = [
     
 micautil = [
     'mica/util/cityhash/city_mod.cc',
-    'mica/util/cityhash/city.cc',
     ]
 
 core = [
