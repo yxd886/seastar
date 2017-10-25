@@ -64,6 +64,7 @@ public:
         // the associated promise with this request
         std::experimental::optional<promise<>> _pr;
 
+        static constexpr unsigned max_retries = 4;
     public:
         // A series of actions that can be applied to request_descriptor.
 
@@ -110,8 +111,11 @@ public:
         }
 
         void arm_timer(){
-            assert( _retry_count == 0 && !_to.armed());
-            _to.arm(1s);
+            assert( _retry_count < 4 && !_to.armed());
+            _to.arm(1ms);
+        }
+        uint64_t get_key_hash(){
+            return _rq_hd.key_hash;
         }
     public:
         action match_response(RequestHeader& res_hd, net::packet res_key, net::packet res_val){
@@ -126,7 +130,7 @@ public:
             // Here, the timer should be armed and not timed out.
             // The retry count should not exceed the maximum value.
             // the _pr must be associated with some continuations.
-            assert(_to.armed() && _retry_count < 4 && _pr);
+            assert(_to.armed() && _retry_count < max_retries && _pr);
 
             if(res_hd.result != static_cast<uint8_t>(Result::kSuccess)){
                 // If the operation fails, we force the flow down.
@@ -147,7 +151,7 @@ public:
 
             _retry_count++;
 
-            if(_retry_count == 4){
+            if(_retry_count == max_retries){
                 // we have retried four times without receiving a response, timeout
                 _pr->set_exception(kill_flow());
                 timeout_recycle_prep();
@@ -169,7 +173,7 @@ public:
             // Preparation for a normal recycle.
             // This is only triggered by correctly match a response.
             // We have the following assertions to check
-            assert(_to.armed() && _retry_count < 4 && _pr);
+            assert(_to.armed() && _retry_count < max_retries && _pr);
             // increase the epoch for a new request_descriptor
             _epoch++;
             // reset the _retyry_count to 0
@@ -187,7 +191,7 @@ public:
             // Preparation for a timeout recycle.
             // This is only triggered after consecutive timeout is triggered
             // without getting a response.
-            assert(_retry_count == 4 && _pr);
+            assert(_retry_count == max_retries && _pr);
             // increase the epoch for a new request_descriptor
             _epoch++;
             // reset the _retyry_count to 0
