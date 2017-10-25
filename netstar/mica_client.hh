@@ -53,6 +53,8 @@ public:
         std::experimental::optional<promise<>> _pr;
 
     public:
+        // A series of actions that can be applied to request_descriptor.
+
         explicit request_descriptor(unsigned rd_index, std::function<void()> fn) :
             _rd_index(rd_index), _epoch(0), _retry_count(0),
             _key_buf(64), _val_buf(256) {
@@ -93,6 +95,26 @@ public:
             assert(!_pr && _retry_count == 0 && !_to.armed());
             _pr = promise<>();
             return _pr->get_future();
+        }
+
+        void arm_timer(){
+            assert( _retry_count == 0 && !_to.armed());
+            _to.arm(1s);
+        }
+
+        void match_response(RequestHeader& res_hd, net::packet res_key, net::packet res_val){
+            auto opaque = res_hd.opaque;
+            uint16_t epoch = opaque & ((1 << 16) - 1);
+            if(epoch != _epoch){
+                // the epoch doesn't match, the response is a late response, ignore it.
+                return;
+            }
+
+            // the epoch matches, we got the response for this request.
+            // Here, the timer should be armed and not timed out.
+            // The retry count should not exceed the maximum value.
+            // the _pr must be associated with some continuations.
+            assert(_to.armed() && _retry_count < 4 && _pr);
         }
 
     private:
