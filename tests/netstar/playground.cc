@@ -63,7 +63,9 @@ int main(int ac, char** av) {
 
         auto ret = c.match_response(r, net::packet(), net::packet());
         assert(ret == mica_client::action::recycle_rd);
-    }).then([]{
-        engine().exit(0);
+
+        return make_ready_future<>().then([]{
+            engine().exit(0);
+        });
     });
 }
