@@ -76,8 +76,8 @@ public:
             assert(_val_buf.data_len() < (1 << 24));
 
             // set up the request header
-            _rq_hd.operation = op;
-            _rq_hd.result = Result::kSuccess;
+            _rq_hd.operation = static_cast<uint8_t>(op);
+            _rq_hd.result = static_cast<uint8_t>(Result::kSuccess);
             _rq_hd.key_hash =  mica::util::hash(_key_buf.data(), _key_buf.data_len());;
             adjust_request_header_opaque();
             // _rq_hd.opaque = (static_cast<uint32_t>(_rd_index) << 16) |
