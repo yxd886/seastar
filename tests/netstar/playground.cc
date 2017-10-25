@@ -46,13 +46,21 @@ int main(int ac, char** av) {
         b2.fill_data(i);
 
         c.new_action(Operation::kSet, std::move(b1), std::move(b2));
-        c.obtain_future().then_wrapped([](auto&&f){
+        c.obtain_future().then_wrapped([](auto&& f){
             try{
                 f.get();
+                printf("Get the response\n");
             }
             catch(kill_flow&){
                 printf("Catch kill_flow exception\n");
             }
         });
+
+        RequestHeader r;
+        r.result = static_cast<uint8_t>(Result::kSuccess);
+        r.opaque = static_cast<uint32_t>(1<<16|0);
+
+        auto ret = c.match_response(r, net::packet(), net::packet());
+        assert(ret == mica_client::action::recycle_rd);
     });
 }
