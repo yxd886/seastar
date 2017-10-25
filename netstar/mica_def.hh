@@ -24,12 +24,14 @@ namespace netstar{
 struct endpoint_info{
     net::ethernet_address eth_addr;
     net::ipv4_address ip_addr;
-    uint16_t core_id;
+    uint16_t udp_port;
+    std::pair<uint16_t, uint16_t> lcore_port_pair;
 
     explicit endpoint_info(net::ethernet_address eaddr,
                            net::ipv4_address ipaddr,
-                           uint16_t cid) :
-            eth_addr(eaddr), ip_addr(ipaddr), core_id(cid) {}
+                           uint16_t u_port,
+                           std::pair<uint16_t, uint16_t> lp_pair) :
+            eth_addr(eaddr), ip_addr(ipaddr), udp_port(u_port), lcore_port_pair(lp_pair) {}
 };
 
 struct server_id{

@@ -2,12 +2,7 @@
 
 namespace netstar{
 
-net::packet mica_client::request_assembler::build_requet_batch_header(std::string src_mac,
-                                                                      std::string dst_mac,
-                                                                      std::string src_ip,
-                                                                      std::string dst_ip,
-                                                                      uint16_t udp_src_port,
-                                                                      uint16_t udp_dst_port){
+net::packet mica_client::request_assembler::build_requet_batch_header(){
     net::packet pkt;
 
     // reserved0
@@ -22,8 +17,8 @@ net::packet mica_client::request_assembler::build_requet_batch_header(std::strin
 
     // udp header
     auto uhdr = pkt.prepend_header<net::udp_hdr>();
-    uhdr->src_port = udp_src_port;
-    uhdr->dst_port = udp_src_port;
+    uhdr->src_port = _local_ei.udp_port;
+    uhdr->dst_port = _remote_ei.udp_port;
     uhdr->len = 0;
     uhdr->cksum = 0;
     *uhdr = net::hton(*uhdr);
@@ -40,14 +35,14 @@ net::packet mica_client::request_assembler::build_requet_batch_header(std::strin
     iph->ttl = 64;
     iph->ip_proto = (uint8_t)net::ip_protocol_num::udp;
     iph->csum = 0;
-    iph->src_ip = net::ipv4_address(src_ip);
-    iph->dst_ip = net::ipv4_address(dst_ip);
+    iph->src_ip = _local_ei.ip_addr;
+    iph->dst_ip = _remote_ei.ip_addr;
     *iph = net::hton(*iph);
 
     // ethernet header
     auto eh = pkt.prepend_header<net::eth_hdr>();
-    net::ethernet_address eth_src = net::parse_ethernet_address(src_mac);
-    net::ethernet_address eth_dst = net::parse_ethernet_address(dst_mac);
+    net::ethernet_address eth_src = _local_ei.eth_addr;
+    net::ethernet_address eth_dst = _remote_ei.eth_addr;
     eh->dst_mac = eth_dst;
     eh->src_mac = eth_src;
     eh->eth_proto = uint16_t(net::eth_protocol_num::ipv4);

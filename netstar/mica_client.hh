@@ -238,12 +238,7 @@ public:
 
 
     private:
-        net::packet build_requet_batch_header(std::string src_mac,
-                                              std::string dst_mac,
-                                              std::string src_ip,
-                                              std::string dst_ip,
-                                              uint16_t udp_src_port,
-                                              uint16_t udp_dst_port);
+        net::packet build_requet_batch_header();
 
 
 
