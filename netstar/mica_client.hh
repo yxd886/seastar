@@ -6,7 +6,7 @@
 #include "netstar/extendable_buffer.hh"
 #include "netstar/mica_def.hh"
 
-#include "mica/hash.h"
+#include "mica/util/hash.h"
 
 #include "net/packet.hh"
 #include "net/udp.hh"
