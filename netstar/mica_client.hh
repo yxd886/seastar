@@ -6,6 +6,8 @@
 #include "netstar/extendable_buffer.hh"
 #include "netstar/mica_def.hh"
 
+#include "mica/hash.h"
+
 #include "net/packet.hh"
 #include "net/udp.hh"
 #include "net/ip_checksum.hh"
@@ -51,9 +53,10 @@ public:
         std::experimental::optional<promise<>> _pr;
 
     public:
-        explicit request_descriptor(unsigned rd_index) :
+        explicit request_descriptor(unsigned rd_index, std::function<void()> fn) :
             _rd_index(rd_index), _epoch(0), _retry_count(0),
             _key_buf(64), _val_buf(256) {
+            _to.set_callback(std::move(fn));
         }
 
         void new_action(Operation op, extendable_buffer key, extendable_buffer val){
