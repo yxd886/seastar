@@ -156,7 +156,7 @@ public:
             else{
                 // increase the epoch to discard late responses.
                 _epoch++;
-                adjust_request_header_opaque()
+                adjust_request_header_opaque();
                 return action::resend_rd;
             }
         }
