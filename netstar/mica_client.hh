@@ -128,7 +128,7 @@ public:
             // the _pr must be associated with some continuations.
             assert(_to.armed() && _retry_count < 4 && _pr);
 
-            if(res_hd.result != Result::kSuccess){
+            if(res_hd.result != static_cast<uint8_t>(Result::kSuccess)){
                 // If the operation fails, we force the flow down.
                 _pr->set_exception(kill_flow());
             }
