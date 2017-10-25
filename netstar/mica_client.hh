@@ -37,7 +37,7 @@ public:
 
 class mica_client {
 public:
-    static constexpr unsigned max_kv_len = ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
+    static constexpr unsigned max_req_len = ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
 
     enum class action {
         recycle_rd,
@@ -90,7 +90,9 @@ public:
             _val_buf = std::move(val);
             // some assertions adopted form mica source code
             assert(_key_buf.data_len() < (1 << 8));
-            assert(_val_buf.data_len() < (1 << 24));
+            assert(roundup<8>(_val_buf.data_len()) +
+                   roundup<8>(_key_buf.data_len()) +
+                   sizeof(RequestHeader) <= max_req_len);
 
             // set up the request header
             _rq_hd.operation = static_cast<uint8_t>(op);
