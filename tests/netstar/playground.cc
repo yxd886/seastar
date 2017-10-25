@@ -55,6 +55,7 @@ int main(int ac, char** av) {
                 printf("Catch kill_flow exception\n");
             }
         });
+        c.arm_timer();
 
         RequestHeader r;
         r.result = static_cast<uint8_t>(Result::kSuccess);
