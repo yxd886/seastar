@@ -9,6 +9,10 @@ using namespace seastar;
 
 namespace netstar {
 
+// A buffer whose buffer size is the data size rounded up to 8
+// This is primarily used to store key and value for mica.
+// Because mica needs to round the size of the keys and values that
+// it sends to 8.
 class extendable_buffer{
     temporary_buffer<char> _buffer;
     size_t _data_len;

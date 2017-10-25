@@ -68,6 +68,31 @@ struct RequestHeader {
     // Key-value data
 };
 
+enum class Operation : uint8_t{
+    kReset = 0,
+    kNoopRead,
+    kNoopWrite,
+    kAdd,
+    kSet,
+    kGet,
+    kTest,
+    kDelete,
+    kIncrement,
+};
+
+enum class Result : uint8_t {
+    kSuccess = 0,
+    kError,
+    kInsufficientSpace,
+    kExists,
+    kNotFound,
+    kPartialValue,
+    kNotProcessed,
+    kNotSupported,
+    kTimedOut,
+    kRejected,
+};
+
 } // namespace netstar
 
 #endif // _MICA_CLIENT_DEF
