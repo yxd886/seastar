@@ -21,6 +21,17 @@ using namespace seastar;
 
 namespace netstar{
 
+struct endpoint_info{
+    net::ethernet_address eth_addr;
+    net::ipv4_address ip_addr;
+    uint16_t core_id;
+
+    explicit endpoint_info(net::ethernet_address eaddr,
+                           net::ipv4_address ipaddr,
+                           uint16_t cid) :
+            eth_addr(eaddr), ip_addr(ipaddr), core_id(cid) {}
+};
+
 struct server_id{
     uint16_t val;
 };

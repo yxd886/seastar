@@ -66,6 +66,7 @@ public:
         // the associated promise with this request
         std::experimental::optional<promise<>> _pr;
 
+        // maximum number of allowed timeout retries
         static constexpr unsigned max_retries = 4;
     public:
         // A series of actions that can be applied to request_descriptor.
@@ -197,16 +198,11 @@ public:
             // This is only triggered after consecutive timeout is triggered
             // without getting a response.
             assert(_retry_count == max_retries && _pr);
-            // increase the epoch for a new request_descriptor
             _epoch++;
-            // reset the _retyry_count to 0
             _retry_count = 0;
-            // clear the data for both key buf and val buf
             _key_buf.clear_data();
             _val_buf.clear_data();
-            // clear the promise
             _pr = std::experimental::nullopt;
-            // no need to touch the _rq_hd
         }
     };
 
@@ -223,26 +219,36 @@ public:
 
         // the packet to use
         net::packet _output_pkt;
+        // fragments to append
+        std::vector<net::fragment> _frags;
+        // remaining request packet size
+        unsigned _remaining_size;
+        // total number of requests
+        unsigned _req_count;
+
         // the timer
         timer<> _to;
 
         // a vector of request descriptors
-        // std::vector<request_descriptor>& _rds;
+        std::vector<request_descriptor>& _rds;
     public:
         explicit request_assembler(server_id sid,
                                    partition_id partid,
                                    endpoint_id eid,
                                    lcore_id lcid,
-                                   port_id pid) :
+                                   port_id pid,
+                                   std::vector<request_descriptor>& rds) :
             _server_id(sid), _partition_id(partid), _remote_eid(eid),
-            _lcore_id(lcid), _port_id(pid), _is_concurrent_assembler(false) {}
-        explicit request_assembler() :
+            _lcore_id(lcid), _port_id(pid), _is_concurrent_assembler(false),
+            _rds(rds), _remaining_size(max_req_len), _req_count(0){}
+        explicit request_assembler(std::vector<request_descriptor>& rds) :
             _server_id(server_id{0}),
             _partition_id(partition_id{0}),
             _remote_eid(std::make_pair(lcore_id{0},port_id{0})),
             _lcore_id(lcore_id{0}),
             _port_id(port_id{0}),
-            _is_concurrent_assembler(true) {}
+            _is_concurrent_assembler(true),
+            _rds(rds), _remaining_size(max_req_len), _req_count(0){}
 
     private:
         net::packet build_requet_batch_header(std::string src_mac,
