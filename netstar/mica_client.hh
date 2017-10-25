@@ -37,6 +37,11 @@ public:
 
 class mica_client {
 public:
+    enum class action {
+        recycle_rd,
+        resend_rd,
+        no_action
+    };
 
     class request_descriptor{
         // index of the request descriptor from the vector.
@@ -47,7 +52,7 @@ public:
         // record the number of retries performed by the current request
         unsigned _retry_count;
         // a timer that is used to check request timeout
-        timer<> _to;
+        timer<steady_clock_type> _to;
 
         // the request header
         RequestHeader _rq_hd;
@@ -108,13 +113,13 @@ public:
             assert( _retry_count == 0 && !_to.armed());
             _to.arm(1s);
         }
-
-        void match_response(RequestHeader& res_hd, net::packet res_key, net::packet res_val){
+    public:
+        action match_response(RequestHeader& res_hd, net::packet res_key, net::packet res_val){
             auto opaque = res_hd.opaque;
             uint16_t epoch = opaque & ((1 << 16) - 1);
             if(epoch != _epoch){
                 // the epoch doesn't match, the response is a late response, ignore it.
-                return;
+                return action::no_action;
             }
 
             // the epoch matches, we got the response for this request.
@@ -127,24 +132,72 @@ public:
                 // If the operation fails, we force the flow down.
                 _pr->set_exception(kill_flow());
             }
+            else{
+                // set the value for the current promise
+                _pr->set_value();
+            }
 
-            _pr->set_value();
+            normal_recycle_prep();
+            return action::recycle_rd;
         }
+        // The timeout handler
+        action timeout_handler(){
+            // handle _to timeout
+            assert(_pr);
 
+            _retry_count++;
+
+            if(_retry_count == 4){
+                // we have retried four times without receiving a response, timeout
+                _pr->set_exception(kill_flow());
+                timeout_recycle_prep();
+                return action::recycle_rd;
+            }
+            else{
+                // increase the epoch to discard late responses.
+                _epoch++;
+                adjust_request_header_opaque()
+                return action::resend_rd;
+            }
+        }
     private:
         void adjust_request_header_opaque(){
             _rq_hd.opaque = (static_cast<uint32_t>(_rd_index) << 16) |
                              static_cast<uint32_t>(_epoch);
         }
-        void recycle(){
+        void normal_recycle_prep(){
+            // Preparation for a normal recycle.
+            // This is only triggered by correctly match a response.
+            // We have the following assertions to check
+            assert(_to.armed() && _retry_count < 4 && _pr);
+            // increase the epoch for a new request_descriptor
             _epoch++;
+            // reset the _retyry_count to 0
             _retry_count = 0;
+            // cancel the _to timer
             _to.cancel();
+            // clear the data for both key buf and val buf
             _key_buf.clear_data();
             _val_buf.clear_data();
-
-            // make sure that the promise has been set and cleared.
-            assert(!_pr);
+            // clear the promise
+            _pr = std::experimental::nullopt;
+            // no need to touch the _rq_hd
+        }
+        void timeout_recycle_prep(){
+            // Preparation for a timeout recycle.
+            // This is only triggered after consecutive timeout is triggered
+            // without getting a response.
+            assert(_retry_count == 4 && _pr);
+            // increase the epoch for a new request_descriptor
+            _epoch++;
+            // reset the _retyry_count to 0
+            _retry_count = 0;
+            // clear the data for both key buf and val buf
+            _key_buf.clear_data();
+            _val_buf.clear_data();
+            // clear the promise
+            _pr = std::experimental::nullopt;
+            // no need to touch the _rq_hd
         }
     };
 
