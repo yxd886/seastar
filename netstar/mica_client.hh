@@ -37,6 +37,8 @@ public:
 
 class mica_client {
 public:
+    static constexpr unsigned max_kv_len = ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
+
     enum class action {
         recycle_rd,
         resend_rd,
@@ -114,6 +116,7 @@ public:
             assert( _retry_count < 4 && !_to.armed());
             _to.arm(1ms);
         }
+
         uint64_t get_key_hash(){
             return _rq_hd.key_hash;
         }
@@ -220,6 +223,9 @@ public:
         net::packet _output_pkt;
         // the timer
         timer<> _to;
+
+        // a vector of request descriptors
+        // std::vector<request_descriptor>& _rds;
     public:
         explicit request_assembler(server_id sid,
                                    partition_id partid,
