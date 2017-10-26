@@ -123,6 +123,12 @@ public:
         uint64_t get_key_hash(){
             return _rq_hd.key_hash;
         }
+
+        void append_frags(std::vector<net::fragment>& frags){
+            frags.push_back(net::fragment{&_rq_hd, sizeof(RequestHeader)});
+            frags.push_back(_key_buf.fragment());
+            frags.push_back(_val_buf.fragment());
+        }
     public:
         action match_response(RequestHeader& res_hd, net::packet res_key, net::packet res_val){
             auto opaque = res_hd.opaque;
@@ -211,39 +217,69 @@ public:
     class request_assembler{
         endpoint_info _remote_ei;
         endpoint_info _local_ei;
+        port& _port;
 
-        // the packet to use
-        net::packet _output_pkt;
+        // the batch packet header
+        net::packet _batch_header_pkt;
         net::fragment _batch_header_frag;
 
-        // fragments to append
-        std::vector<net::fragment> _frags;
         // remaining request packet size
         unsigned _remaining_size;
-        // total number of requests
-        unsigned _req_count;
-
-        // the timer
-        timer<> _to;
+        // This vector records the requests that are going
+        // to be sent out in a single packet.
+        std::vector<int> _rd_idxs;
 
         // a vector of request descriptors
         std::vector<request_descriptor>& _rds;
+
+        // fragments to append
+        std::vector<net::fragment> _frags;
     public:
         explicit request_assembler(endpoint_info remote_ei,
-                endpoint_info local_ei,
+                endpoint_info local_ei, port& p,
                 std::vector<request_descriptor>& rds) :
                 _remote_ei(remote_ei), _local_ei(local_ei),
-                _remaining_size(max_req_len), _req_count(0),
+                _port(p), _remaining_size(max_req_len),
                 _rds(rds) {
-            _output_pkt = build_requet_batch_header();
-            _batch_header_frag = _output_pkt.frag(0);
-            _frags.reserve(10);
-            // _to.set_callback();
+            _batch_header_pkt = build_requet_batch_header();
+            _batch_header_frag = _batch_header_pkt.frag(0);
+            int reqs_reserve_num = 5;
+            _rd_idxs.reserve(reqs_reserve_num);
+            _frags.reserve(3*reqs_reserve_num+1);
         }
 
+        void force_packet_out(){
+            assert(_rd_idxs.size() > 0);
+
+            // First, put the batch_header in to the _frags
+            _frags.push_back(_batch_header_frag);
+
+            // Then, for each request descriptor, put the request header
+            // , key and value into the _frags.
+            // After this, arm the timer for the request descriptor.
+            for(auto rd_idx : _rd_idxs){
+                _rds[rd_idx].append_frags(_frags);
+                _rds[rd_idx].arm_timer();
+            }
+
+            // build up the packet;
+            net::packet p(_frags, deleter());
+            p.linearize();
+            assert(p.nr_frags() == 1 && ETHER_MAX_LEN - ETHER_CRC_LEN - _remaining_size == p.len());
+
+            // send the packet out and reset
+            _port.send(std::move(p));
+            reset();
+        }
 
     private:
         net::packet build_requet_batch_header();
+        void reset(){
+            // reset the status of the request_assembler
+            _rd_idxs.clear();
+            _frags.clear();
+            _remaining_size = max_req_len;
+        }
     };
 };
 
