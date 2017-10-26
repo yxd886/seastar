@@ -125,7 +125,7 @@ public:
         }
 
         void append_frags(std::vector<net::fragment>& frags){
-            frags.push_back(net::fragment{&_rq_hd, sizeof(RequestHeader)});
+            frags.push_back(net::fragment{static_cast<char*>(&_rq_hd), sizeof(RequestHeader)});
             frags.push_back(_key_buf.fragment());
             frags.push_back(_val_buf.fragment());
         }
