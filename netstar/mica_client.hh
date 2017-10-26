@@ -287,6 +287,10 @@ public:
             _remaining_size -= total_request_size;
         }
 
+        bool need_force_out(){
+            return _rd_idxs.size()>0;
+        }
+
     private:
         net::packet build_requet_batch_header();
         void reset(){
