@@ -45,7 +45,10 @@ int main(int ac, char** av) {
         b1.fill_data(i);
         b2.fill_data(i);
 
-        c.new_action(Operation::kSet, std::move(b1), std::move(b2));
+        auto b1_len = b1.data_len();
+        auto b2_len = b2.data_len();
+
+        c.new_action(Operation::kSet, b1_len, b1.get_temp_buffer(), b2_len, b2.get_temp_buffer());
         c.obtain_future().then_wrapped([](auto&& f){
             try{
                 f.get();

@@ -90,6 +90,11 @@ public:
     net::fragment fragment(){
         return net::fragment {_buffer.get_write(), roundup<8>(_data_len)};
     }
+
+    temporary_buffer<char> get_temp_buffer(){
+        _data_len = 0;
+        return std::move(_buffer);
+    }
 };
 
 } // namespace netstar
