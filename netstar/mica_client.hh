@@ -96,16 +96,7 @@ public:
             assert(_key_buf.data_len() < (1 << 8));
             assert(get_request_size()<=max_req_len);
 
-            // set up the request header
-            _rq_hd.operation = static_cast<uint8_t>(op);
-            _rq_hd.result = static_cast<uint8_t>(Result::kSuccess);
-            _rq_hd.key_hash =  mica::util::hash(_key_buf.data(), _key_buf.data_len());;
-            adjust_request_header_opaque();
-            // _rq_hd.opaque = (static_cast<uint32_t>(_rd_index) << 16) |
-            //                  static_cast<uint32_t>(_epoch);
-            _rq_hd.reserved0 = 0;
-            _rq_hd.kv_length_vec =
-                static_cast<uint32_t>((_key_buf.data_len() << 24) | _val_buf.data_len());
+            setup_request_header(op);
         }
 
         future<> obtain_future(){
@@ -189,6 +180,17 @@ public:
             _rq_hd.opaque = (static_cast<uint32_t>(_rd_index) << 16) |
                              static_cast<uint32_t>(_epoch);
         }
+        void setup_request_header(Operation& op){
+            // set up the request header
+            _rq_hd.operation = static_cast<uint8_t>(op);
+            _rq_hd.result = static_cast<uint8_t>(Result::kSuccess);
+            _rq_hd.key_hash =  mica::util::hash(_key_buf.data(), _key_buf.data_len());
+            _rq_hd.opaque = (static_cast<uint32_t>(_rd_index) << 16) |
+                             static_cast<uint32_t>(_epoch);
+            _rq_hd.reserved0 = 0;
+            _rq_hd.kv_length_vec =
+                static_cast<uint32_t>((_key_buf.data_len() << 24) | _val_buf.data_len());
+        }
         void normal_recycle_prep(){
             // Preparation for a normal recycle.
             // This is only triggered by correctly match a response.
@@ -233,10 +235,10 @@ public:
 
         // remaining request packet size
         unsigned _remaining_size;
+
         // This vector records the requests that are going
         // to be sent out in a single packet.
         std::vector<int> _rd_idxs;
-
         // a vector of request descriptors
         std::vector<request_descriptor>& _rds;
 
