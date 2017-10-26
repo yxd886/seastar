@@ -3,7 +3,6 @@
 
 #include "netstar/port.hh"
 #include "netstar/work_unit.hh"
-#include "netstar/extendable_buffer.hh"
 #include "netstar/mica_def.hh"
 
 #include "mica/util/hash.h"
@@ -17,6 +16,7 @@
 
 #include "core/future.hh"
 #include "core/chunked_fifo.hh"
+#include "core/scattered_message.hh"
 
 #include <string>
 #include <experimental/optional>
@@ -60,10 +60,14 @@ public:
 
         // the request header
         RequestHeader _rq_hd;
+
         // record the previous sent key, cleared after each recycle
-        extendable_buffer _key_buf;
+        size_t _key_len;
+        temporary_buffer<char> _key_buf;
+
         // record the previous sent value, cleared after each recycle
-        extendable_buffer _val_buf;
+        size_t _val_len;
+        temporary_buffer<char> _val_buf;
 
         // the associated promise with this request
         std::experimental::optional<promise<>> _pr;
@@ -76,11 +80,13 @@ public:
         explicit request_descriptor(unsigned rd_index, std::function<void()> fn,
                                     RequestHeader rq_hd = RequestHeader{}) :
             _rd_index(rd_index), _epoch(0), _retry_count(0),
-            _key_buf(64), _val_buf(256) {
+            _key_len(0), _key_buf(), _val_len(0), _val_buf() {
             _to.set_callback(std::move(fn));
         }
 
-        void new_action(Operation op, extendable_buffer key, extendable_buffer val){
+        void new_action(Operation op,
+                        size_t key_len, temporary_buffer<char> key,
+                        size_t val_len, temporary_buffer<char> val){
             // an assertion to make sure that the request_descriptor is in correct state.
             // If this method is called, the rd must be popped out from
             // the fifo. When the rd is popped out from the fifo, it is either in
@@ -89,11 +95,15 @@ public:
             // 2. _retry_count is cleared and is zero
             // 3. _to timer is not armed.
             assert(!_pr && _retry_count == 0 && !_to.armed());
+            assert(roundup<8>(key_len) == key.size() && roundup<8>(val_len) == val.size());
 
+            _key_len = key_len;
             _key_buf = std::move(key);
+            _val_len = val_len;
             _val_buf = std::move(val);
+
             // some assertions adopted form mica source code
-            assert(_key_buf.data_len() < (1 << 8));
+            assert(_key_len < (1 << 8));
             assert(get_request_size()<=max_req_len);
 
             setup_request_header(op);
@@ -116,17 +126,16 @@ public:
             return _rq_hd.key_hash;
         }
 
-        void append_frags(std::vector<net::fragment>& frags){
+        void append_frags(scattered_message<char>& msg){
             // RequestHeader is a plain old object, doing reinterpret_cast here
             // is fine. Plus we have the guarantee of the lifetime of _rq_hd object.
-            frags.push_back(net::fragment{reinterpret_cast<char*>(&_rq_hd), sizeof(RequestHeader)});
-
-            frags.push_back(_key_buf.fragment());
-            frags.push_back(_val_buf.fragment());
+            msg.append_static(reinterpret_cast<char*>(&_rq_hd), sizeof(RequestHeader));
+            msg.append_static(_key_buf.get(), _key_buf.size());
+            msg.append_static(_val_buf.get(), _val_buf.size());
         }
 
         size_t get_request_size(){
-            return sizeof(RequestHeader)+roundup<8>(_key_buf.data_len())+roundup<8>(_val_buf.data_len());
+            return sizeof(RequestHeader)+_key_buf.size()+_val_buf.size();
         }
     public:
         action match_response(RequestHeader& res_hd, net::packet res_key, net::packet res_val){
@@ -184,12 +193,12 @@ public:
             // set up the request header
             _rq_hd.operation = static_cast<uint8_t>(op);
             _rq_hd.result = static_cast<uint8_t>(Result::kSuccess);
-            _rq_hd.key_hash =  mica::util::hash(_key_buf.data(), _key_buf.data_len());
+            _rq_hd.key_hash =  mica::util::hash(_key_buf.get(), _key_len);
             _rq_hd.opaque = (static_cast<uint32_t>(_rd_index) << 16) |
                              static_cast<uint32_t>(_epoch);
             _rq_hd.reserved0 = 0;
             _rq_hd.kv_length_vec =
-                static_cast<uint32_t>((_key_buf.data_len() << 24) | _val_buf.data_len());
+                static_cast<uint32_t>((_key_len << 24) | _val_len);
         }
         void normal_recycle_prep(){
             // Preparation for a normal recycle.
@@ -202,9 +211,6 @@ public:
             _retry_count = 0;
             // cancel the _to timer
             _to.cancel();
-            // clear the data for both key buf and val buf
-            _key_buf.clear_data();
-            _val_buf.clear_data();
             // clear the promise
             _pr = std::experimental::nullopt;
             // no need to touch the _rq_hd
@@ -213,11 +219,9 @@ public:
             // Preparation for a timeout recycle.
             // This is only triggered after consecutive timeout is triggered
             // without getting a response.
-            assert(_retry_count == max_retries && _pr);
+            assert(_retry_count == max_retries && _pr && !_to.armed());
             _epoch++;
             _retry_count = 0;
-            _key_buf.clear_data();
-            _val_buf.clear_data();
             _pr = std::experimental::nullopt;
         }
     };
@@ -242,8 +246,6 @@ public:
         // a vector of request descriptors
         std::vector<request_descriptor>& _rds;
 
-        // fragments to append
-        std::vector<net::fragment> _frags;
     public:
         explicit request_assembler(endpoint_info remote_ei,
                 endpoint_info local_ei, port& p,
@@ -253,27 +255,28 @@ public:
                 _rds(rds) {
             _batch_header_pkt = build_requet_batch_header();
             _batch_header_frag = _batch_header_pkt.frag(0);
-            int reqs_reserve_num = 5;
-            _rd_idxs.reserve(reqs_reserve_num);
-            _frags.reserve(3*reqs_reserve_num+1);
+            _rd_idxs.reserve(10);
         }
 
         void force_packet_out(){
             assert(_rd_idxs.size() > 0);
 
+            scattered_message<char> msg;
+            msg.reserve(1+3*_rd_idxs.size());
+
             // First, put the batch_header in to the _frags
-            _frags.push_back(_batch_header_frag);
+            msg.append_static(_batch_header_frag.base, _batch_header_frag.size);
 
             // Then, for each request descriptor, put the request header
             // , key and value into the _frags.
             // After this, arm the timer for the request descriptor.
             for(auto rd_idx : _rd_idxs){
-                _rds[rd_idx].append_frags(_frags);
+                _rds[rd_idx].append_frags(msg);
                 _rds[rd_idx].arm_timer();
             }
 
             // build up the packet;
-            net::packet p(_frags, deleter());
+            net::packet p(std::move(msg).release());
             p.linearize();
             assert(p.nr_frags() == 1 && ETHER_MAX_LEN - ETHER_CRC_LEN - _remaining_size == p.len());
 
@@ -317,10 +320,13 @@ public:
         void reset(){
             // reset the status of the request_assembler
             _rd_idxs.clear();
-            _frags.clear();
             _remaining_size = max_req_len;
         }
     };
+
+    // class request_disassembler {
+
+    // };
 };
 
 } // namespace netstar
