@@ -4,6 +4,7 @@
 #include "netstar/port.hh"
 #include "netstar/work_unit.hh"
 #include "netstar/mica_def.hh"
+#include "netstar/roundup.hh"
 
 #include "mica/util/hash.h"
 
