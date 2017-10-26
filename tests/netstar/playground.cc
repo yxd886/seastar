@@ -64,6 +64,13 @@ int main(int ac, char** av) {
         auto ret = c.match_response(r, net::packet(), net::packet());
         assert(ret == mica_client::action::recycle_rd);
 
+        std::cout << "net::eth_hdr " << sizeof(net::eth_hdr) <<std::endl;
+        std::cout << "net::ip_hdr " << sizeof(net::ip_hdr) <<std::endl;
+        std::cout << "net::udp_hdr " << sizeof(net::udp_hdr) <<std::endl;
+        std::cout << "eth_hdr " << sizeof(ether_hdr) <<std::endl;
+        std::cout << "ip_hdr " << sizeof(ipv4_hdr) <<std::endl;
+        std::cout << "udp_hdr " << sizeof(udp_hdr) <<std::endl;
+
         return make_ready_future<>().then([]{
             engine().exit(0);
         });
