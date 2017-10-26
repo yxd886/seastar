@@ -92,7 +92,7 @@ public:
             _val_buf = std::move(val);
             // some assertions adopted form mica source code
             assert(_key_buf.data_len() < (1 << 8));
-            assert(roundup<8>(_val_buf.data_len())+roundup<8>(_key_buf.data_len())+sizeof(RequestHeader)<=max_req_len);
+            assert(get_request_size()<=max_req_len);
 
             // set up the request header
             _rq_hd.operation = static_cast<uint8_t>(op);
@@ -124,9 +124,16 @@ public:
         }
 
         void append_frags(std::vector<net::fragment>& frags){
+            // RequestHeader is a plain old object, doing reinterpret_cast here
+            // is fine. Plus we have the guarantee of the lifetime of _rq_hd object.
             frags.push_back(net::fragment{reinterpret_cast<char*>(&_rq_hd), sizeof(RequestHeader)});
+
             frags.push_back(_key_buf.fragment());
             frags.push_back(_val_buf.fragment());
+        }
+
+        size_t get_request_size(){
+            return sizeof(RequestHeader)+roundup<8>(_key_buf.data_len())+roundup<8>(_val_buf.data_len());
         }
     public:
         action match_response(RequestHeader& res_hd, net::packet res_key, net::packet res_val){
@@ -269,6 +276,15 @@ public:
             // send the packet out and reset
             _port.send(std::move(p));
             reset();
+        }
+
+        void append_new_request_descriptor(unsigned rd_index){
+            auto total_request_size = _rds[rd_index].get_request_size();
+            if(_remaining_size < total_request_size){
+                force_packet_out();
+            }
+            _rd_idxs.push_back(rd_index);
+            _remaining_size -= total_request_size;
         }
 
     private:
