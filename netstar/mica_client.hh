@@ -38,6 +38,8 @@ public:
 class mica_client {
 public:
     static constexpr unsigned max_req_len = ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
+    static constexpr unsigned max_payload_len =
+            ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(net::eth_hdr) - sizeof(net::ip_hdr) - sizeof(net::udp_hdr);
 
     enum class action {
         recycle_rd,
@@ -269,12 +271,12 @@ public:
             }
 
             // build up the packet;
-            // payload length is :
             net::packet p(_frags, deleter());
             p.linearize();
             assert(p.nr_frags() == 1 && ETHER_MAX_LEN - ETHER_CRC_LEN - _remaining_size == p.len());
 
-            // send the packet out and reset
+            setup_ip_udp_length(p);
+            setup_request_num(p);
             _port.send(std::move(p));
             reset();
         }
@@ -294,6 +296,22 @@ public:
 
     private:
         net::packet build_requet_batch_header();
+        void setup_ip_udp_length(net::packet& p){
+            // payload length is : max_payload_len - _remainng_size
+            // udp length is : max_payload_len + sizeof(net::udp_hdr) - _remainng_size
+            // ip length is : udp length + sizeof(net::ip_hdr)
+            auto udp_length = static_cast<uint16_t>(max_payload_len+sizeof(net::udp_hdr)-_remaining_size);
+            auto ip_length = static_cast<uint16_t>(udp_length + sizeof(net::ip_hdr));
+            auto ip_hdr = p.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+            ip_hdr->len = net::hton(ip_length);
+            auto udp_hdr = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+            udp_hdr->len = net::hton(udp_length);
+        }
+        void setup_request_num(net::packet& p){
+            // set up num_requests in the batch header
+            auto num_requests = p.get_header<uint8_t>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr)+sizeof(net::udp_hdr)+1);
+            *num_requests = static_cast<uint8_t>(_rd_idxs.size());
+        }
         void reset(){
             // reset the status of the request_assembler
             _rd_idxs.clear();
