@@ -269,6 +269,7 @@ public:
             }
 
             // build up the packet;
+            // payload length is :
             net::packet p(_frags, deleter());
             p.linearize();
             assert(p.nr_frags() == 1 && ETHER_MAX_LEN - ETHER_CRC_LEN - _remaining_size == p.len());
