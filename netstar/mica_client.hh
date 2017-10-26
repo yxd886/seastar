@@ -325,9 +325,13 @@ public:
         }
     };
 
-    // class request_disassembler {
+private:
+    std::vector<request_descriptor> _rqs;
+    std::vector<request_assembler> _ras;
 
-    // };
+    void receive(net::packet){
+
+    }
 };
 
 } // namespace netstar
