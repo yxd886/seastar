@@ -78,7 +78,7 @@ public:
             _key_buf(64), _val_buf(256) {
             _to.set_callback(std::move(fn));
             _rq_hd_buf.fill_data(rq_hd);
-            _rq_hd = _rq_hd_buf.data();
+            _rq_hd = _rq_hd_buf.data<RequestHeader>();
         }
 
         void new_action(Operation op, extendable_buffer key, extendable_buffer val){
