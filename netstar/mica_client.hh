@@ -56,12 +56,13 @@ public:
         // a timer that is used to check request timeout
         timer<steady_clock_type> _to;
 
-        // the request header
-        RequestHeader _rq_hd;
         // record the previous sent key, cleared after each recycle
         extendable_buffer _key_buf;
         // record the previous sent value, cleared after each recycle
         extendable_buffer _val_buf;
+        // the request header
+        extendable_buffer _rq_hd_buf;
+        RequestHeader& _rq_hd;
 
         // the associated promise with this request
         std::experimental::optional<promise<>> _pr;
@@ -71,10 +72,13 @@ public:
     public:
         // A series of actions that can be applied to request_descriptor.
 
-        explicit request_descriptor(unsigned rd_index, std::function<void()> fn) :
+        explicit request_descriptor(unsigned rd_index, std::function<void()> fn,
+                                    RequestHeader rq_hd = RequestHeader{}) :
             _rd_index(rd_index), _epoch(0), _retry_count(0),
             _key_buf(64), _val_buf(256) {
             _to.set_callback(std::move(fn));
+            _rq_hd_buf.fill_data(rq_hd);
+            _rq_hd = _rq_hd_buf.data();
         }
 
         void new_action(Operation op, extendable_buffer key, extendable_buffer val){
@@ -125,7 +129,7 @@ public:
         }
 
         void append_frags(std::vector<net::fragment>& frags){
-            frags.push_back(net::fragment{static_cast<char*>(&_rq_hd), sizeof(RequestHeader)});
+            frags.push_back(_rq_hd_buf.fragment());
             frags.push_back(_key_buf.fragment());
             frags.push_back(_val_buf.fragment());
         }
