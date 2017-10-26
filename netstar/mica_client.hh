@@ -306,8 +306,8 @@ public:
             // payload length is : max_payload_len - _remainng_size
             // udp length is : max_payload_len + sizeof(net::udp_hdr) - _remainng_size
             // ip length is : udp length + sizeof(net::ip_hdr)
-            auto udp_length = static_cast<uint16_t>(max_payload_len+sizeof(net::udp_hdr)-_remaining_size);
-            auto ip_length = static_cast<uint16_t>(udp_length + sizeof(net::ip_hdr));
+            auto udp_length = static_cast<uint16_t>(p.len()-sizeof(net::eth_hdr)-sizeof(net::ip_hdr));
+            auto ip_length = static_cast<uint16_t>(p.len() - sizeof(net::eth_hdr));
             auto ip_hdr = p.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
             ip_hdr->len = net::hton(ip_length);
             auto udp_hdr = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
@@ -329,8 +329,108 @@ private:
     std::vector<request_descriptor> _rqs;
     std::vector<request_assembler> _ras;
 
-    void receive(net::packet){
+    void receive(net::packet p){
+        if (!is_valid(p) || !is_response(p) || p.nr_frags()!=1){
+            return;
+        }
 
+        size_t remaining_size = p.len() - sizeof(RequestBatchHeader);
+        size_t offset = sizeof(RequestBatchHeader);
+
+        while(offset < p.len()){
+            auto rh = p.get_header<RequestHeader>(offset);
+
+            size_t key_len = (rh->kv_length_vec >> 24);
+            size_t roundup_key_len = roundup<8>(key_len);
+            size_t val_len = (rh->kv_length_vec & ((1 << 24) - 1));
+            size_t roundup_val_len = roundup<8>(val_len);
+
+            size_t key_offset = offset+sizeof(RequestHeader);
+            size_t val_offset = key_offset + roundup_key_len;
+            size_t next_req_offset = val_offset + roundup_val_len;
+
+            unsigned rd_idx = static_cast<unsigned>(rh->opaque >> 16);
+
+
+            auto action_res = _rqs[rd_idx].match_response(*rh,
+                                  p.share(key_offset, roundup_key_len),
+                                  p.share(val_offset, roundup_val_len));
+
+            switch (action_res){
+            case action::no_action :
+                break;
+            case action::recycle_rd : {
+                // recycle the request descriptor.
+                break;
+            }
+            case action::resend_rd : {
+                assert(false);
+                break;
+            }
+            default:
+                break;
+            }
+
+            offset = next_req_offset;
+        }
+    }
+    bool is_valid(net::packet& p){
+        auto eth_hdr = p.get_header<net::eth_hdr>();
+        auto ip_hdr = p.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+        auto udp_hdr = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+        auto rbh = p.get_header<RequestBatchHeader>();
+
+        if (p.len() < sizeof(RequestBatchHeader)) {
+            // printf("too short packet length\n");
+            return false;
+        }
+
+        if (net::ntoh(eth_hdr->eth_proto) != uint16_t(net::eth_protocol_num::ipv4)) {
+            // printf("invalid network layer protocol\n");
+            return false;
+        }
+
+        if (ip_hdr->ihl != 5 && ip_hdr->ver != 4) {
+            // printf("invalid IP layer protocol\n");
+            return false;
+        }
+
+        if (ip_hdr->id != 0 || ip_hdr->frag != 0) {
+            // printf("ignoring fragmented IP packet\n");
+            return false;
+        }
+
+
+        if (net::ntoh(ip_hdr->len) != p.len() - sizeof(net::eth_hdr)) {
+            // printf("invalid IP packet length\n");
+            return false;
+        }
+
+        if (ip_hdr->ip_proto != (uint8_t)net::ip_protocol_num::udp) {
+            // printf("invalid transport layer protocol\n");
+            return false;
+        }
+
+        if (net::ntoh(udp_hdr->len) != p.len() - sizeof(net::eth_hdr) - sizeof(net::ip_hdr)) {
+            // printf("invalid UDP datagram length\n");
+            return false;
+        }
+
+        if(udp_hdr->cksum != 0 || ip_hdr->csum != 0){
+            // printf("We only accept packet with zero checksums\n");
+            return false;
+        }
+
+        if (rbh->magic != 0x78 && rbh->magic != 0x79) {
+            printf("invalid magic\n");
+            return false;
+        }
+
+        return true;
+    }
+    bool is_response(net::packet& p) const {
+        auto rbh = p.get_header<RequestBatchHeader>();
+        return rbh->magic == 0x79;
     }
 };
 
