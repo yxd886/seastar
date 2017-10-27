@@ -39,9 +39,11 @@ public:
 
 class mica_client : public work_unit<mica_client>{
 public:
-    static constexpr unsigned max_req_len = ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
+    static constexpr unsigned max_req_len =
+            ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
     static constexpr unsigned max_payload_len =
-            ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(net::eth_hdr) - sizeof(net::ip_hdr) - sizeof(net::udp_hdr);
+            ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(net::eth_hdr) -
+            sizeof(net::ip_hdr) - sizeof(net::udp_hdr);
 
     enum class action {
         recycle_rd,
@@ -52,7 +54,8 @@ public:
     class request_descriptor{
         // index of the request descriptor from the vector.
         const uint16_t _rd_index;
-        // record the epoch of the request descriptor, increase by 1 after each recycle
+        // record the epoch of the request descriptor,
+        // increase by 1 after each recycle
         uint16_t _epoch;
 
         // record the number of retries performed by the current request
@@ -89,15 +92,17 @@ public:
         void new_action(Operation op,
                         size_t key_len, temporary_buffer<char> key,
                         size_t val_len, temporary_buffer<char> val){
-            // an assertion to make sure that the request_descriptor is in correct state.
+            // an assertion to make sure that the request_descriptor
+            // is in correct state.
             // If this method is called, the rd must be popped out from
-            // the fifo. When the rd is popped out from the fifo, it is either in
-            // initialized state, or be recycled. This means that:
+            // the fifo. When the rd is popped out from the fifo, it is either
+            // in initialized state, or be recycled. This means that:
             // 1. _pr contains nothing and associate with no continuation
             // 2. _retry_count is cleared and is zero
             // 3. _to timer is not armed.
             assert(!_pr && _retry_count == 0 && !_to.armed());
-            assert(roundup<8>(key_len) == key.size() && roundup<8>(val_len) == val.size());
+            assert(roundup<8>(key_len) == key.size() &&
+                   roundup<8>(val_len) == val.size());
 
             _key_len = key_len;
             _key_buf = std::move(key);
@@ -129,9 +134,11 @@ public:
         }
 
         void append_frags(scattered_message<char>& msg){
-            // RequestHeader is a plain old object, doing reinterpret_cast here
-            // is fine. Plus we have the guarantee of the lifetime of _rq_hd object.
-            msg.append_static(reinterpret_cast<char*>(&_rq_hd), sizeof(RequestHeader));
+            // RequestHeader is a plain old object,
+            // doing reinterpret_cast here is fine.
+            // Plus we have the guarantee of the lifetime of _rq_hd object.
+            msg.append_static(reinterpret_cast<char*>(&_rq_hd),
+                              sizeof(RequestHeader));
             msg.append_static(_key_buf.get(), _key_buf.size());
             msg.append_static(_val_buf.get(), _val_buf.size());
         }
@@ -140,11 +147,13 @@ public:
             return sizeof(RequestHeader)+_key_buf.size()+_val_buf.size();
         }
     public:
-        action match_response(RequestHeader& res_hd, net::packet res_key, net::packet res_val){
+        action match_response(RequestHeader& res_hd, net::packet res_key,
+                              net::packet res_val){
             auto opaque = res_hd.opaque;
             uint16_t epoch = opaque & ((1 << 16) - 1);
             if(epoch != _epoch){
-                // the epoch doesn't match, the response is a late response, ignore it.
+                // the epoch doesn't match, the response is a late response,
+                // ignore it.
                 return action::no_action;
             }
 
@@ -174,7 +183,8 @@ public:
             _retry_count++;
 
             if(_retry_count == max_retries){
-                // we have retried four times without receiving a response, timeout
+                // we have retried four times without receiving a response,
+                // timeout
                 _pr->set_exception(kill_flow());
                 timeout_recycle_prep();
                 return action::recycle_rd;
@@ -280,7 +290,8 @@ public:
             // build up the packet;
             net::packet p(std::move(msg).release());
             p.linearize();
-            assert(p.nr_frags() == 1 && ETHER_MAX_LEN - ETHER_CRC_LEN - _remaining_size == p.len());
+            assert(p.nr_frags() == 1 &&
+                   ETHER_MAX_LEN - ETHER_CRC_LEN - _remaining_size == p.len());
 
             setup_ip_udp_length(p);
             setup_request_num(p);
@@ -304,19 +315,29 @@ public:
     private:
         net::packet build_requet_batch_header();
         void setup_ip_udp_length(net::packet& p){
-            // payload length is : max_payload_len - _remainng_size
-            // udp length is : max_payload_len + sizeof(net::udp_hdr) - _remainng_size
-            // ip length is : udp length + sizeof(net::ip_hdr)
-            auto udp_length = static_cast<uint16_t>(p.len()-sizeof(net::eth_hdr)-sizeof(net::ip_hdr));
-            auto ip_length = static_cast<uint16_t>(p.len() - sizeof(net::eth_hdr));
+            // payload length is :
+            // max_payload_len - _remainng_size
+
+            // udp length is :
+            // max_payload_len + sizeof(net::udp_hdr) - _remainng_size
+
+            // ip length is :
+            // udp length + sizeof(net::ip_hdr)
+            auto udp_length =
+                    static_cast<uint16_t>(p.len()-sizeof(net::eth_hdr)- sizeof(net::ip_hdr));
+            auto ip_length =
+                    static_cast<uint16_t>(p.len() - sizeof(net::eth_hdr));
             auto ip_hdr = p.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
             ip_hdr->len = net::hton(ip_length);
-            auto udp_hdr = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+            auto udp_hdr =
+                    p.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
             udp_hdr->len = net::hton(udp_length);
         }
         void setup_request_num(net::packet& p){
             // set up num_requests in the batch header
-            auto num_requests = p.get_header<uint8_t>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr)+sizeof(net::udp_hdr)+1);
+            auto num_requests = p.get_header<uint8_t>(sizeof(net::eth_hdr)+
+                                                      sizeof(net::ip_hdr)+
+                                                      sizeof(net::udp_hdr)+1);
             *num_requests = static_cast<uint8_t>(_rd_idxs.size());
         }
         void reset(){
@@ -370,11 +391,15 @@ public:
             uint16_t local_ei_core_id = static_cast<uint16_t>(engine().cpu_id());
             uint16_t local_ei_udp_port = local_ei_core_id;
 
-            endpoint_info remote_ei_info(remote_ei_eth_addr, remote_ei_ip_addr, remote_ei_udp_port,
+            endpoint_info remote_ei_info(remote_ei_eth_addr,
+                                         remote_ei_ip_addr,
+                                         remote_ei_udp_port,
                                          std::make_pair(remote_ei_core_id, remote_ei_port_id));
 
-            endpoint_info local_ei_info(local_ei_eth_addr, local_ei_ip_addr, local_ei_udp_port,
-                                         std::make_pair(local_ei_core_id, local_ei_port_id));
+            endpoint_info local_ei_info(local_ei_eth_addr,
+                                        local_ei_ip_addr,
+                                        local_ei_udp_port,
+                                        std::make_pair(local_ei_core_id, local_ei_port_id));
 
 
             _ras.emplace_back(remote_ei_info, local_ei_info, *(ports()[0]), _rds);
