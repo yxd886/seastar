@@ -23,6 +23,7 @@
 #include <experimental/optional>
 #include <utility>
 #include <chrono>
+#include <boost/program_options/variables_map.hpp>
 
 namespace netstar {
 
@@ -386,6 +387,14 @@ public:
 
     future<> stop(){
         return make_ready_future<>();
+    }
+
+    void client_initialize(boost::program_options::variables_map& opts){
+        // opts["ms-port-id"].as<unsigned>()
+        // opts["ms-smp-count"].as<unsigned>()
+        // opts["ms-starting-udp-port"].as<std::string>()
+        // opts["ms-mac"].as<std::string>()
+        // opts["ms-ip"].as<std::string>()
     }
 };
 
