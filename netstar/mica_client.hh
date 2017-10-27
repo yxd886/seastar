@@ -333,7 +333,6 @@ private:
             return;
         }
 
-        size_t remaining_size = p.len() - sizeof(RequestBatchHeader);
         size_t offset = sizeof(RequestBatchHeader);
 
         while(offset < p.len()){
@@ -372,9 +371,12 @@ private:
 
             offset = next_req_offset;
         }
+        assert(offset == p.len());
     }
     bool is_valid(net::packet& p);
     bool is_response(net::packet& p) const;
+public:
+
 };
 
 } // namespace netstar
