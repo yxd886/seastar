@@ -389,12 +389,30 @@ public:
         return make_ready_future<>();
     }
 
-    void client_initialize(boost::program_options::variables_map& opts){
+    void bootup(boost::program_options::variables_map& opts){
         // opts["ms-port-id"].as<unsigned>()
         // opts["ms-smp-count"].as<unsigned>()
-        // opts["ms-starting-udp-port"].as<std::string>()
+        // opts["ms-starting-udp-port"].as<unsigned>()
         // opts["ms-mac"].as<std::string>()
         // opts["ms-ip"].as<std::string>()
+        // opts["mc-ip"].as<std::string>()
+
+        // Currently, we only support one port for mica client, and
+        // one port for mica server.
+        assert(ports().size() == 1);
+
+
+
+        // first, create request_assembler for each pair of remote endpoint
+        // and local endpoint
+        for(unsigned remote_ei_core_id=0;
+            remote_ei_core_id<opts["ms-smp-count"].as<unsigned>();
+            remote_ei_core_id++){
+            unsigned local_ei_core_id = engine().cpu_id();
+            unsigned local_port_id = 0;
+            unsigned remote_port_id = 0;
+
+        }
     }
 };
 
