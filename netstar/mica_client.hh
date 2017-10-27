@@ -394,7 +394,8 @@ public:
         // one port for mica server.
         assert(ports().size() == 1);
 
-        net::ethernet_address remote_ei_eth_addr(opts["mica-server-mac"].as<std::string>());
+        net::ethernet_address remote_ei_eth_addr(
+                net::parse_ethernet_address(opts["mica-server-mac"].as<std::string>()));
         net::ipv4_address remote_ei_ip_addr(opts["mica-server-ip"].as<std::string>());
         uint16_t remote_ei_port_id = opts["mica-server-port-id"].as<uint16_t>();
 
