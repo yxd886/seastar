@@ -326,7 +326,7 @@ public:
         }
     };
 private:
-    std::vector<request_descriptor> _rqs;
+    std::vector<request_descriptor> _rds;
     std::vector<request_assembler> _ras;
 
     void receive(net::packet p){
@@ -351,7 +351,7 @@ private:
             unsigned rd_idx = static_cast<unsigned>(rh->opaque >> 16);
 
 
-            auto action_res = _rqs[rd_idx].match_response(*rh,
+            auto action_res = _rds[rd_idx].match_response(*rh,
                                   p.share(key_offset, roundup_key_len),
                                   p.share(val_offset, roundup_val_len));
 
@@ -390,28 +390,35 @@ public:
     }
 
     void bootup(boost::program_options::variables_map& opts){
-        // opts["ms-port-id"].as<unsigned>()
-        // opts["ms-smp-count"].as<unsigned>()
-        // opts["ms-starting-udp-port"].as<unsigned>()
-        // opts["ms-mac"].as<std::string>()
-        // opts["ms-ip"].as<std::string>()
-        // opts["mc-ip"].as<std::string>()
-
         // Currently, we only support one port for mica client, and
         // one port for mica server.
         assert(ports().size() == 1);
 
+        net::ethernet_address remote_ei_eth_addr(opts["mica-server-mac"].as<std::string>());
+        net::ipv4_address remote_ei_ip_addr(opts["mica-server-ip"].as<std::string>());
+        uint16_t remote_ei_port_id = opts["mica-server-port-id"].as<uint16_t>();
 
+        net::ethernet_address local_ei_eth_addr(ports()[0]->get_eth_addr());
+        net::ipv4_address local_ei_ip_addr(opts["mica-client-ip"].as<std::string>());
+        uint16_t local_ei_port_id = 0;
 
         // first, create request_assembler for each pair of remote endpoint
         // and local endpoint
-        for(unsigned remote_ei_core_id=0;
-            remote_ei_core_id<opts["ms-smp-count"].as<unsigned>();
+        for(uint16_t remote_ei_core_id=0;
+            remote_ei_core_id<opts["ms-smp-count"].as<uint16_t>();
             remote_ei_core_id++){
-            unsigned local_ei_core_id = engine().cpu_id();
-            unsigned local_port_id = 0;
-            unsigned remote_port_id = 0;
+            uint16_t remote_ei_udp_port = remote_ei_core_id;
+            uint16_t local_ei_core_id = static_cast<uint16_t>(engine().cpu_id());
+            uint16_t local_ei_udp_port = local_ei_core_id;
 
+            endpoint_info remote_ei_info(remote_ei_eth_addr, remote_ei_ip_addr, remote_ei_udp_port,
+                                         std::make_pair(remote_ei_core_id, remote_ei_port_id));
+
+            endpoint_info local_ei_info(local_ei_eth_addr, local_ei_ip_addr, local_ei_udp_port,
+                                         std::make_pair(local_ei_core_id, local_ei_port_id));
+
+
+            _ras.emplace_back(remote_ei_info, local_ei_info, *(ports()[0]), _rds);
         }
     }
 };

@@ -106,6 +106,10 @@ public:
     uint16_t port_id(){
         return _port_id;
     }
+
+    net::ethernet_address get_eth_addr(){
+        return _dev->hw_address();
+    }
 };
 
 class ports_env{
