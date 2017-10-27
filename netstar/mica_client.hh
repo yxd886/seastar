@@ -324,7 +324,6 @@ public:
             _remaining_size = max_req_len;
         }
     };
-
 private:
     std::vector<request_descriptor> _rqs;
     std::vector<request_assembler> _ras;
@@ -374,64 +373,8 @@ private:
             offset = next_req_offset;
         }
     }
-    bool is_valid(net::packet& p){
-        auto eth_hdr = p.get_header<net::eth_hdr>();
-        auto ip_hdr = p.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-        auto udp_hdr = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
-        auto rbh = p.get_header<RequestBatchHeader>();
-
-        if (p.len() < sizeof(RequestBatchHeader)) {
-            // printf("too short packet length\n");
-            return false;
-        }
-
-        if (net::ntoh(eth_hdr->eth_proto) != uint16_t(net::eth_protocol_num::ipv4)) {
-            // printf("invalid network layer protocol\n");
-            return false;
-        }
-
-        if (ip_hdr->ihl != 5 && ip_hdr->ver != 4) {
-            // printf("invalid IP layer protocol\n");
-            return false;
-        }
-
-        if (ip_hdr->id != 0 || ip_hdr->frag != 0) {
-            // printf("ignoring fragmented IP packet\n");
-            return false;
-        }
-
-
-        if (net::ntoh(ip_hdr->len) != p.len() - sizeof(net::eth_hdr)) {
-            // printf("invalid IP packet length\n");
-            return false;
-        }
-
-        if (ip_hdr->ip_proto != (uint8_t)net::ip_protocol_num::udp) {
-            // printf("invalid transport layer protocol\n");
-            return false;
-        }
-
-        if (net::ntoh(udp_hdr->len) != p.len() - sizeof(net::eth_hdr) - sizeof(net::ip_hdr)) {
-            // printf("invalid UDP datagram length\n");
-            return false;
-        }
-
-        if(udp_hdr->cksum != 0 || ip_hdr->csum != 0){
-            // printf("We only accept packet with zero checksums\n");
-            return false;
-        }
-
-        if (rbh->magic != 0x78 && rbh->magic != 0x79) {
-            printf("invalid magic\n");
-            return false;
-        }
-
-        return true;
-    }
-    bool is_response(net::packet& p) const {
-        auto rbh = p.get_header<RequestBatchHeader>();
-        return rbh->magic == 0x79;
-    }
+    bool is_valid(net::packet& p);
+    bool is_response(net::packet& p) const;
 };
 
 } // namespace netstar
