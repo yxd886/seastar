@@ -36,7 +36,7 @@ public:
     }
 };
 
-class mica_client {
+class mica_client : public work_unit<mica_client>{
 public:
     static constexpr unsigned max_req_len = ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
     static constexpr unsigned max_payload_len =
@@ -376,7 +376,17 @@ private:
     bool is_valid(net::packet& p);
     bool is_response(net::packet& p) const;
 public:
+    explicit mica_client(per_core_objs<mica_client>* all_objs) :
+            work_unit<mica_client>(all_objs) {}
 
+    mica_client(const mica_client& other) = delete;
+    mica_client(mica_client&& other)  = delete;
+    mica_client& operator=(const mica_client& other) = delete;
+    mica_client& operator=(mica_client&& other) = delete;
+
+    future<> stop(){
+        return make_ready_future<>();
+    }
 };
 
 } // namespace netstar
