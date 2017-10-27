@@ -15,7 +15,7 @@ class work_unit{
     per_core_objs<T>* _all_objs;
     std::vector<port*> _all_ports;
     std::vector<sub_option> _all_subs;
-    semaphore _send_queue_length = {100};
+    semaphore _forward_queue_length = {100};
 protected:
     std::vector<port*>& ports(){
         return std::ref(_all_ports);
@@ -68,12 +68,12 @@ public:
         return (*_all_ports.at(port_id)).send(std::move(pkt));
     }
     inline future<> forward_to(unsigned dst_core, net::packet pkt){
-        return _send_queue_length.wait(1).then([this, dst_core, pkt = std::move(pkt)] () mutable{
+        return _forward_queue_length.wait(1).then([this, dst_core, pkt = std::move(pkt)] () mutable{
            auto src_core = engine().cpu_id();
            auto& peer = _all_objs->get_obj(dst_core);
 
            smp::submit_to(dst_core, [this, &peer, src_core, pkt = std::move(pkt)] () mutable {
-               peer.receive_forwarded(src_core, pkt.free_on_cpu(src_core, [this]{ _send_queue_length.signal(1);}));
+               peer.receive_forwarded(src_core, pkt.free_on_cpu(src_core, [this]{ _forward_queue_length.signal(1);}));
            });
         });
     }
