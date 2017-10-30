@@ -94,6 +94,15 @@ public:
             _sendq.push_back(std::move(p));
         });
     }
+    inline future<> linearize_and_send(net::packet p){
+        assert(_qid < _dev->hw_queues_count());
+        auto len = p.len();
+        return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
+            p = net::packet(std::move(p), make_deleter([qs = _queue_space.get(), len] { qs->signal(len); }));
+            p.linearize();
+            _sendq.push_back(std::move(p));
+        });
+    }
     subscription<net::packet>
     receive(std::function<future<> (net::packet)> next_packet) {
         return _dev->receive(std::move(next_packet));
