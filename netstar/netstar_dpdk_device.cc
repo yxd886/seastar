@@ -45,6 +45,8 @@ using namespace seastar::net;
 
 namespace netstar{
 
+namespace netstar_dpdk{
+
 #if RTE_VERSION <= RTE_VERSION_NUM(2,0,0,16)
 
 static
@@ -69,8 +71,6 @@ void* as_cookie(struct rte_pktmbuf_pool_private& p) {
 #ifndef MARKER
 typedef void    *MARKER[0];   /**< generic marker for a point in a structure */
 #endif
-
-namespace netstar_dpdk{
 
 /******************* Net device related constatns *****************************/
 static constexpr uint16_t default_ring_size      = 512;
