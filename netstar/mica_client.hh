@@ -451,7 +451,7 @@ public:
         }
         else{
             return _pending_work_queue.wait(1).then(
-                    [this, op, key_len, key=std::move(key), val_len, val=std::move(val)]{
+                    [this, op, key_len, key=std::move(key), val_len, val=std::move(val)] () mutable{
                 auto rd_idx = _recycled_rds.front();
                 _recycled_rds.pop_front();
                 _rds[rd_idx].new_action(op, key_len, std::move(key),
