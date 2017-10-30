@@ -462,7 +462,7 @@ public:
     }
 private:
     void check_request_assemblers(){
-        for(auto ra : _ras){
+        for(auto& ra : _ras){
             ra.consume_send_stream();
         }
     }
