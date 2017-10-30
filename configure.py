@@ -266,10 +266,13 @@ tests = [
     'tests/tuple_utils_test',
     'tests/tls_echo_server',
     'tests/tls_simple_client',
-    'tests/netstar/test_netstar_compilation',
+    'tests/netstar/simple_send',
     'tests/netstar/create_two_ports',
     'tests/netstar/per_core_objs_invoke_on_some',
     'tests/netstar/per_core_objs_invoke_on_all',
+    'tests/netstar/simple_send_work_unit',
+    'tests/netstar/playground',
+    'tests/netstar/extendable_buffer_test'
     ]
 
 apps = [
@@ -340,6 +343,9 @@ libnet = [
 libnetstar = [
     'netstar/netstar_dpdk_device.cc',
     'netstar/port.cc',
+    'netstar/mica_client.cc',
+    'mica/util/cityhash/city_mod.cc',
+    'netstar/fdir_device.cc'
     ]
 
 core = [
@@ -498,10 +504,13 @@ deps = {
     'tests/tuple_utils_test': ['tests/tuple_utils_test.cc'],
     'tests/tls_echo_server': ['tests/tls_echo_server.cc'] + core + libnet,
     'tests/tls_simple_client': ['tests/tls_simple_client.cc'] + core + libnet,
-    'tests/netstar/test_netstar_compilation': ['tests/netstar/test_netstar_compilation.cc'] + core + libnet + libnetstar,
+    'tests/netstar/simple_send': ['tests/netstar/simple_send.cc'] + core + libnet + libnetstar,
     'tests/netstar/create_two_ports': ['tests/netstar/create_two_ports.cc'] + core + libnet + libnetstar,
     'tests/netstar/per_core_objs_invoke_on_some': ['tests/netstar/per_core_objs_invoke_on_some.cc'] + core + libnet + libnetstar,
     'tests/netstar/per_core_objs_invoke_on_all': ['tests/netstar/per_core_objs_invoke_on_all.cc'] + core + libnet + libnetstar,
+    'tests/netstar/simple_send_work_unit': ['tests/netstar/simple_send_work_unit.cc'] + core + libnet + libnetstar,
+    'tests/netstar/playground': ['tests/netstar/playground.cc'] + core + libnet + libnetstar,
+    'tests/netstar/extendable_buffer_test': ['tests/netstar/extendable_buffer_test.cc'] + core + libnet + libnetstar,
 }
 
 boost_tests = [

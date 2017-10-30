@@ -8,6 +8,8 @@
 #include "core/stream.hh"
 #include "net/proxy.hh"
 #include "per_core_objs.hh"
+#include "core/semaphore.hh"
+#include "core/shared_ptr.hh"
 
 using namespace seastar;
 
@@ -20,9 +22,8 @@ class port{
     net::device* _dev;
     std::unique_ptr<net::qp> _qp;
     circular_buffer<net::packet> _sendq;
+    std::unique_ptr<semaphore> _queue_space;
 public:
-    static constexpr size_t max_sendq_length = 100;
-
     explicit port(boost::program_options::variables_map opts,
                           net::device* dev,
                           uint16_t port_id) :
@@ -61,27 +62,47 @@ public:
                 return p;
             });
         }
+
+        _queue_space = std::make_unique<semaphore>(212992);
     }
 
-    ~port(){}
+    ~port(){
+        // Extend the life time of _queue_space.
+        // When port is deconstructed, both _sendq and _qp contain some packets with a customized deletor like this:
+        // [qs = _queue_space.get(), len] { qs->signal(len); }.
+        // These packets will also be deconstructed when deconstructing the port.
+        // Therefore we must ensure that _queue_space lives until the port is completely deconstructed.
+        // What we have done here is to move the _queue_space into a fifo, that will be called later after the port.
+        // Because the we use per_core_objs to construct the port, the port is actually placed in a position that
+        // is closer to the head of the fifo. So we guarantee that _queue_space lives until port is fully deconstructed.
+        // However, we do have to ensure that the port is constructed only by per_core_objs, otherwise this hack
+        // doesn't work and abort seastar exit processs.
+        // BTW: This hack saves about 100000pkts/s send rate, which I think to be important.
+        engine().at_destroy([queue_space_sptr = std::move(_queue_space)]{});
+    }
+
     port(const port& other) = delete;
     port(port&& other)  = delete;
     port& operator=(const port& other) = delete;
     port& operator=(port&& other) = delete;
 
     inline future<> send(net::packet p){
-        if(_qid >= _dev->hw_queues_count() ||
-           _sendq.size() >= max_sendq_length){
-            printf("WARNING: Send error! Siliently drop the packets\n");
-            _failed_send_count += 1;
-            return make_ready_future<>();
-        }
-        else{
+        assert(_qid < _dev->hw_queues_count());
+        auto len = p.len();
+        return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
+            p = net::packet(std::move(p), make_deleter([qs = _queue_space.get(), len] { qs->signal(len); }));
             _sendq.push_back(std::move(p));
-            return make_ready_future<>();
-        }
+        });
     }
-
+    inline future<> linearize_and_send(net::packet p){
+        assert(_qid < _dev->hw_queues_count());
+        auto len = p.len();
+        return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
+            p = net::packet(std::move(p), make_deleter([qs = _queue_space.get(), len] { qs->signal(len); }));
+            p.linearize();
+            _sendq.push_back(std::move(p));
+        });
+    }
     subscription<net::packet>
     receive(std::function<future<> (net::packet)> next_packet) {
         return _dev->receive(std::move(next_packet));
@@ -93,6 +114,10 @@ public:
 
     uint16_t port_id(){
         return _port_id;
+    }
+
+    net::ethernet_address get_eth_addr(){
+        return _dev->hw_address();
     }
 };
 
@@ -139,10 +164,12 @@ public:
 
     bool check_assigned_to_core(uint16_t port_id, uint16_t core_id){
         assert(port_id<_core_book_keeping.size() && core_id<smp::count);
+
         return _core_book_keeping[port_id][core_id];
     }
     void set_port_on_core(uint16_t port_id, uint16_t core_id){
         assert(port_id<_core_book_keeping.size() && core_id<smp::count);
+
         _core_book_keeping[port_id][core_id] = true;
     }
 
