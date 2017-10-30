@@ -24,6 +24,7 @@
 #include "core/print.hh"
 #include "core/distributed.hh"
 #include "netstar/netstar_dpdk_device.hh"
+#include "netstar/fdir_device.hh"
 #include "netstar/port.hh"
 #include "netstar/work_unit.hh"
 #include "net/udp.hh"
@@ -167,7 +168,7 @@ int main(int ac, char** av) {
         }).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count,
                 [](uint16_t port_id, uint16_t queue_num){
-                    return create_netstar_dpdk_net_device(port_id, queue_num);
+                    return create_fdir_device(port_id, queue_num);
             });
         }).then([&all_objs]{
             return all_objs.start(&all_objs);
