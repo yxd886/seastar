@@ -345,6 +345,7 @@ libnetstar = [
     'netstar/port.cc',
     'netstar/mica_client.cc',
     'mica/util/cityhash/city_mod.cc',
+    'netstar/fdir_device.cc'
     ]
 
 core = [
