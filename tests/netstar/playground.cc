@@ -52,6 +52,10 @@ int main(int ac, char** av) {
             return all_objs.invoke_on_all([&opts](mica_client& mc){
                 mc.bootup(opts);
             });
+        }).then([&all_objs]{
+            return all_objs.invoke_on_all([](mica_client& mc){
+                mc.start_receiving();
+            });
         }).then([]{
             printf("The mica client is successfully booted up\n");
         });
