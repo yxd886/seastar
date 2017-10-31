@@ -285,6 +285,7 @@ public:
 
         void consume_send_stream(){
             while(!_send_stream.empty() && !_is_in_send_state){
+                printf("Consume send stream\n");
                 auto next_rd_idx = _send_stream.front();
                 auto& next_rd = _rds[next_rd_idx];
                 auto next_rd_size = next_rd.get_request_size();
@@ -301,6 +302,7 @@ public:
 
         void force_send(){
             if(_rd_idxs.size()>0 && !_is_in_send_state){
+                printf("Force send\n");
                 send_request_packet();
             }
         }
