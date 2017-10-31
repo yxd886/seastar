@@ -1512,7 +1512,8 @@ int dpdk_device::init_port_start()
 
     int retval;
 
-    printf("Port %u init ... ", _port_idx);
+    printf("Port %u with %d queues init ... \n", _port_idx, _num_queues);
+
     fflush(stdout);
 
     /*
@@ -1577,6 +1578,7 @@ void dpdk_device::init_port_fini()
     }
 
     for(unsigned i = 0; i<_num_queues; i++){
+        printf("Configuring filter for queue %d\n", i);
         rte_eth_fdir_filter filter = { 0 };
         filter.soft_id = i;
         filter.input.flow_type = RTE_ETH_FLOW_NONFRAG_IPV4_UDP;
