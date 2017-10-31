@@ -26,7 +26,7 @@
 #include "netstar/netstar_dpdk_device.hh"
 #include "netstar/fdir_device.hh"
 #include "netstar/port.hh"
-#include "per_core_objs.hh"
+#include "netstar/per_core_objs.hh"
 #include "netstar/mica_client.hh"
 
 using namespace seastar;
