@@ -51,16 +51,20 @@ public:
                            std::function<future<> (net::packet)> receive_fn){
         assert(port_id<_all_subs.size() && !_all_subs[port_id]);
 
-        _all_subs[port_id].emplace((*_all_ports.at(port_id)).receive(std::move(receive_fn)));
+        _all_subs[port_id].emplace(
+            (*_all_ports.at(port_id)).receive(std::move(receive_fn))
+        );
     }
     void configure_receive_fn_for_all_ports(){
         assert(_all_subs.size()>0 && _all_ports.size()==_all_subs.size());
 
         for(auto i=0; i<_all_subs.size(); i++){
             assert(!_all_subs[i]);
-            _all_subs[i] = _all_ports[i]->receive([this, i](net::packet pkt){
-                return receive_from_port(i, std::move(pkt));
-            });
+            _all_subs[i].emplace(
+                _all_ports[i]->receive([this, i](net::packet pkt){
+                    return receive_from_port(i, std::move(pkt));
+                })
+            );
         }
     }
 
