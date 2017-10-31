@@ -289,42 +289,7 @@ public:
                 auto& next_rd = _rds[next_rd_idx];
                 auto next_rd_size = next_rd.get_request_size();
                 if(_remaining_size < next_rd_size){
-                    scattered_message<char> msg;
-                    msg.reserve(1+3*_rd_idxs.size());
-
-                    // First, put the batch_header in to the _frags
-                    msg.append_static(_batch_header_frag.base,
-                                      _batch_header_frag.size);
-
-                    // Then, for each request descriptor, put the request header
-                    // , key and value into the _frags.
-                    for(auto rd_idx : _rd_idxs){
-                        _rds[rd_idx].append_frags(msg);
-                    }
-
-                    // build up the packet;
-                    net::packet p(std::move(msg).release());
-
-                    // setup the missing header information
-                    setup_ip_udp_length(p);
-                    setup_request_num(p);
-                    // make sure that we don't trigger a linearization
-                    assert(p.nr_frags() == (1+_rd_idxs.size()));
-
-                    // flip the send state
-                    _is_in_send_state = true;
-
-                    // send
-                    _port.linearize_and_send(std::move(p)).then([this]{
-                        for(auto rd_idx : _rd_idxs){
-                            _rds[rd_idx].arm_timer();
-                        }
-
-                        // reset the status of the request_assembler
-                        _is_in_send_state = false;
-                       _rd_idxs.clear();
-                       _remaining_size = max_req_len;
-                    });
+                    send_request_packet();
                 }
                 else{
                     _rd_idxs.push_back(next_rd_idx);
@@ -334,7 +299,51 @@ public:
             }
         }
 
+        void force_send(){
+            if(_rd_idxs.size()>0 && !_is_in_send_state){
+                send_request_packet();
+            }
+        }
+
     private:
+        void send_request_packet(){
+            scattered_message<char> msg;
+            msg.reserve(1+3*_rd_idxs.size());
+
+            // First, put the batch_header in to the _frags
+            msg.append_static(_batch_header_frag.base,
+                              _batch_header_frag.size);
+
+            // Then, for each request descriptor, put the request header
+            // , key and value into the _frags.
+            for(auto rd_idx : _rd_idxs){
+                _rds[rd_idx].append_frags(msg);
+            }
+
+            // build up the packet;
+            net::packet p(std::move(msg).release());
+
+            // setup the missing header information
+            setup_ip_udp_length(p);
+            setup_request_num(p);
+            // make sure that we don't trigger a linearization
+            assert(p.nr_frags() == (1+_rd_idxs.size()));
+
+            // flip the send state
+            _is_in_send_state = true;
+
+            // send
+            _port.linearize_and_send(std::move(p)).then([this]{
+                for(auto rd_idx : _rd_idxs){
+                    _rds[rd_idx].arm_timer();
+                }
+
+                // reset the status of the request_assembler
+                _is_in_send_state = false;
+               _rd_idxs.clear();
+               _remaining_size = max_req_len;
+            });
+        }
         net::packet build_requet_batch_header();
         void setup_ip_udp_length(net::packet& p){
             auto udp_length =
@@ -464,6 +473,7 @@ private:
     void check_request_assemblers(){
         for(auto& ra : _ras){
             ra.consume_send_stream();
+            ra.force_send();
         }
     }
     void check_request_descriptor_timeout(unsigned rd_idx){
