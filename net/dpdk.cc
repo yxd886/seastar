@@ -2315,9 +2315,9 @@ get_dpdk_net_options_description()
          * patch by djp
          * add several command line parameters for mica clients
          */
-        ("mica-server-mac",
-                boost::program_options::value<std::string>()->default_value("3c:fd:fe:06:09:62"),
-                "The MAC address of the port on the mica server.")
+        ("mica-sever-smp-count",
+                boost::program_options::value<uint16_t>()->default_value(10),
+                "The number of the cores used by the mica server.")
         ("mica-server-mac",
                 boost::program_options::value<std::string>()->default_value("3c:fd:fe:06:09:62"),
                 "The MAC address of the port on the mica server.")
