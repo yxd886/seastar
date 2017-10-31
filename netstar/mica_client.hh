@@ -330,7 +330,7 @@ public:
             setup_ip_udp_length(p);
             setup_request_num(p);
             // make sure that we don't trigger a linearization
-            assert(p.nr_frags() == (1+_rd_idxs.size()));
+            assert(p.nr_frags() == (1+3*_rd_idxs.size()));
 
             // flip the send state
             _is_in_send_state = true;
