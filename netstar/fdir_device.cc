@@ -1480,183 +1480,35 @@ int dpdk_device::init_port_start()
       _is_vmxnet3_device = true;
     }
 
-    //
-    // Another workaround: this time for a lack of number of RSS bits.
-    // ixgbe PF NICs support up to 16 RSS queues.
-    // ixgbe VF NICs support up to 4 RSS queues.
-    // i40e PF NICs support up to 64 RSS queues.
-    // i40e VF NICs support up to 16 RSS queues.
-    //
-    if (sstring("rte_ixgbe_pmd") == _dev_info.driver_name) {
-        _dev_info.max_rx_queues = std::min(_dev_info.max_rx_queues, (uint16_t)16);
-    } else if (sstring("rte_ixgbevf_pmd") == _dev_info.driver_name) {
-        _dev_info.max_rx_queues = std::min(_dev_info.max_rx_queues, (uint16_t)4);
-    } else if (sstring("rte_i40e_pmd") == _dev_info.driver_name) {
-        _dev_info.max_rx_queues = std::min(_dev_info.max_rx_queues, (uint16_t)64);
-    } else if (sstring("rte_i40evf_pmd") == _dev_info.driver_name) {
-        _dev_info.max_rx_queues = std::min(_dev_info.max_rx_queues, (uint16_t)16);
-    }
+    // hard code the hw_featuer here.
+    // don't touch _hw_features, leave _hw_features as default value
 
-    // Clear txq_flags - we want to support all available offload features
-    // except for multi-mempool and refcnt'ing which we don't need
-    _dev_info.default_txconf.txq_flags =
-        ETH_TXQ_FLAGS_NOMULTMEMP | ETH_TXQ_FLAGS_NOREFCOUNT;
+    // follow how mica configure the device
+    rte_eth_conf eth_conf = { 0 };
+    eth_conf.rxmode.mq_mode = ETH_MQ_RX_NONE;
+    eth_conf.rxmode.max_rx_pkt_len = ETHER_MAX_LEN;
+    eth_conf.rxmode.hw_vlan_filter = 1;
+    eth_conf.rxmode.hw_vlan_strip = 1;
+    eth_conf.txmode.mq_mode = ETH_MQ_TX_NONE;
+    eth_conf.fdir_conf.mode = RTE_FDIR_MODE_PERFECT;
+    eth_conf.fdir_conf.pballoc = RTE_FDIR_PBALLOC_64K;
+    eth_conf.fdir_conf.status = RTE_FDIR_NO_REPORT_STATUS;
+    eth_conf.fdir_conf.mask.dst_port_mask = 0xffff;
+    eth_conf.fdir_conf.drop_queue = 0;
 
-    //
-    // Disable features that are not supported by port's HW
-    //
-    if (!(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM)) {
-        _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOXSUMUDP;
-    }
+    _dev_info.default_rxconf.rx_thresh.pthresh = 8;
+    _dev_info.default_rxconf.rx_thresh.hthresh = 0;
+    _dev_info.default_rxconf.rx_thresh.wthresh = 0;
+    _dev_info.default_rxconf.rx_free_thresh = 0;
+    _dev_info.default_rxconf.rx_drop_en = 0;
 
-    if (!(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_CKSUM)) {
-        _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOXSUMTCP;
-    }
-
-    if (!(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_SCTP_CKSUM)) {
-        _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOXSUMSCTP;
-    }
-
-    if (!(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_VLAN_INSERT)) {
-        _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOVLANOFFL;
-    }
-
-    if (!(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_VLAN_INSERT)) {
-        _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOVLANOFFL;
-    }
-
-    if (!(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO) &&
-        !(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TSO)) {
-        _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
-    }
-
-    /* for port configuration all features are off by default */
-    rte_eth_conf port_conf = { 0 };
-
-    printf("Port %d: max_rx_queues %d max_tx_queues %d\n",
-           _port_idx, _dev_info.max_rx_queues, _dev_info.max_tx_queues);
-
-    _num_queues = std::min({_num_queues, _dev_info.max_rx_queues, _dev_info.max_tx_queues});
-
-    printf("Port %d: using %d %s\n", _port_idx, _num_queues,
-           (_num_queues > 1) ? "queues" : "queue");
-
-    // Set RSS mode: enable RSS if seastar is configured with more than 1 CPU.
-    // Even if port has a single queue we still want the RSS feature to be
-    // available in order to make HW calculate RSS hash for us.
-    if (smp::count > 1) {
-        if (_dev_info.hash_key_size == 40) {
-            _rss_key = default_rsskey_40bytes;
-        } else if (_dev_info.hash_key_size == 52) {
-            _rss_key = default_rsskey_52bytes;
-        } else if (_dev_info.hash_key_size != 0) {
-            // WTF?!!
-            rte_exit(EXIT_FAILURE,
-                "Port %d: We support only 40 or 52 bytes RSS hash keys, %d bytes key requested",
-                _port_idx, _dev_info.hash_key_size);
-        } else {
-            _rss_key = default_rsskey_40bytes;
-            _dev_info.hash_key_size = 40;
-        }
-
-        port_conf.rxmode.mq_mode = ETH_MQ_RX_RSS;
-        port_conf.rx_adv_conf.rss_conf.rss_hf = ETH_RSS_PROTO_MASK;
-        if (_dev_info.hash_key_size) {
-            port_conf.rx_adv_conf.rss_conf.rss_key = const_cast<uint8_t *>(_rss_key.data());
-            port_conf.rx_adv_conf.rss_conf.rss_key_len = _dev_info.hash_key_size;
-        }
-    } else {
-        port_conf.rxmode.mq_mode = ETH_MQ_RX_NONE;
-    }
-
-    if (_num_queues > 1) {
-        if (_dev_info.reta_size) {
-            // RETA size should be a power of 2
-            assert((_dev_info.reta_size & (_dev_info.reta_size - 1)) == 0);
-
-            // Set the RSS table to the correct size
-            _redir_table.resize(_dev_info.reta_size);
-            _rss_table_bits = std::lround(std::log2(_dev_info.reta_size));
-            printf("Port %d: RSS table size is %d\n",
-                   _port_idx, _dev_info.reta_size);
-        } else {
-            _rss_table_bits = std::lround(std::log2(_dev_info.max_rx_queues));
-        }
-    } else {
-        _redir_table.push_back(0);
-    }
-
-    // Set Rx VLAN stripping
-    if (_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_VLAN_STRIP) {
-        port_conf.rxmode.hw_vlan_strip = 1;
-    }
-
-    // Enable HW CRC stripping
-    port_conf.rxmode.hw_strip_crc = 1;
-
-#ifdef RTE_ETHDEV_HAS_LRO_SUPPORT
-    // Enable LRO
-    if (_use_lro && (_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_LRO)) {
-        printf("LRO is on\n");
-        port_conf.rxmode.enable_lro = 1;
-        _hw_features.rx_lro = true;
-    } else
-#endif
-        printf("LRO is off\n");
-
-    // Check that all CSUM features are either all set all together or not set
-    // all together. If this assumption breaks we need to rework the below logic
-    // by splitting the csum offload feature bit into separate bits for IPv4,
-    // TCP and UDP.
-    assert(((_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_IPV4_CKSUM) &&
-            (_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_UDP_CKSUM) &&
-            (_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_CKSUM)) ||
-           (!(_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_IPV4_CKSUM) &&
-            !(_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_UDP_CKSUM) &&
-            !(_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_CKSUM)));
-
-    // Set Rx checksum checking
-    if (  (_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_IPV4_CKSUM) &&
-          (_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_UDP_CKSUM) &&
-          (_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_CKSUM)) {
-        printf("RX checksum offload supported\n");
-        port_conf.rxmode.hw_ip_checksum = 1;
-        _hw_features.rx_csum_offload = 1;
-    }
-
-    if ((_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_IPV4_CKSUM)) {
-        printf("TX ip checksum offload supported\n");
-        _hw_features.tx_csum_ip_offload = 1;
-    }
-
-    // TSO is supported starting from DPDK v1.8
-    if (_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO) {
-        printf("TSO is supported\n");
-        _hw_features.tx_tso = 1;
-    }
-
-    // There is no UFO support in the PMDs yet.
-#if 0
-    if (_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TSO) {
-        printf("UFO is supported\n");
-        _hw_features.tx_ufo = 1;
-    }
-#endif
-
-    // Check that Tx TCP and UDP CSUM features are either all set all together
-    // or not set all together. If this assumption breaks we need to rework the
-    // below logic by splitting the csum offload feature bit into separate bits
-    // for TCP and UDP.
-    assert(((_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM) &&
-            (_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_CKSUM)) ||
-           (!(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM) &&
-            !(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_CKSUM)));
-
-    if (  (_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM) &&
-          (_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_CKSUM)) {
-        printf("TX TCP&UDP checksum offload supported\n");
-        _hw_features.tx_csum_l4_offload = 1;
-    }
+    _dev_info.default_txconf.tx_thresh.pthresh = 32;
+    _dev_info.default_txconf.tx_thresh.hthresh = 0;
+    _dev_info.default_txconf.tx_thresh.wthresh = 0;
+    _dev_info.default_txconf.tx_free_thresh = 0;
+    _dev_info.default_txconf.tx_rs_thresh = 0;
+    _dev_info.default_txconf.txq_flags = (ETH_TXQ_FLAGS_NOMULTSEGS | ETH_TXQ_FLAGS_NOREFCOUNT |
+                                          ETH_TXQ_FLAGS_NOMULTMEMP | ETH_TXQ_FLAGS_NOOFFLOADS);
 
     int retval;
 
@@ -1668,7 +1520,7 @@ int dpdk_device::init_port_start()
      * rx and tx rings.
       */
     if ((retval = rte_eth_dev_configure(_port_idx, _num_queues, _num_queues,
-                                        &port_conf)) != 0) {
+                                        &eth_conf)) != 0) {
         return retval;
     }
 
@@ -1724,23 +1576,24 @@ void dpdk_device::init_port_fini()
         rte_exit(EXIT_FAILURE, "Cannot start port %d\n", _port_idx);
     }
 
-    if (_num_queues > 1) {
-        if (!rte_eth_dev_filter_supported(_port_idx, RTE_ETH_FILTER_HASH)) {
-            printf("Port %d: HASH FILTER configuration is supported\n", _port_idx);
+    for(unsigned i = 0; i<_num_queues; i++){
+        rte_eth_fdir_filter filter = { 0 };
+        filter.soft_id = i;
+        filter.input.flow_type = RTE_ETH_FLOW_NONFRAG_IPV4_UDP;
+        filter.input.flow.udp4_flow.dst_port = rte_cpu_to_be_16(i);
+        filter.action.rx_queue = i;
+        filter.action.behavior = RTE_ETH_FDIR_ACCEPT;
+        filter.action.report_status = RTE_ETH_FDIR_NO_REPORT_STATUS;
 
-            // Setup HW touse the TOEPLITZ hash function as an RSS hash function
-            struct rte_eth_hash_filter_info info = {};
-
-            info.info_type = RTE_ETH_HASH_FILTER_GLOBAL_CONFIG;
-            info.info.global_conf.hash_func = RTE_ETH_HASH_FUNCTION_TOEPLITZ;
-
-            if (rte_eth_dev_filter_ctrl(_port_idx, RTE_ETH_FILTER_HASH,
-                                        RTE_ETH_FILTER_SET, &info) < 0) {
-                rte_exit(EXIT_FAILURE, "Cannot set hash function on a port %d\n", _port_idx);
-            }
+        int ret;
+        ret = rte_eth_dev_filter_ctrl(static_cast<uint8_t>(_port_idx),
+                                      RTE_ETH_FILTER_FDIR, RTE_ETH_FILTER_ADD,
+                                      &filter);
+        if (ret < 0) {
+            rte_exit(EXIT_FAILURE,
+                    "Error: Failed to add perfect filter entry on port %d\n",
+                    _port_idx);
         }
-
-        set_rss_table();
     }
 
     // Wait for a link
