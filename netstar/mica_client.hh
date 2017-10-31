@@ -462,6 +462,7 @@ public:
             _recycled_rds.pop_front();
             _rds[rd_idx].new_action(op, key_len, std::move(key),
                                     val_len, std::move(val));
+            send_request_descriptor(rd_idx);
             return _rds[rd_idx].obtain_future();
         }
         else{
@@ -471,6 +472,7 @@ public:
                 _recycled_rds.pop_front();
                 _rds[rd_idx].new_action(op, key_len, std::move(key),
                                         val_len, std::move(val));
+                send_request_descriptor(rd_idx);
                 return _rds[rd_idx].obtain_future();
             });
         }
