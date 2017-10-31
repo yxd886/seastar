@@ -2318,6 +2318,9 @@ get_dpdk_net_options_description()
         ("mica-server-mac",
                 boost::program_options::value<std::string>()->default_value("3c:fd:fe:06:09:62"),
                 "The MAC address of the port on the mica server.")
+        ("mica-server-mac",
+                boost::program_options::value<std::string>()->default_value("3c:fd:fe:06:09:62"),
+                "The MAC address of the port on the mica server.")
         ("mica-server-ip",
                 boost::program_options::value<std::string>()->default_value("10.0.0.2"),
                 "The IP address of the port on the mica server.")

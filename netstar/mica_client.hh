@@ -405,14 +405,21 @@ public:
                 opts["mica-client-ip"].as<std::string>());
         uint16_t local_ei_port_id = 0;
 
+        uint16_t local_ei_core_id = static_cast<uint16_t>(engine().cpu_id());
+        uint16_t local_ei_udp_port = local_ei_core_id;
+        endpoint_info local_ei_info(local_ei_eth_addr,
+                                    local_ei_ip_addr,
+                                    local_ei_udp_port,
+                                    std::make_pair(local_ei_core_id,
+                                                   local_ei_port_id));
+
         // first, create request_assembler for each pair of remote endpoint
         // and local endpoint
         for(uint16_t remote_ei_core_id=0;
-            remote_ei_core_id<opts["ms-smp-count"].as<uint16_t>();
+            remote_ei_core_id<opts["mica-sver-smp-count"].as<uint16_t>();
             remote_ei_core_id++){
             uint16_t remote_ei_udp_port = remote_ei_core_id;
-            uint16_t local_ei_core_id = static_cast<uint16_t>(engine().cpu_id());
-            uint16_t local_ei_udp_port = local_ei_core_id;
+
 
             endpoint_info remote_ei_info(remote_ei_eth_addr,
                                          remote_ei_ip_addr,
