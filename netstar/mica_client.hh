@@ -442,7 +442,11 @@ public:
         _check_ras_timer.set_callback([this]{check_request_assemblers();});
         _check_ras_timer.arm_periodic(200us);
     }
-
+    void start_receiving(){
+        assert(ports().size() == 1);
+        this->configure_receive_fn(0,
+                [this](net::packet pkt){return receive(std::move(pkt));});
+    }
     future<> query(Operation op,
                size_t key_len, temporary_buffer<char> key,
                size_t val_len, temporary_buffer<char> val) {
@@ -507,9 +511,9 @@ private:
                                               _ras.size());
         _ras[partition_id].append_new_request_descriptor(rd_idx);
     }
-    void receive(net::packet p){
+    future<> receive(net::packet p){
         if (!is_valid(p) || !is_response(p) || p.nr_frags()!=1){
-            return;
+            return make_ready_future<>();
         }
 
         size_t offset = sizeof(RequestBatchHeader);
@@ -553,6 +557,7 @@ private:
             offset = next_req_offset;
         }
         assert(offset == p.len());
+        return make_ready_future<>();
     }
     uint16_t calc_partition_id(uint64_t key_hash, size_t partition_count) {
       return static_cast<uint16_t>((key_hash >> 48) % partition_count);

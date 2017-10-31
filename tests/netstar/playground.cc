@@ -48,6 +48,10 @@ int main(int ac, char** av) {
             return all_objs.invoke_on_all([&all_ports](mica_client& mc){
                 mc.configure_ports(all_ports, 0, 0);
             });
+        }).then([&all_objs]{
+            return all_objs.invoke_on_all([&all_ports](mica_client& mc){
+                mc.start_receiving();
+            });
         });
     });
 }
