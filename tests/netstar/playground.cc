@@ -28,6 +28,7 @@
 #include "netstar/port.hh"
 #include "netstar/per_core_objs.hh"
 #include "netstar/mica_client.hh"
+#include "netstar/extendable_buffer.hh"
 
 using namespace seastar;
 using namespace netstar;
