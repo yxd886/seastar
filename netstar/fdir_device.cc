@@ -1577,27 +1577,6 @@ void dpdk_device::init_port_fini()
         rte_exit(EXIT_FAILURE, "Cannot start port %d\n", _port_idx);
     }
 
-    for(unsigned i = 0; i<_num_queues; i++){
-        printf("Configuring filter for queue %d\n", i);
-        rte_eth_fdir_filter filter = { 0 };
-        filter.soft_id = i;
-        filter.input.flow_type = RTE_ETH_FLOW_NONFRAG_IPV4_UDP;
-        filter.input.flow.udp4_flow.dst_port = rte_cpu_to_be_16(i);
-        filter.action.rx_queue = i;
-        filter.action.behavior = RTE_ETH_FDIR_ACCEPT;
-        filter.action.report_status = RTE_ETH_FDIR_NO_REPORT_STATUS;
-
-        int ret;
-        ret = rte_eth_dev_filter_ctrl(static_cast<uint8_t>(_port_idx),
-                                      RTE_ETH_FILTER_FDIR, RTE_ETH_FILTER_ADD,
-                                      &filter);
-        if (ret < 0) {
-            rte_exit(EXIT_FAILURE,
-                    "Error: Failed to add perfect filter entry on port %d\n",
-                    _port_idx);
-        }
-    }
-
     // Wait for a link
     check_port_link_status();
 
@@ -1746,6 +1725,28 @@ void dpdk_device::check_port_link_status()
                 " Mbps - " << ((link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
                           ("full-duplex") : ("half-duplex\n")) <<
                 std::endl;
+
+            for(unsigned i = 0; i<_num_queues; i++){
+                printf("Configuring filter for queue %d\n", i);
+                rte_eth_fdir_filter filter = { 0 };
+                filter.soft_id = i;
+                filter.input.flow_type = RTE_ETH_FLOW_NONFRAG_IPV4_UDP;
+                filter.input.flow.udp4_flow.dst_port = rte_cpu_to_be_16(i);
+                filter.action.rx_queue = i;
+                filter.action.behavior = RTE_ETH_FDIR_ACCEPT;
+                filter.action.report_status = RTE_ETH_FDIR_NO_REPORT_STATUS;
+
+                int ret;
+                ret = rte_eth_dev_filter_ctrl(static_cast<uint8_t>(_port_idx),
+                                              RTE_ETH_FILTER_FDIR, RTE_ETH_FILTER_ADD,
+                                              &filter);
+                if (ret < 0) {
+                    rte_exit(EXIT_FAILURE,
+                            "Error: Failed to add perfect filter entry on port %d\n",
+                            _port_idx);
+                }
+            }
+
             _link_ready_promise.set_value();
 
             // We may start collecting statistics only after the Link is UP.
