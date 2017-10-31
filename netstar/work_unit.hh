@@ -35,7 +35,7 @@ protected:
     explicit work_unit(per_core_objs<T>* objs): _all_objs(objs) {}
 public:
     void configure_ports(ports_env& env, unsigned first_pos, unsigned last_pos){
-        assert(first_pos<last_pos && last_pos<env.count() && _all_ports.size() == 0);
+        assert(first_pos<=last_pos && last_pos<env.count() && _all_ports.size() == 0);
 
         for(auto i = first_pos; i<=last_pos; i++){
             assert(!env.check_assigned_to_core(i, engine().cpu_id()));
