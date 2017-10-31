@@ -440,7 +440,7 @@ public:
         // in case there's not enough request put into the request
         // assemblers.
         _check_ras_timer.set_callback([this]{check_request_assemblers();});
-        _check_ras_timer.arm_periodic(500us);
+        _check_ras_timer.arm_periodic(200us);
     }
 
     future<> query(Operation op,
