@@ -51,7 +51,7 @@ public:
                            std::function<future<> (net::packet)> receive_fn){
         assert(port_id<_all_subs.size() && !_all_subs[port_id]);
 
-        _all_subs[port_id] = (*_all_ports.at(port_id)).receive(std::move(receive_fn));
+        _all_subs[port_id].emplace((*_all_ports.at(port_id)).receive(std::move(receive_fn)));
     }
     void configure_receive_fn_for_all_ports(){
         assert(_all_subs.size()>0 && _all_ports.size()==_all_subs.size());
