@@ -444,7 +444,7 @@ public:
         // in case there's not enough request put into the request
         // assemblers.
         _check_ras_timer.set_callback([this]{check_request_assemblers();});
-        _check_ras_timer.arm_periodic(1s);
+        _check_ras_timer.arm_periodic(200us);
     }
     void start_receiving(){
         assert(ports().size() == 1);
@@ -479,7 +479,6 @@ public:
     }
 private:
     void check_request_assemblers(){
-        printf("I am called\n");
         for(auto& ra : _ras){
             ra.consume_send_stream();
             ra.force_send();
