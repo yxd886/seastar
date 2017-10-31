@@ -334,6 +334,7 @@ public:
 
             // send
             _port.linearize_and_send(std::move(p)).then([this]{
+                printf("The request packet is sent out\n");
                 for(auto rd_idx : _rd_idxs){
                     _rds[rd_idx].arm_timer();
                 }
