@@ -310,6 +310,10 @@ public:
 
     private:
         void send_request_packet(){
+            printf("In send_request_packet\n");
+            printf("The source lcore is %d\n", _local_ei.udp_port);
+            printf("The destination lcore is %d\n", _remote_ei.udp_port);
+
             scattered_message<char> msg;
             msg.reserve(1+3*_rd_idxs.size());
 
@@ -515,6 +519,7 @@ private:
         // Here, each ra in _ras represents a partition.
         auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
                                               _ras.size());
+        printf("The partition id is %d\n", partition_id);
         _ras[partition_id].append_new_request_descriptor(rd_idx);
     }
     future<> receive(net::packet p){
@@ -545,9 +550,12 @@ private:
                                   p.share(val_offset, roundup_val_len));
 
             switch (action_res){
-            case action::no_action :
+            case action::no_action : {
+                printf("Response match fails, invalid response\n");
                 break;
+            }
             case action::recycle_rd : {
+                printf("Response match succeed, recycle the request descriptor\n");
                 // recycle the request descriptor.
                 _recycled_rds.push_back(rd_idx);
                 _pending_work_queue.signal(1);
