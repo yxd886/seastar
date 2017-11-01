@@ -161,6 +161,9 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
                 total--;
                 res[local_queue][remote_queue].local_port = local_port;
                 res[local_queue][remote_queue].remote_port = remote_port;
+
+                printf("Find one valid queue mapping entry: local_queue %d <-> remote_queue %d, \\"
+                       "local_port %d, remote_port %d\n", local_queue, remote_queue, local_port, remote_port);
             }
 
             if(total == 0){

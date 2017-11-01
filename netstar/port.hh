@@ -119,6 +119,9 @@ public:
     net::ethernet_address get_eth_addr(){
         return _dev->hw_address();
     }
+    const rss_key_type& get_rss_key(){
+        return _dev->rss_key();
+    }
 };
 
 class ports_env{
