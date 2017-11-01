@@ -599,7 +599,8 @@ vector<vector<port_pair>>
 calculate_queue_mapping(boost::program_options::variables_map& opts,
                         unsigned local_smp_count, unsigned remote_smp_count,
                         net::ipv4_address local_ip_addr,
-                        net::ipv4_address remote_ip_addr);
+                        net::ipv4_address remote_ip_addr,
+                        rss_key_type& rss_key);
 
 } // namespace queue_mapping
 

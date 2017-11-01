@@ -45,8 +45,8 @@ int main(int ac, char** av) {
                 return create_fdir_device(port_id);
         }).then([&all_objs]{
             return all_objs.start(&all_objs);
-        }).then([&all_objs, &opts]{
-
+        }).then([&all_ports, &opts]{
+            // all_ports.get_ports(0).local_obj().get_rss_key();
         });/*.then([&all_ports, &all_objs]{
             return all_objs.invoke_on_all([&all_ports](mica_client& mc){
                 mc.configure_ports(all_ports, 0, 0);
