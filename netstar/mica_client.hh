@@ -24,7 +24,6 @@
 #include <utility>
 #include <chrono>
 #include <boost/program_options/variables_map.hpp>
-#include <random>
 
 namespace netstar {
 
@@ -384,12 +383,9 @@ private:
     semaphore _pending_work_queue = {total_request_descriptor_count};
     circular_buffer<unsigned> _recycled_rds;
     timer<steady_clock_type> _check_ras_timer;
-    std::random_device _rd;
-    std::default_random_engine _e;
-    std::uniform_int_distribution<uint16_t> _port_dist{10240, 65535};
 public:
     explicit mica_client(per_core_objs<mica_client>* all_objs) :
-            work_unit<mica_client>(all_objs), _e(_rd()) {}
+            work_unit<mica_client>(all_objs){}
 
     mica_client(const mica_client& other) = delete;
     mica_client(mica_client&& other)  = delete;
