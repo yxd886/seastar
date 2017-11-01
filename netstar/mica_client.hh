@@ -524,6 +524,7 @@ private:
     }
     future<> receive(net::packet p){
         if (!is_valid(p) || !is_response(p) || p.nr_frags()!=1){
+            printf("Receive invalid response packet\n");
             return make_ready_future<>();
         }
         printf("Receive valid response packet\n");

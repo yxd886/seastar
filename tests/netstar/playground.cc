@@ -58,23 +58,25 @@ int main(int ac, char** av) {
                 mc.start_receiving();
             });
         }).then([&all_objs]{
-            unsigned key = 1024;
-            extendable_buffer key_buf;
-            key_buf.fill_data(key);
+            return smp::submit_to(1, [&all_objs]{
+                unsigned key = 1024;
+                extendable_buffer key_buf;
+                key_buf.fill_data(key);
 
-            unsigned val = 8721;
-            extendable_buffer val_buf;
-            val_buf.fill_data(val);
+                unsigned val = 8721;
+                extendable_buffer val_buf;
+                val_buf.fill_data(val);
 
-            return all_objs.local_obj().query(Operation::kSet,
-                    sizeof(unsigned), key_buf.get_temp_buffer(),
-                    sizeof(unsigned), val_buf.get_temp_buffer()).then_wrapped([](auto&& f){
-                try{
-                    f.get();
-                }
-                catch(...){
-                    printf("We got some errors here!\n");
-                }
+                return all_objs.local_obj().query(Operation::kSet,
+                        sizeof(unsigned), key_buf.get_temp_buffer(),
+                        sizeof(unsigned), val_buf.get_temp_buffer()).then_wrapped([](auto&& f){
+                    try{
+                        f.get();
+                    }
+                    catch(...){
+                        printf("We got some errors here!\n");
+                    }
+                });
             });
         }).then([]{
             printf("The mica client is successfully booted up\n");
