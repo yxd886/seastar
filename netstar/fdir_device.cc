@@ -1500,7 +1500,7 @@ int dpdk_device::init_port_start()
     eth_conf.fdir_conf.pballoc = RTE_FDIR_PBALLOC_64K;
     eth_conf.fdir_conf.status = RTE_FDIR_NO_REPORT_STATUS;
     eth_conf.fdir_conf.mask.dst_port_mask = 0xffff;
-    eth_conf.fdir_conf.drop_queue = 0;
+    eth_conf.fdir_conf.drop_queue = 1;
 
     _dev_info.default_rxconf.rx_thresh.pthresh = 8;
     _dev_info.default_rxconf.rx_thresh.hthresh = 0;
