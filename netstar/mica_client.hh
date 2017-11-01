@@ -96,7 +96,7 @@ public:
         void new_action(Operation op,
                         size_t key_len, temporary_buffer<char> key,
                         size_t val_len, temporary_buffer<char> val){
-            printf("New action is called on %d\n", _rd_index);
+            printf("Thread %d: New action is called on %d\n", engine().cpu_id(), _rd_index);
             // If this method is called, the rd must be popped out from
             // the fifo. When the rd is popped out from the fifo, it is either
             // in initialized state, or be recycled. This means that:
@@ -286,7 +286,7 @@ public:
 
         void consume_send_stream(){
             while(!_send_stream.empty() && !_is_in_send_state){
-                printf("Consume send stream\n");
+                printf("Thread %d: Consume send stream\n", engine().cpu_id());
                 auto next_rd_idx = _send_stream.front();
                 auto& next_rd = _rds[next_rd_idx];
                 auto next_rd_size = next_rd.get_request_size();
@@ -303,16 +303,16 @@ public:
 
         void force_send(){
             if(_rd_idxs.size()>0 && !_is_in_send_state){
-                printf("Force send\n");
+                printf("Thread %d: Force send\n", engine().cpu_id());
                 send_request_packet();
             }
         }
 
     private:
         void send_request_packet(){
-            printf("In send_request_packet\n");
-            printf("The source lcore is %d\n", _local_ei.udp_port);
-            printf("The destination lcore is %d\n", _remote_ei.udp_port);
+            printf("Thread %d: In send_request_packet\n", engine().cpu_id());
+            printf("Thread %d: The source lcore is %d\n", engine().cpu_id(), _local_ei.udp_port);
+            printf("Thread %d: The destination lcore is %d\n", engine().cpu_id(), _remote_ei.udp_port);
 
             scattered_message<char> msg;
             msg.reserve(1+3*_rd_idxs.size());
@@ -341,7 +341,7 @@ public:
 
             // send
             _port.linearize_and_send(std::move(p)).then([this]{
-                printf("The request packet is sent out\n");
+                printf("Thread %d: The request packet is sent out\n", engine().cpu_id());
                 for(auto rd_idx : _rd_idxs){
                     _rds[rd_idx].arm_timer();
                 }
@@ -519,15 +519,15 @@ private:
         // Here, each ra in _ras represents a partition.
         auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
                                               _ras.size());
-        printf("The partition id is %d\n", partition_id);
+        printf("Thread %d: The partition id is %d\n", engine().cpu_id(), partition_id);
         _ras[partition_id].append_new_request_descriptor(rd_idx);
     }
     future<> receive(net::packet p){
         if (!is_valid(p) || !is_response(p) || p.nr_frags()!=1){
-            printf("Receive invalid response packet\n");
+            printf("Thread %d: Receive invalid response packet\n", engine().cpu_id());
             return make_ready_future<>();
         }
-        printf("Receive valid response packet\n");
+        printf("Thread %d: Receive valid response packet\n", engine().cpu_id());
 
         size_t offset = sizeof(RequestBatchHeader);
 
@@ -552,11 +552,11 @@ private:
 
             switch (action_res){
             case action::no_action : {
-                printf("Response match fails, invalid response\n");
+                printf("Thread %d: Response match fails, invalid response\n", engine().cpu_id());
                 break;
             }
             case action::recycle_rd : {
-                printf("Response match succeed, recycle the request descriptor\n");
+                printf("Thread %d: Response match succeed, recycle the request descriptor\n", engine().cpu_id());
                 // recycle the request descriptor.
                 _recycled_rds.push_back(rd_idx);
                 _pending_work_queue.signal(1);
