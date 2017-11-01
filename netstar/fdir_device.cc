@@ -1483,6 +1483,12 @@ int dpdk_device::init_port_start()
     // hard code the hw_featuer here.
     // don't touch _hw_features, leave _hw_features as default value
 
+    int ret = rte_eth_dev_filter_supported(_port_idx, RTE_ETH_FILTER_FDIR);
+    if (ret < 0) {
+        rte_exit(EXIT_FAILURE, "flow director is not supported on port %u.\n",
+                 _port_idx);
+    }
+
     // follow how mica configure the device
     rte_eth_conf eth_conf = { 0 };
     eth_conf.rxmode.mq_mode = ETH_MQ_RX_NONE;
