@@ -594,7 +594,7 @@ namespace queue_mapping {
 
 using namespace std;
 
-vector<vector<experimental::optional<pair<uint16_t, uint16_t>>>>
+vector<vector<pair<uint16_t, uint16_t>>>
 calculate_queue_mapping(boost::program_options::variables_map& opts,
                         unsigned local_smp_count, unsigned remote_smp_count,
                         net::ipv4_address local_ip_addr,

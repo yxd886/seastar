@@ -122,12 +122,24 @@ bool mica_client::is_response(net::packet& p) const {
 
 namespace queue_mapping {
 
-vector<vector<experimental::optional<pair<uint16_t, uint16_t>>>>
+vector<vector<pair<uint16_t, uint16_t>>>
 calculate_queue_mapping(boost::program_options::variables_map& opts,
                         unsigned local_smp_count, unsigned remote_smp_count,
                         net::ipv4_address local_ip_addr,
                         net::ipv4_address remote_ip_addr){
-    return vector<vector<experimental::optional<pair<uint16_t, uint16_t>>>>();
+    // Given local_ip_addr and remote_ip_addr, the
+    // result contains the following information
+    // get<0>(res[x][y]): source port that maps local queue x to remote queue y
+    // get<1>(res[x][y]): desitination port that maps local queue x to remote queue y
+    vector<vector<pair<uint16_t, uint16_t>>> res;
+
+    res.resize(smp::count);
+    for(auto& v : res){
+        v.resize(opts["mica-sever-smp-count"].as<unsigned>());
+    }
+
+
+    return vector<vector<pair<uint16_t, uint16_t>>>();
 }
 
 } // namespace queue_mapping
