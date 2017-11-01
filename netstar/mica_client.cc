@@ -122,16 +122,17 @@ bool mica_client::is_response(net::packet& p) const {
 
 namespace queue_mapping {
 
-vector<vector<pair<uint16_t, uint16_t>>>
+vector<vector<port_pair>>
 calculate_queue_mapping(boost::program_options::variables_map& opts,
                         unsigned local_smp_count, unsigned remote_smp_count,
                         net::ipv4_address local_ip_addr,
-                        net::ipv4_address remote_ip_addr){
+                        net::ipv4_address remote_ip_addr,
+                        rss_key_type& rss_key){
     // Given local_ip_addr and remote_ip_addr, the
     // result contains the following information
     // get<0>(res[x][y]): local port that maps local queue x to remote queue y
     // get<1>(res[x][y]): remote port that maps local queue x to remote queue y
-    vector<vector<pair<uint16_t, uint16_t>>> res;
+    vector<vector<port_pair>> res;
     res.resize(local_smp_count);
     for(auto& v : res){
         v.resize(remote_smp_count);
@@ -144,7 +145,7 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
         v.resize(remote_smp_count, false);
     }
 
-    /*unsigned total = local_smp_count * remote_smp_count;
+    unsigned total = local_smp_count * remote_smp_count;
 
     for(uint16_t local_port = 10240; local_port < 65535; local_port ++){
         for(uint16_t remote_port = 10240; remote_port < 65535; remote_port ++){
@@ -152,11 +153,28 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
             net::l4connid<net::ipv4_traits> to_local{local_ip_addr, remote_ip_addr, local_port, remote_port};
             net::l4connid<net::ipv4_traits> to_remote{remote_ip_addr, local_ip_addr, remote_port, local_port};
 
+            unsigned local_queue = to_local.hash(rss_key) % local_smp_count;
+            unsigned remote_queue = to_remote.hash(rss_key) % remote_smp_count;
+
+            if(!res_pos_flag[local_queue][remote_queue]){
+                res_pos_flag[local_queue][remote_queue] = true;
+                total--;
+                res[local_queue][remote_queue].local_port = local_port;
+                res[local_queue][remote_queue].remote_port = remote_port;
+            }
+
+            if(total == 0){
+                return res;
+            }
         }
-    }*/
+    }
 
+    if(total!=0){
+        printf("Fail to find a valid queue mapping. \n");
+        assert(false);
+    }
 
-    return vector<vector<pair<uint16_t, uint16_t>>>();
+    return res;
 }
 
 } // namespace queue_mapping
