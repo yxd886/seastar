@@ -404,7 +404,7 @@ public:
         // Currently, we only support one port for mica client, and
         // one port for mica server.
         assert(ports().size() == 1);
-
+#if 0
         net::ethernet_address remote_ei_eth_addr(
                 net::parse_ethernet_address(
                         opts["mica-server-mac"].as<std::string>()));
@@ -440,6 +440,7 @@ public:
             _ras.emplace_back(remote_ei_info, local_ei_info,
                     *(ports()[0]), _rds);
         }
+#endif
 
         // second, create all the request_descriptor
         for(unsigned rd_idx=0; rd_idx<total_request_descriptor_count; rd_idx++){
@@ -588,6 +589,16 @@ private:
     bool is_valid(net::packet& p);
     bool is_response(net::packet& p) const;
 };
+
+namespace queue_mapping {
+
+std::vector<std::vector<std::pair<uint16_t, uint16_t>>>
+calculate_queue_mapping(boost::program_options::variables_map& opts,
+                        unsigned local_smp_count, unsigned remote_smp_count,
+                        net::ipv4_address local_ip_addr,
+                        net::ipv4_address remote_ip_addr);
+
+} // namespace queue_mapping
 
 } // namespace netstar
 
