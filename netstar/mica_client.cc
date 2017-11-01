@@ -127,7 +127,7 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
                         unsigned local_smp_count, unsigned remote_smp_count,
                         net::ipv4_address local_ip_addr,
                         net::ipv4_address remote_ip_addr,
-                        rss_key_type& rss_key){
+                        const rss_key_type& rss_key){
     // Given local_ip_addr and remote_ip_addr, the
     // result contains the following information
     // get<0>(res[x][y]): local port that maps local queue x to remote queue y
