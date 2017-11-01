@@ -528,6 +528,9 @@ private:
             return make_ready_future<>();
         }
         printf("Thread %d: Receive valid response packet\n", engine().cpu_id());
+        auto hd = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
+        printf("Thread %d: source port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->src_port));
+        printf("Thread %d: destination port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->dst_port));
 
         size_t offset = sizeof(RequestBatchHeader);
 
