@@ -521,6 +521,7 @@ private:
         if (!is_valid(p) || !is_response(p) || p.nr_frags()!=1){
             return make_ready_future<>();
         }
+        printf("Receive valid response packet\n");
 
         size_t offset = sizeof(RequestBatchHeader);
 
