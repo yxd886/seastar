@@ -49,7 +49,7 @@ int main(int ac, char** av) {
             // all_ports.get_ports(0).local_obj().get_rss_key();
             net::ipv4_address local_ip_addr(opts["mica-client-ip"].as<std::string>());
             net::ipv4_address remote_ip_addr(opts["mica-server-ip"].as<std::string>());
-            auto res = queue_mapping::calculate_queue_mapping(opts, smp::count, 1, local_ip_addr, remote_ip_addr,
+            auto res = queue_mapping::calculate_queue_mapping(opts, smp::count, 10, local_ip_addr, remote_ip_addr,
                     all_ports.get_ports(0).local_obj().get_rss_key());
         });/*.then([&all_ports, &all_objs]{
             return all_objs.invoke_on_all([&all_ports](mica_client& mc){
