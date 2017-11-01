@@ -132,11 +132,18 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
     // get<0>(res[x][y]): source port that maps local queue x to remote queue y
     // get<1>(res[x][y]): desitination port that maps local queue x to remote queue y
     vector<vector<pair<uint16_t, uint16_t>>> res;
-
     res.resize(smp::count);
     for(auto& v : res){
         v.resize(opts["mica-sever-smp-count"].as<unsigned>());
     }
+
+    // record whether a position in res is used
+    vector<vector<bool>> res_pos_flag;
+    res_pos_flag.resize(smp::count);
+    for(auto& v : res_pos_flag){
+        v.resize(opts["mica-sever-smp-count"].as<unsigned>(), false);
+    }
+
 
 
     return vector<vector<pair<uint16_t, uint16_t>>>();
