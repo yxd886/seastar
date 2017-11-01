@@ -132,25 +132,28 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
     // get<0>(res[x][y]): local port that maps local queue x to remote queue y
     // get<1>(res[x][y]): remote port that maps local queue x to remote queue y
     vector<vector<pair<uint16_t, uint16_t>>> res;
-    res.resize(smp::count);
+    res.resize(local_smp_count);
     for(auto& v : res){
-        v.resize(opts["mica-sever-smp-count"].as<unsigned>());
+        v.resize(remote_smp_count);
     }
 
     // record whether a position in res is used
     vector<vector<bool>> res_pos_flag;
-    res_pos_flag.resize(smp::count);
+    res_pos_flag.resize(local_smp_count);
     for(auto& v : res_pos_flag){
-        v.resize(opts["mica-sever-smp-count"].as<unsigned>(), false);
+        v.resize(remote_smp_count, false);
     }
 
-    unsigned total = smp::count * opts["mica-sever-smp-count"].as<unsigned>();
+    /*unsigned total = local_smp_count * remote_smp_count;
 
     for(uint16_t local_port = 10240; local_port < 65535; local_port ++){
         for(uint16_t remote_port = 10240; remote_port < 65535; remote_port ++){
             // iterate through each of the local and remote port;
+            net::l4connid<net::ipv4_traits> to_local{local_ip_addr, remote_ip_addr, local_port, remote_port};
+            net::l4connid<net::ipv4_traits> to_remote{remote_ip_addr, local_ip_addr, remote_port, local_port};
+
         }
-    }
+    }*/
 
 
     return vector<vector<pair<uint16_t, uint16_t>>>();
