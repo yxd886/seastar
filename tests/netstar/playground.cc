@@ -42,7 +42,7 @@ int main(int ac, char** av) {
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 1, smp::count,
             [](uint16_t port_id, uint16_t queue_num){
-                return create_fdir_device(port_id, queue_num);
+                return create_fdir_device(port_id);
         }).then([&all_objs]{
             return all_objs.start(&all_objs);
         }).then([&all_ports, &all_objs]{
