@@ -77,7 +77,9 @@ public:
            auto& peer = _all_objs->get_obj(dst_core);
 
            smp::submit_to(dst_core, [this, &peer, src_core, pkt = std::move(pkt)] () mutable {
-               peer.receive_forwarded(src_core, pkt.free_on_cpu(src_core, [this]{ _forward_queue_length.signal(1);}));
+               peer.receive_forwarded(src_core, pkt.free_on_cpu(src_core, []{}));
+           }).then([this]{
+               _forward_queue_length.signal(1);
            });
         });
     }
