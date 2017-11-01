@@ -1578,8 +1578,9 @@ int dpdk_device::init_port_start()
     // Clear txq_flags - we want to support all available offload features
     // except for multi-mempool and refcnt'ing which we don't need
     _dev_info.default_txconf.txq_flags =
-        ETH_TXQ_FLAGS_NOMULTMEMP | ETH_TXQ_FLAGS_NOREFCOUNT;
-
+            (ETH_TXQ_FLAGS_NOMULTSEGS | ETH_TXQ_FLAGS_NOREFCOUNT |
+             ETH_TXQ_FLAGS_NOMULTMEMP | ETH_TXQ_FLAGS_NOOFFLOADS);
+#if 0
     //
     // Disable features that are not supported by port's HW
     //
@@ -1607,6 +1608,7 @@ int dpdk_device::init_port_start()
         !(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TSO)) {
         _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
     }
+#endif
 
     /* for port configuration all features are off by default */
     rte_eth_conf port_conf = { 0 };
@@ -1671,7 +1673,7 @@ int dpdk_device::init_port_start()
 
     // Enable HW CRC stripping
     port_conf.rxmode.hw_strip_crc = 1;
-
+#if 0
 #ifdef RTE_ETHDEV_HAS_LRO_SUPPORT
     // Enable LRO
     if (_use_lro && (_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_LRO)) {
@@ -1712,7 +1714,7 @@ int dpdk_device::init_port_start()
         printf("TSO is supported\n");
         _hw_features.tx_tso = 1;
     }
-
+#endif
     // There is no UFO support in the PMDs yet.
 #if 0
     if (_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TSO) {
@@ -1720,7 +1722,7 @@ int dpdk_device::init_port_start()
         _hw_features.tx_ufo = 1;
     }
 #endif
-
+#if 0
     // Check that Tx TCP and UDP CSUM features are either all set all together
     // or not set all together. If this assumption breaks we need to rework the
     // below logic by splitting the csum offload feature bit into separate bits
@@ -1735,7 +1737,7 @@ int dpdk_device::init_port_start()
         printf("TX TCP&UDP checksum offload supported\n");
         _hw_features.tx_csum_l4_offload = 1;
     }
-
+#endif
     int retval;
 
     printf("Port %u init ... ", _port_idx);
