@@ -82,7 +82,7 @@ int main(int ac, char** av) {
                         printf("Operation %d, result %d\n", op, r);
                         auto key_len = response.get_key_len();
                         auto val_len = response.get_val_len();
-                        printf("key_len %d, val_len %d\n", key_len, val_len);
+                        std::cout<<"key_len "<<key_len<<" val_len "<<val_len<<std::endl;
                     }
                     catch(...){
                         printf("We got some errors here!\n");
