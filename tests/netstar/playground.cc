@@ -54,7 +54,7 @@ int main(int ac, char** av) {
             queue_map = calculate_queue_mapping(
                     opts, all_ports.get_ports(0).local_obj());
         }).then([&all_objs, &opts, &queue_map]{
-            return all_objs.invoke_on_all([&opts](mica_client& mc){
+            return all_objs.invoke_on_all([&opts, &queue_map](mica_client& mc){
                 mc.bootup(opts, queue_map);
             });
         }).then([&all_objs]{
