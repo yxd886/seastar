@@ -140,7 +140,7 @@ public:
         temporary_buffer<char> _val_buf;
 
         // the associated promise with this request
-        std::experimental::optional<promise<>> _pr;
+        std::experimental::optional<promise<mica_response>> _pr;
 
         // the size of the request
         size_t _request_size;
@@ -189,7 +189,7 @@ public:
             // This is called after new_action is called. So we
             // perform the same assertion.
             assert(!_pr && _retry_count == 0 && !_to.armed());
-            _pr = promise<>();
+            _pr = promise<mica_response>();
             return _pr->get_future();
         }
 
@@ -216,8 +216,7 @@ public:
             return _rq_hd.key_hash;
         }
     public:
-        action match_response(RequestHeader& res_hd, net::packet res_key,
-                              net::packet res_val){
+        action match_response(RequestHeader& res_hd, net::packet response_pkt){
             auto opaque = res_hd.opaque;
             uint16_t epoch = opaque & ((1 << 16) - 1);
             if(epoch != _epoch){
@@ -232,13 +231,7 @@ public:
             // the _pr must be associated with some continuations.
             assert(_to.armed() && _retry_count < max_retries && _pr);
 
-            if(res_hd.result != static_cast<uint8_t>(Result::kSuccess)){
-                _pr->set_exception(kill_flow());
-            }
-            else{
-                _pr->set_value();
-            }
-
+            _pr->set_value(mica_response(std::move(response_pkt)));
             normal_recycle_prep();
             return action::recycle_rd;
         }
@@ -632,16 +625,16 @@ private:
             size_t val_len = (rh->kv_length_vec & ((1 << 24) - 1));
             size_t roundup_val_len = roundup<8>(val_len);
 
-            size_t key_offset = offset+sizeof(RequestHeader);
-            size_t val_offset = key_offset + roundup_key_len;
-            size_t next_req_offset = val_offset + roundup_val_len;
+            // size_t key_offset = offset+sizeof(RequestHeader);
+            // size_t val_offset = key_offset + roundup_key_len;
+            // size_t next_req_offset = val_offset + roundup_val_len;
+
+            size_t total_reponse_length = sizeof(RequestHeader)+
+                    roundup_key_len+roundup_val_len;
 
             unsigned rd_idx = static_cast<unsigned>(rh->opaque >> 16);
-
-
             auto action_res = _rds[rd_idx].match_response(*rh,
-                                  p.share(key_offset, roundup_key_len),
-                                  p.share(val_offset, roundup_val_len));
+                                  p.share(offset, total_reponse_length));
 
             switch (action_res){
             case action::no_action : {
@@ -663,7 +656,7 @@ private:
                 break;
             }
 
-            offset = next_req_offset;
+            offset += total_reponse_length;
         }
         assert(offset == p.len());
         return make_ready_future<>();
