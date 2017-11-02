@@ -83,7 +83,9 @@ int main(int ac, char** av) {
 #include "core/reactor.hh"
 #include "core/future-util.hh"
 #include <iostream>
-
+#include "core/reactor.hh"
+#include "core/app-template.hh"
+#include "core/print.hh"
 
 
 
