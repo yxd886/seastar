@@ -39,13 +39,6 @@ struct port_pair{
     uint16_t remote_port;
 };
 
-/*vector<vector<port_pair>>
-calculate_queue_mapping(boost::program_options::variables_map& opts,
-                        unsigned local_smp_count, unsigned remote_smp_count,
-                        std::string local_ip_addr_str,
-                        std::string remote_ip_addr_str,
-                        port& pt);*/
-
 vector<vector<port_pair>>& get_queue_mapping();
 
 template <typename... T>

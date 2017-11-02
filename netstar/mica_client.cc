@@ -62,15 +62,20 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
     return res;
 }
 
+static bool is_qm_initialized = false;
+
 vector<vector<port_pair>>& get_queue_mapping(){
     static vector<vector<port_pair>> qm;
+    assert(is_qm_initialized);
     return qm;
 }
 
 template <typename... T>
 void initialize_queue_mapping(T&&... args){
+    assert(is_qm_initialized == false);
     auto result = calculate_queue_mapping(std::forward<T>(args)...);
     get_queue_mapping() = std::move(result);
+    is_qm_initialized = true;
 }
 
 } // namespace queue_mapping
