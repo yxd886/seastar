@@ -95,7 +95,9 @@ public:
     template<typename T>
     T& get_value(){
         assert(sizeof(T) == get_val_len());
-        auto value = _response_pkt.get_header<T>(sizeof(RequestHeader)+get_roundup_key_len());
+        auto value =
+                _response_pkt.get_header<T>(
+                        sizeof(RequestHeader)+get_roundup_key_len());
         return *value;
     }
 };
