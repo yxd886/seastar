@@ -41,8 +41,8 @@ struct port_pair{
 
 vector<vector<port_pair>>& get_queue_mapping();
 
-template <typename... T>
-void initialize_queue_mapping(T&&... args);
+void initialize_queue_mapping(boost::program_options::variables_map& opts,
+                              port& pt);
 
 } // namespace queue_mapping
 
@@ -417,6 +417,7 @@ public:
         // one port for mica server.
         assert(ports().size() == 1);
 
+        // prepare all the ingredients for the intialization loop
         net::ethernet_address remote_ei_eth_addr(
                 net::parse_ethernet_address(
                         opts["mica-server-mac"].as<std::string>()));

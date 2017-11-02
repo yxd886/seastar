@@ -70,11 +70,19 @@ vector<vector<port_pair>>& get_queue_mapping(){
     return qm;
 }
 
-template <typename... T>
-void initialize_queue_mapping(T&&... args){
+void initialize_queue_mapping(boost::program_options::variables_map& opts,
+                              port& pt){
     assert(is_qm_initialized == false);
-    auto result = calculate_queue_mapping(std::forward<T>(args)...);
+
+    auto result = calculate_queue_mapping(
+                        opts,
+                        smp::count,
+                        static_cast<unsigned>(opts["mica-sever-smp-count"].as<uint16_t>()),
+                        opts["mica-client-ip"].as<std::string>(),
+                        opts["mica-server-ip"].as<std::string>(),
+                        pt);
     get_queue_mapping() = std::move(result);
+
     is_qm_initialized = true;
 }
 
