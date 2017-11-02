@@ -41,8 +41,8 @@ struct port_pair{
 
 vector<vector<port_pair>>& get_queue_mapping();
 
-void initialize_queue_mapping(boost::program_options::variables_map& opts,
-                              port& pt);
+future<> initialize_queue_mapping(boost::program_options::variables_map& opts,
+                                  port& pt);
 
 } // namespace queue_mapping
 
