@@ -100,10 +100,10 @@ seastar::future<> service_loop() {
         return seastar::keep_doing([&listener] () {
             return listener.accept().then(
                 [] (seastar::connected_socket s, seastar::socket_address a) {
-                    auto out = s.output();
+            		std::cout << "Accepted connection from " << a << "\n";
+            		auto out = s.output();
                     return seastar::do_with(std::move(s), std::move(out),
                         [] (auto& s, auto& out) {
-                    	    std::cout << "Accepted connection from " << a << "\n";
                             return out.write(canned_response).then([&out] {
                                 return out.close();
 			    });
