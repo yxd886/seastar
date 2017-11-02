@@ -432,10 +432,11 @@ public:
         uint16_t local_ei_port_id = 0;
 
         uint16_t local_ei_core_id = static_cast<uint16_t>(engine().cpu_id());
-        auto remote_smp_count = opts["mica-sever-smp-count"].as<unsigned>();
+        auto remote_smp_count = opts["mica-sever-smp-count"].as<uint16_t>();
         auto queue_map = queue_mapping::calculate_queue_mapping(
                                                  opts,
-                                                 smp::count, remote_smp_count,
+                                                 smp::count,
+                                                 static_cast<unsigned>(remote_smp_count),
                                                  local_ei_ip_addr,
                                                  remote_ei_ip_addr,
                                                  ports()[0]->get_rss_key());
@@ -443,7 +444,7 @@ public:
         // first, create request_assembler for each pair of remote endpoint
         // and local endpoint
         for(uint16_t remote_ei_core_id=0;
-            remote_ei_core_id<static_cast<uint16_t>(remote_smp_count);
+            remote_ei_core_id<remote_smp_count;
             remote_ei_core_id++){
             uint16_t remote_ei_udp_port =
                     queue_map[local_ei_core_id][remote_ei_core_id].remote_port;
