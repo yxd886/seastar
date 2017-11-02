@@ -562,14 +562,21 @@ private:
         printf("Thread %d: destination port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->dst_port));
         if(p.rss_hash()){
             // printf("Thread %d: ", engine().cpu_id());
-            printf("Thread %d: The rss hash of the received flow packet is %d\n", engine().cpu_id(), p.rss_hash().value());
-            // uint16_t src_port = net::ntoh(hd->src_port);
-            // uint16_t dst_port = net::ntoh(hd->dst_port);
+            printf("Thread %d: The rss hash of the received flow packet is %" PRIu32 "\n", engine().cpu_id(), p.rss_hash().value());
+            uint16_t src_port = net::ntoh(hd->src_port);
+            uint16_t dst_port = net::ntoh(hd->dst_port);
             auto ip_hdr = p.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
             net::ipv4_address src_ip(ip_hdr->src_ip);
-            std::cout<<"Thread "<<engine().cpu_id()<<" "<<src_ip<<std::endl;
             src_ip = net::ntoh(src_ip);
-            std::cout<<"Thread "<<engine().cpu_id()<<" "<<src_ip<<std::endl;
+            net::ipv4_address dst_ip(ip_hdr->dst_ip);
+            dst_ip = net::ntoh(dst_ip);
+            std::cout<<"src_ip "<<src_ip<<", src_port "<<src_port
+                     <<", dst_ip "<<dst_ip<<", dst_port "<<dst_port<<std::endl;
+
+            net::l4connid<net::ipv4_traits> to_local{src_ip, dst_ip, src_port, dst_port};
+            net::l4connid<net::ipv4_traits> to_remote{dst_ip, src_ip, dst_port, src_port};
+            printf("Thread %d: src_ip,dst_ip %" PRIu32 "\n", engine().cpu_id(), to_local.hash(ports()[0]->get_rss_key()));
+            printf("Thread %d: dst_ip,src_ip %" PRIu32 "\n", engine().cpu_id(), to_remote.hash(ports()[0]->get_rss_key()));
         }
 
         size_t offset = sizeof(RequestBatchHeader);
