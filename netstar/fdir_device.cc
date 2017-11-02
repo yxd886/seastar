@@ -2339,7 +2339,7 @@ void dpdk_device::set_rss_table()
     i = 0;
     for (auto& r : _redir_table) {
         r = i++ % _num_queues;
-        printf("%" PRIu8 " ");
+        printf("%" PRIu8 " ", r);
     }
     printf("\n");
 }
