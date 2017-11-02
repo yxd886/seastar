@@ -24,9 +24,11 @@
 #include "core/print.hh"
 #include "core/distributed.hh"
 #include "netstar/netstar_dpdk_device.hh"
+#include "netstar/fdir_device.hh"
 #include "netstar/port.hh"
-#include "netstar/extendable_buffer.hh"
+#include "netstar/per_core_objs.hh"
 #include "netstar/mica_client.hh"
+#include "netstar/extendable_buffer.hh"
 
 using namespace seastar;
 using namespace netstar;
@@ -34,48 +36,59 @@ using namespace netstar;
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
-    mica_client::request_descriptor c(1, []{printf("timer called!\n");});
+    per_core_objs<mica_client> all_objs;
 
-    return app.run_deprecated(ac, av, [&app, &all_ports, &c] {
-        int i = 10;
+    return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs] {
+        auto& opts = app.configuration();
+        return all_ports.add_port(opts, 1, smp::count,
+            [](uint16_t port_id, uint16_t queue_num){
+                return create_fdir_device(port_id);
+        }).then([&all_objs]{
+            return all_objs.start(&all_objs);
+        })/*.then([&all_ports, &opts]{
+            net::ipv4_address local_ip_addr(opts["mica-client-ip"].as<std::string>());
+            net::ipv4_address remote_ip_addr(opts["mica-server-ip"].as<std::string>());
+            auto res = queue_mapping::calculate_queue_mapping(opts, 20, 20, local_ip_addr, remote_ip_addr,
+                    all_ports.get_ports(0).local_obj().get_rss_key());
+        });*/.then([&all_ports, &all_objs]{
+            return all_objs.invoke_on_all([&all_ports](mica_client& mc){
+                mc.configure_ports(all_ports, 0, 0);
+            });
+        }).then([&opts, &all_ports]{
+            return queue_mapping::initialize_queue_mapping(
+                        opts, all_ports.get_ports(0).local_obj());
+        }).then([&all_objs, &opts]{
+            return all_objs.invoke_on_all([&opts](mica_client& mc){
+                mc.bootup(opts);
+            });
+        }).then([&all_objs]{
+            return all_objs.invoke_on_all([](mica_client& mc){
+                mc.start_receiving();
+            });
+        }).then([&all_objs]{
+            return smp::submit_to(7, [&all_objs]{
+                unsigned key = 1024;
+                extendable_buffer key_buf;
+                key_buf.fill_data(key);
 
-        extendable_buffer b1(5);
-        extendable_buffer b2(5);
+                unsigned val = 8721;
+                extendable_buffer val_buf;
+                val_buf.fill_data(val);
 
-        b1.fill_data(i);
-        b2.fill_data(i);
-
-        auto b1_len = b1.data_len();
-        auto b2_len = b2.data_len();
-
-        c.new_action(Operation::kSet, b1_len, b1.get_temp_buffer(), b2_len, b2.get_temp_buffer());
-        c.obtain_future().then_wrapped([](auto&& f){
-            try{
-                f.get();
-                printf("Get the response\n");
-            }
-            catch(kill_flow&){
-                printf("Catch kill_flow exception\n");
-            }
-        });
-        c.arm_timer();
-
-        RequestHeader r;
-        r.result = static_cast<uint8_t>(Result::kSuccess);
-        r.opaque = static_cast<uint32_t>(1<<16|0);
-
-        auto ret = c.match_response(r, net::packet(), net::packet());
-        assert(ret == mica_client::action::recycle_rd);
-
-        std::cout << "net::eth_hdr " << sizeof(net::eth_hdr) <<std::endl;
-        std::cout << "net::ip_hdr " << sizeof(net::ip_hdr) <<std::endl;
-        std::cout << "net::udp_hdr " << sizeof(net::udp_hdr) <<std::endl;
-        std::cout << "eth_hdr " << sizeof(ether_hdr) <<std::endl;
-        std::cout << "ip_hdr " << sizeof(ipv4_hdr) <<std::endl;
-        std::cout << "udp_hdr " << sizeof(udp_hdr) <<std::endl;
-
-        return make_ready_future<>().then([]{
-            engine().exit(0);
+                return all_objs.local_obj().query(Operation::kSet,
+                        sizeof(unsigned), key_buf.get_temp_buffer(),
+                        sizeof(unsigned), val_buf.get_temp_buffer()).then_wrapped([](auto&& f){
+                    try{
+                        f.get();
+                        printf("No error!!!!\n");
+                    }
+                    catch(...){
+                        printf("We got some errors here!\n");
+                    }
+                });
+            });
+        }).then([]{
+            printf("The mica client is successfully booted up\n");
         });
     });
 }

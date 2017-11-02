@@ -11,7 +11,7 @@ namespace netstar{
 
 std::unique_ptr<seastar::net::device> create_fdir_device(
                                         uint8_t port_idx = 0,
-                                        uint8_t num_queues = 4,
+                                        uint8_t num_queues = seastar::smp::count,
                                         bool use_lro = false,
                                         bool enable_fc = false);
 } // namespace netstar

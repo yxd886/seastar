@@ -30,6 +30,22 @@ namespace netstar {
 using namespace seastar;
 using namespace std::chrono_literals;
 
+namespace queue_mapping {
+
+using namespace std;
+
+struct port_pair{
+    uint16_t local_port;
+    uint16_t remote_port;
+};
+
+vector<vector<port_pair>>& get_queue_mapping();
+
+future<> initialize_queue_mapping(boost::program_options::variables_map& opts,
+                                  port& pt);
+
+} // namespace queue_mapping
+
 class kill_flow : public std::exception {
 public:
     virtual const char* what() const noexcept override {
@@ -96,6 +112,7 @@ public:
         void new_action(Operation op,
                         size_t key_len, temporary_buffer<char> key,
                         size_t val_len, temporary_buffer<char> val){
+            printf("Thread %d: New action is called on %d\n", engine().cpu_id(), _rd_index);
             // If this method is called, the rd must be popped out from
             // the fifo. When the rd is popped out from the fifo, it is either
             // in initialized state, or be recycled. This means that:
@@ -285,46 +302,12 @@ public:
 
         void consume_send_stream(){
             while(!_send_stream.empty() && !_is_in_send_state){
+                printf("Thread %d: Consume send stream\n", engine().cpu_id());
                 auto next_rd_idx = _send_stream.front();
                 auto& next_rd = _rds[next_rd_idx];
                 auto next_rd_size = next_rd.get_request_size();
                 if(_remaining_size < next_rd_size){
-                    scattered_message<char> msg;
-                    msg.reserve(1+3*_rd_idxs.size());
-
-                    // First, put the batch_header in to the _frags
-                    msg.append_static(_batch_header_frag.base,
-                                      _batch_header_frag.size);
-
-                    // Then, for each request descriptor, put the request header
-                    // , key and value into the _frags.
-                    for(auto rd_idx : _rd_idxs){
-                        _rds[rd_idx].append_frags(msg);
-                    }
-
-                    // build up the packet;
-                    net::packet p(std::move(msg).release());
-
-                    // setup the missing header information
-                    setup_ip_udp_length(p);
-                    setup_request_num(p);
-                    // make sure that we don't trigger a linearization
-                    assert(p.nr_frags() == (1+_rd_idxs.size()));
-
-                    // flip the send state
-                    _is_in_send_state = true;
-
-                    // send
-                    _port.linearize_and_send(std::move(p)).then([this]{
-                        for(auto rd_idx : _rd_idxs){
-                            _rds[rd_idx].arm_timer();
-                        }
-
-                        // reset the status of the request_assembler
-                        _is_in_send_state = false;
-                       _rd_idxs.clear();
-                       _remaining_size = max_req_len;
-                    });
+                    send_request_packet();
                 }
                 else{
                     _rd_idxs.push_back(next_rd_idx);
@@ -334,7 +317,57 @@ public:
             }
         }
 
+        void force_send(){
+            if(_rd_idxs.size()>0 && !_is_in_send_state){
+                printf("Thread %d: Force send\n", engine().cpu_id());
+                send_request_packet();
+            }
+        }
+
     private:
+        void send_request_packet(){
+            printf("Thread %d: In send_request_packet\n", engine().cpu_id());
+            printf("Thread %d: The source lcore is %d\n", engine().cpu_id(), _local_ei.udp_port);
+            printf("Thread %d: The destination lcore is %d\n", engine().cpu_id(), _remote_ei.udp_port);
+
+            scattered_message<char> msg;
+            msg.reserve(1+3*_rd_idxs.size());
+
+            // First, put the batch_header in to the _frags
+            msg.append_static(_batch_header_frag.base,
+                              _batch_header_frag.size);
+
+            // Then, for each request descriptor, put the request header
+            // , key and value into the _frags.
+            for(auto rd_idx : _rd_idxs){
+                _rds[rd_idx].append_frags(msg);
+            }
+
+            // build up the packet;
+            net::packet p(std::move(msg).release());
+
+            // setup the missing header information
+            setup_ip_udp_length(p);
+            setup_request_num(p);
+            // make sure that we don't trigger a linearization
+            assert(p.nr_frags() == (1+3*_rd_idxs.size()));
+
+            // flip the send state
+            _is_in_send_state = true;
+
+            // send
+            _port.linearize_and_send(std::move(p)).then([this]{
+                printf("Thread %d: The request packet is sent out\n", engine().cpu_id());
+                for(auto rd_idx : _rd_idxs){
+                    _rds[rd_idx].arm_timer();
+                }
+
+                // reset the status of the request_assembler
+                _is_in_send_state = false;
+               _rd_idxs.clear();
+               _remaining_size = max_req_len;
+            });
+        }
         net::packet build_requet_batch_header();
         void setup_ip_udp_length(net::packet& p){
             auto udp_length =
@@ -368,7 +401,7 @@ private:
     timer<steady_clock_type> _check_ras_timer;
 public:
     explicit mica_client(per_core_objs<mica_client>* all_objs) :
-            work_unit<mica_client>(all_objs) {}
+            work_unit<mica_client>(all_objs){}
 
     mica_client(const mica_client& other) = delete;
     mica_client(mica_client&& other)  = delete;
@@ -384,6 +417,7 @@ public:
         // one port for mica server.
         assert(ports().size() == 1);
 
+        // prepare all the ingredients for the intialization loop
         net::ethernet_address remote_ei_eth_addr(
                 net::parse_ethernet_address(
                         opts["mica-server-mac"].as<std::string>()));
@@ -396,27 +430,30 @@ public:
                 opts["mica-client-ip"].as<std::string>());
         uint16_t local_ei_port_id = 0;
 
+        uint16_t local_ei_core_id = static_cast<uint16_t>(engine().cpu_id());
+        auto remote_smp_count = opts["mica-sever-smp-count"].as<uint16_t>();
+        auto& queue_map = queue_mapping::get_queue_mapping();
+
         // first, create request_assembler for each pair of remote endpoint
         // and local endpoint
         for(uint16_t remote_ei_core_id=0;
-            remote_ei_core_id<opts["ms-smp-count"].as<uint16_t>();
+            remote_ei_core_id<remote_smp_count;
             remote_ei_core_id++){
-            uint16_t remote_ei_udp_port = remote_ei_core_id;
-            uint16_t local_ei_core_id = static_cast<uint16_t>(engine().cpu_id());
-            uint16_t local_ei_udp_port = local_ei_core_id;
-
+            uint16_t remote_ei_udp_port =
+                    queue_map[local_ei_core_id][remote_ei_core_id].remote_port;
             endpoint_info remote_ei_info(remote_ei_eth_addr,
                                          remote_ei_ip_addr,
                                          remote_ei_udp_port,
                                          std::make_pair(remote_ei_core_id,
                                                         remote_ei_port_id));
 
+            uint16_t local_ei_udp_port =
+                    queue_map[local_ei_core_id][remote_ei_core_id].local_port;
             endpoint_info local_ei_info(local_ei_eth_addr,
                                         local_ei_ip_addr,
                                         local_ei_udp_port,
                                         std::make_pair(local_ei_core_id,
                                                        local_ei_port_id));
-
 
             _ras.emplace_back(remote_ei_info, local_ei_info,
                     *(ports()[0]), _rds);
@@ -433,9 +470,13 @@ public:
         // in case there's not enough request put into the request
         // assemblers.
         _check_ras_timer.set_callback([this]{check_request_assemblers();});
-        // _check_ras_timer.arm_periodic(500us);
+        _check_ras_timer.arm_periodic(200us);
     }
-
+    void start_receiving(){
+        assert(ports().size() == 1);
+        this->configure_receive_fn(0,
+                [this](net::packet pkt){return receive(std::move(pkt));});
+    }
     future<> query(Operation op,
                size_t key_len, temporary_buffer<char> key,
                size_t val_len, temporary_buffer<char> val) {
@@ -447,6 +488,7 @@ public:
             _recycled_rds.pop_front();
             _rds[rd_idx].new_action(op, key_len, std::move(key),
                                     val_len, std::move(val));
+            send_request_descriptor(rd_idx);
             return _rds[rd_idx].obtain_future();
         }
         else{
@@ -456,6 +498,7 @@ public:
                 _recycled_rds.pop_front();
                 _rds[rd_idx].new_action(op, key_len, std::move(key),
                                         val_len, std::move(val));
+                send_request_descriptor(rd_idx);
                 return _rds[rd_idx].obtain_future();
             });
         }
@@ -464,6 +507,7 @@ private:
     void check_request_assemblers(){
         for(auto& ra : _ras){
             ra.consume_send_stream();
+            ra.force_send();
         }
     }
     void check_request_descriptor_timeout(unsigned rd_idx){
@@ -497,11 +541,37 @@ private:
         // Here, each ra in _ras represents a partition.
         auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
                                               _ras.size());
+        printf("Thread %d: The partition id is %d\n", engine().cpu_id(), partition_id);
         _ras[partition_id].append_new_request_descriptor(rd_idx);
     }
-    void receive(net::packet p){
+    future<> receive(net::packet p){
         if (!is_valid(p) || !is_response(p) || p.nr_frags()!=1){
-            return;
+            printf("Thread %d: Receive invalid response packet\n", engine().cpu_id());
+            return make_ready_future<>();
+        }
+        printf("Thread %d: Receive valid response packet\n", engine().cpu_id());
+        auto hd = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
+        printf("Thread %d: source port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->src_port));
+        printf("Thread %d: destination port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->dst_port));
+        if(p.rss_hash()){
+            // printf("Thread %d: ", engine().cpu_id());
+            printf("Thread %d: The rss hash of the received flow packet is %" PRIu32 "\n", engine().cpu_id(), p.rss_hash().value());
+            uint16_t src_port = net::ntoh(hd->src_port);
+            uint16_t dst_port = net::ntoh(hd->dst_port);
+            auto ip_hdr = p.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+            net::ipv4_address src_ip(ip_hdr->src_ip);
+            src_ip = net::ntoh(src_ip);
+            net::ipv4_address dst_ip(ip_hdr->dst_ip);
+            dst_ip = net::ntoh(dst_ip);
+            std::cout<<"src_ip "<<src_ip<<", src_port "<<src_port
+                     <<", dst_ip "<<dst_ip<<", dst_port "<<dst_port<<std::endl;
+
+            net::l4connid<net::ipv4_traits> to_local{src_ip, dst_ip, src_port, dst_port};
+            net::l4connid<net::ipv4_traits> to_remote{dst_ip, src_ip, dst_port, src_port};
+            printf("Thread %d: src_ip,dst_ip %" PRIu32 "\n", engine().cpu_id(), to_local.hash(ports()[0]->get_rss_key()));
+            printf("Thread %d: dst_ip,src_ip %" PRIu32 "\n", engine().cpu_id(), to_remote.hash(ports()[0]->get_rss_key()));
+            std::cout<< to_local.hash(ports()[0]->get_rss_key()) % smp::count <<std::endl;
+            std::cout<< to_remote.hash(ports()[0]->get_rss_key()) % smp::count <<std::endl;
         }
 
         size_t offset = sizeof(RequestBatchHeader);
@@ -526,9 +596,12 @@ private:
                                   p.share(val_offset, roundup_val_len));
 
             switch (action_res){
-            case action::no_action :
+            case action::no_action : {
+                printf("Thread %d: Response match fails, invalid response\n", engine().cpu_id());
                 break;
+            }
             case action::recycle_rd : {
+                printf("Thread %d: Response match succeed, recycle the request descriptor\n", engine().cpu_id());
                 // recycle the request descriptor.
                 _recycled_rds.push_back(rd_idx);
                 _pending_work_queue.signal(1);
@@ -545,6 +618,7 @@ private:
             offset = next_req_offset;
         }
         assert(offset == p.len());
+        return make_ready_future<>();
     }
     uint16_t calc_partition_id(uint64_t key_hash, size_t partition_count) {
       return static_cast<uint16_t>((key_hash >> 48) % partition_count);
