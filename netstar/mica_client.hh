@@ -592,7 +592,7 @@ private:
             printf("Thread %d: Receive invalid response packet\n", engine().cpu_id());
             return make_ready_future<>();
         }
-        printf("Thread %d: Receive valid response packet\n", engine().cpu_id());
+        printf("Thread %d: Receive valid response packet with length %d\n", engine().cpu_id(), p.len());
         auto hd = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
         printf("Thread %d: source port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->src_port));
         printf("Thread %d: destination port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->dst_port));
@@ -631,6 +631,7 @@ private:
 
             size_t total_reponse_length = sizeof(RequestHeader)+
                     roundup_key_len+roundup_val_len;
+            printf("Total response length is %zu\n", total_reponse_length);
 
             unsigned rd_idx = static_cast<unsigned>(rh->opaque >> 16);
             auto action_res = _rds[rd_idx].match_response(*rh,
