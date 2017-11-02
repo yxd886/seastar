@@ -562,7 +562,7 @@ private:
         printf("Thread %d: destination port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->dst_port));
         if(p.rss_hash()){
             // printf("Thread %d: ", engine().cpu_id());
-            printf("Thread %d: The rss hash of the received flow packet is %d\n", engine().cpu_id(), p.rss_hash().valeu());
+            printf("Thread %d: The rss hash of the received flow packet is %d\n", engine().cpu_id(), p.rss_hash().value());
             uint16_t src_port = net::ntoh(hd->src_port);
             uint16_t dst_port = net::ntoh(hd->dst_port);
             auto ip_hdr = p.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
