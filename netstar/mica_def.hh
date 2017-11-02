@@ -1,11 +1,6 @@
 #ifndef _MICA_DEF
 #define _MICA_DEF
 
-// #include <rte_ethdev.h>
-#include <rte_ether.h>
-#include <rte_ip.h>
-#include <rte_udp.h>
-
 #include <array>
 #include <cstdint>
 #include <utility>
@@ -37,12 +32,15 @@ struct endpoint_info{
                            net::ipv4_address ipaddr,
                            uint16_t u_port,
                            std::pair<uint16_t, uint16_t> lp_pair) :
-            eth_addr(eaddr), ip_addr(ipaddr), udp_port(u_port), lcore_port_pair(lp_pair) {}
+            eth_addr(eaddr),
+            ip_addr(ipaddr),
+            udp_port(u_port),
+            lcore_port_pair(lp_pair) {}
 };
 
 struct RequestBatchHeader {
     // 0
-    uint8_t header[sizeof(ether_hdr) + sizeof(ipv4_hdr) + sizeof(udp_hdr)];
+    uint8_t header[sizeof(net::eth_hdr)+sizeof(net::ip_hdr)+sizeof(net::udp_hdr)];
     // 42
     uint8_t magic;  // 0x78 for requests; 0x79 for responses.
     uint8_t num_requests;
