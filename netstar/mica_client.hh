@@ -185,7 +185,7 @@ public:
             setup_request_header(op);
         }
 
-        future<> obtain_future(){
+        future<mica_response> obtain_future(){
             // This is called after new_action is called. So we
             // perform the same assertion.
             assert(!_pr && _retry_count == 0 && !_to.armed());
