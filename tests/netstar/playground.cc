@@ -77,6 +77,9 @@ int main(int ac, char** av) {
                     try{
                         auto response = std::get<0>(f.get());
                         printf("No error!!!!\n");
+                        auto op = static_cast<uint8_t>(response.get_operation());
+                        auto r = static_cast<uint8_t>(response.get_result());
+                        printf("Operation %d, result %d\n", op, r);
                     }
                     catch(...){
                         printf("We got some errors here!\n");
