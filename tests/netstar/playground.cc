@@ -80,6 +80,7 @@ int main(int ac, char** av) {
                         sizeof(unsigned), val_buf.get_temp_buffer()).then_wrapped([](auto&& f){
                     try{
                         f.get();
+                        printf("No error!!!!\n");
                     }
                     catch(...){
                         printf("We got some errors here!\n");
