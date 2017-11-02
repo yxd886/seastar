@@ -519,7 +519,7 @@ public:
         this->configure_receive_fn(0,
                 [this](net::packet pkt){return receive(std::move(pkt));});
     }
-    future<> query(Operation op,
+    future<mica_response> query(Operation op,
                size_t key_len, temporary_buffer<char> key,
                size_t val_len, temporary_buffer<char> val) {
         if(_pending_work_queue.waiters() > max_samephore_waiting_count){
