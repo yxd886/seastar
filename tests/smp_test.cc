@@ -103,6 +103,7 @@ seastar::future<> service_loop() {
                     auto out = s.output();
                     return seastar::do_with(std::move(s), std::move(out),
                         [] (auto& s, auto& out) {
+                    	    std::cout << "Accepted connection from " << a << "\n";
                             return out.write(canned_response).then([&out] {
                                 return out.close();
 			    });
