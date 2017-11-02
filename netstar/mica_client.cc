@@ -32,8 +32,8 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
     for(uint16_t local_port = 10240; local_port < 65535; local_port ++){
         for(uint16_t remote_port = 10240; remote_port < 65535; remote_port ++){
             // iterate through each of the local and remote port;
-            net::l4connid<net::ipv4_traits> to_remote{local_ip_addr, remote_ip_addr, local_port, remote_port};
-            net::l4connid<net::ipv4_traits> to_local{remote_ip_addr, local_ip_addr, remote_port, local_port};
+            net::l4connid<net::ipv4_traits> to_local{local_ip_addr, remote_ip_addr, local_port, remote_port};
+            net::l4connid<net::ipv4_traits> to_remote{remote_ip_addr, local_ip_addr, remote_port, local_port};
 
             unsigned local_queue = to_local.hash(rss_key) % local_smp_count;
             unsigned remote_queue = to_remote.hash(rss_key) % remote_smp_count;
@@ -46,6 +46,10 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
 
                 printf("Find one valid queue mapping entry: local_queue %d <-> remote_queue %d, \\"
                        "local_port %d, remote_port %d\n", local_queue, remote_queue, local_port, remote_port);
+                printf("to_local hash value: %" PRIu32 "\n", to_local.hash(rss_key));
+                printf("to_remote hash value: %" PRIu32 "\n", to_remote.hash(rss_key));
+                std::cout<<"to_local queue id "<<local_queue<<std::endl;
+                std::cout<<"to_remote queue id "<<remote_queue<<std::endl;
             }
 
             if(total == 0){
