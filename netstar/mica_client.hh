@@ -84,6 +84,20 @@ public:
         auto rh = _response_pkt.get_header<RequestHeader>();
         return static_cast<Result>(rh->result);
     }
+
+    template<typename T>
+    T& get_key(){
+        assert(sizeof(T) == get_key_len());
+        auto key = _response_pkt.get_header<T>(sizeof(RequestHeader));
+        return *key;
+    }
+
+    template<typename T>
+    T& get_value(){
+        assert(sizeof(T) == get_val_len());
+        auto value = _response_pkt.get_header<T>(sizeof(RequestHeader)+get_roundup_key_len());
+        return *value;
+    }
 };
 
 class mica_client : public work_unit<mica_client>{
