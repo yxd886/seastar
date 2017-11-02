@@ -29,6 +29,14 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
     net::ipv4_address local_ip_addr(local_ip_addr_str);
     net::ipv4_address remote_ip_addr(remote_ip_addr_str);
 
+    // manually build a redirection table for remote side.
+    // We assume that the size of the redirection table is 512
+    vector<uint8_t> remote_redir_table(512);
+    unsigned i = 0;
+    for (auto& r : remote_redir_table) {
+        r = i++ % remote_smp_count;
+    }
+
     for(uint16_t local_port = 10240; local_port < 65535; local_port ++){
         for(uint16_t remote_port = 10240; remote_port < 65535; remote_port ++){
             // iterate through each of the local and remote port;
@@ -36,8 +44,10 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
             net::l4connid<net::ipv4_traits> to_remote{remote_ip_addr, local_ip_addr, remote_port, local_port};
 
             unsigned local_queue = pt.hash2cpu(to_local.hash(pt.get_rss_key()));
-            unsigned remote_queue = 0;
-            pt.hash2cpu(to_remote.hash(pt.get_rss_key()));
+            unsigned remote_queue = remote_redir_table[
+                                                       to_remote.hash(pt.get_rss_key()) &
+                                                       (remote_redir_table.size() - 1)
+                                                       ];
 
             if(!res_pos_flag[local_queue][remote_queue]){
                 res_pos_flag[local_queue][remote_queue] = true;
