@@ -66,7 +66,7 @@ int main(int ac, char** av) {
                 mc.start_receiving();
             });
         }).then([&all_objs]{
-            return smp::submit_to(1, [&all_objs]{
+            return smp::submit_to(7, [&all_objs]{
                 unsigned key = 1024;
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
