@@ -555,8 +555,6 @@ private:
             net::l4connid<net::ipv4_traits> to_remote{dst_ip, src_ip, dst_port, src_port};
             printf("Thread %d: src_ip,dst_ip %" PRIu32 "\n", engine().cpu_id(), to_local.hash(ports()[0]->get_rss_key()));
             printf("Thread %d: dst_ip,src_ip %" PRIu32 "\n", engine().cpu_id(), to_remote.hash(ports()[0]->get_rss_key()));
-            std::cout<< to_local.hash(ports()[0]->get_rss_key()) % smp::count <<std::endl;
-            std::cout<< to_remote.hash(ports()[0]->get_rss_key()) % smp::count <<std::endl;
         }
 
         size_t offset = sizeof(RequestBatchHeader);
