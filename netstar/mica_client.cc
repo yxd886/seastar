@@ -2,6 +2,68 @@
 
 namespace netstar{
 
+namespace queue_mapping {
+
+vector<vector<port_pair>>
+calculate_queue_mapping(boost::program_options::variables_map& opts,
+                        unsigned local_smp_count, unsigned remote_smp_count,
+                        net::ipv4_address local_ip_addr,
+                        net::ipv4_address remote_ip_addr,
+                        const rss_key_type& rss_key){
+    // Given local_ip_addr and remote_ip_addr, the
+    // result contains the following information
+    // get<0>(res[x][y]): local port that maps local queue x to remote queue y
+    // get<1>(res[x][y]): remote port that maps local queue x to remote queue y
+    vector<vector<port_pair>> res;
+    res.resize(local_smp_count);
+    for(auto& v : res){
+        v.resize(remote_smp_count);
+    }
+
+    // record whether a position in res is used
+    vector<vector<bool>> res_pos_flag;
+    res_pos_flag.resize(local_smp_count);
+    for(auto& v : res_pos_flag){
+        v.resize(remote_smp_count, false);
+    }
+
+    unsigned total = local_smp_count * remote_smp_count;
+
+    for(uint16_t local_port = 10240; local_port < 65535; local_port ++){
+        for(uint16_t remote_port = 10240; remote_port < 65535; remote_port ++){
+            // iterate through each of the local and remote port;
+            net::l4connid<net::ipv4_traits> to_local{local_ip_addr, remote_ip_addr, local_port, remote_port};
+            net::l4connid<net::ipv4_traits> to_remote{remote_ip_addr, local_ip_addr, remote_port, local_port};
+
+            unsigned local_queue = to_local.hash(rss_key) % local_smp_count;
+            unsigned remote_queue = to_remote.hash(rss_key) % remote_smp_count;
+
+            if(!res_pos_flag[local_queue][remote_queue]){
+                res_pos_flag[local_queue][remote_queue] = true;
+                total--;
+                res[local_queue][remote_queue].local_port = local_port;
+                res[local_queue][remote_queue].remote_port = remote_port;
+
+                printf("Find one valid queue mapping entry: local_queue %d <-> remote_queue %d, \\"
+                       "local_port %d, remote_port %d\n", local_queue, remote_queue, local_port, remote_port);
+            }
+
+            if(total == 0){
+                return res;
+            }
+        }
+    }
+
+    if(total!=0){
+        printf("Fail to find a valid queue mapping. \n");
+        assert(false);
+    }
+
+    return res;
+}
+
+} // namespace queue_mapping
+
 net::packet mica_client::request_assembler::build_requet_batch_header(){
     net::packet pkt;
 
@@ -119,67 +181,5 @@ bool mica_client::is_response(net::packet& p) const {
     auto rbh = p.get_header<RequestBatchHeader>();
     return rbh->magic == 0x79;
 }
-
-namespace queue_mapping {
-
-vector<vector<port_pair>>
-calculate_queue_mapping(boost::program_options::variables_map& opts,
-                        unsigned local_smp_count, unsigned remote_smp_count,
-                        net::ipv4_address local_ip_addr,
-                        net::ipv4_address remote_ip_addr,
-                        const rss_key_type& rss_key){
-    // Given local_ip_addr and remote_ip_addr, the
-    // result contains the following information
-    // get<0>(res[x][y]): local port that maps local queue x to remote queue y
-    // get<1>(res[x][y]): remote port that maps local queue x to remote queue y
-    vector<vector<port_pair>> res;
-    res.resize(local_smp_count);
-    for(auto& v : res){
-        v.resize(remote_smp_count);
-    }
-
-    // record whether a position in res is used
-    vector<vector<bool>> res_pos_flag;
-    res_pos_flag.resize(local_smp_count);
-    for(auto& v : res_pos_flag){
-        v.resize(remote_smp_count, false);
-    }
-
-    unsigned total = local_smp_count * remote_smp_count;
-
-    for(uint16_t local_port = 10240; local_port < 65535; local_port ++){
-        for(uint16_t remote_port = 10240; remote_port < 65535; remote_port ++){
-            // iterate through each of the local and remote port;
-            net::l4connid<net::ipv4_traits> to_local{local_ip_addr, remote_ip_addr, local_port, remote_port};
-            net::l4connid<net::ipv4_traits> to_remote{remote_ip_addr, local_ip_addr, remote_port, local_port};
-
-            unsigned local_queue = to_local.hash(rss_key) % local_smp_count;
-            unsigned remote_queue = to_remote.hash(rss_key) % remote_smp_count;
-
-            if(!res_pos_flag[local_queue][remote_queue]){
-                res_pos_flag[local_queue][remote_queue] = true;
-                total--;
-                res[local_queue][remote_queue].local_port = local_port;
-                res[local_queue][remote_queue].remote_port = remote_port;
-
-                printf("Find one valid queue mapping entry: local_queue %d <-> remote_queue %d, \\"
-                       "local_port %d, remote_port %d\n", local_queue, remote_queue, local_port, remote_port);
-            }
-
-            if(total == 0){
-                return res;
-            }
-        }
-    }
-
-    if(total!=0){
-        printf("Fail to find a valid queue mapping. \n");
-        assert(false);
-    }
-
-    return res;
-}
-
-} // namespace queue_mapping
 
 } // namespace nestar

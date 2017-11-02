@@ -37,6 +37,24 @@ public:
     }
 };
 
+namespace queue_mapping {
+
+using namespace std;
+
+struct port_pair{
+    uint16_t local_port;
+    uint16_t remote_port;
+};
+
+vector<vector<port_pair>>
+calculate_queue_mapping(boost::program_options::variables_map& opts,
+                        unsigned local_smp_count, unsigned remote_smp_count,
+                        net::ipv4_address local_ip_addr,
+                        net::ipv4_address remote_ip_addr,
+                        const rss_key_type& rss_key);
+
+} // namespace queue_mapping
+
 class mica_client : public work_unit<mica_client>{
 public:
     static constexpr unsigned max_req_len =
@@ -400,6 +418,7 @@ public:
         // Currently, we only support one port for mica client, and
         // one port for mica server.
         assert(ports().size() == 1);
+
 #if 0
         net::ethernet_address remote_ei_eth_addr(
                 net::parse_ethernet_address(
@@ -437,6 +456,42 @@ public:
                     *(ports()[0]), _rds);
         }
 #endif
+
+        net::ethernet_address remote_ei_eth_addr(
+                net::parse_ethernet_address(
+                        opts["mica-server-mac"].as<std::string>()));
+        net::ipv4_address remote_ei_ip_addr(
+                opts["mica-server-ip"].as<std::string>());
+        uint16_t remote_ei_port_id = opts["mica-server-port-id"].as<uint16_t>();
+
+        net::ethernet_address local_ei_eth_addr(ports().at(0)->get_eth_addr());
+        net::ipv4_address local_ei_ip_addr(
+                opts["mica-client-ip"].as<std::string>());
+        uint16_t local_ei_port_id = 0;
+
+        uint16_t local_ei_core_id = static_cast<uint16_t>(engine().cpu_id());
+        uint16_t local_ei_udp_port = local_ei_core_id;
+        endpoint_info local_ei_info(local_ei_eth_addr,
+                                    local_ei_ip_addr,
+                                    local_ei_udp_port,
+                                    std::make_pair(local_ei_core_id,
+                                                   local_ei_port_id));
+
+        // first, create request_assembler for each pair of remote endpoint
+        // and local endpoint
+        for(uint16_t remote_ei_core_id=0;
+            remote_ei_core_id<opts["mica-sever-smp-count"].as<uint16_t>();
+            remote_ei_core_id++){
+            uint16_t remote_ei_udp_port = remote_ei_core_id;
+            endpoint_info remote_ei_info(remote_ei_eth_addr,
+                                         remote_ei_ip_addr,
+                                         remote_ei_udp_port,
+                                         std::make_pair(remote_ei_core_id,
+                                                        remote_ei_port_id));
+
+            _ras.emplace_back(remote_ei_info, local_ei_info,
+                    *(ports()[0]), _rds);
+        }
 
         // second, create all the request_descriptor
         for(unsigned rd_idx=0; rd_idx<total_request_descriptor_count; rd_idx++){
@@ -585,24 +640,6 @@ private:
     bool is_valid(net::packet& p);
     bool is_response(net::packet& p) const;
 };
-
-namespace queue_mapping {
-
-using namespace std;
-
-struct port_pair{
-    uint16_t local_port;
-    uint16_t remote_port;
-};
-
-vector<vector<port_pair>>
-calculate_queue_mapping(boost::program_options::variables_map& opts,
-                        unsigned local_smp_count, unsigned remote_smp_count,
-                        net::ipv4_address local_ip_addr,
-                        net::ipv4_address remote_ip_addr,
-                        const rss_key_type& rss_key);
-
-} // namespace queue_mapping
 
 } // namespace netstar
 

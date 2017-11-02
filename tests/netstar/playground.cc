@@ -45,13 +45,12 @@ int main(int ac, char** av) {
                 return create_fdir_device(port_id);
         }).then([&all_objs]{
             return all_objs.start(&all_objs);
-        }).then([&all_ports, &opts]{
-            // all_ports.get_ports(0).local_obj().get_rss_key();
+        })/*.then([&all_ports, &opts]{
             net::ipv4_address local_ip_addr(opts["mica-client-ip"].as<std::string>());
             net::ipv4_address remote_ip_addr(opts["mica-server-ip"].as<std::string>());
             auto res = queue_mapping::calculate_queue_mapping(opts, smp::count, 10, local_ip_addr, remote_ip_addr,
                     all_ports.get_ports(0).local_obj().get_rss_key());
-        });/*.then([&all_ports, &all_objs]{
+        });*/.then([&all_ports, &all_objs]{
             return all_objs.invoke_on_all([&all_ports](mica_client& mc){
                 mc.configure_ports(all_ports, 0, 0);
             });
@@ -86,6 +85,6 @@ int main(int ac, char** av) {
             });
         }).then([]{
             printf("The mica client is successfully booted up\n");
-        });*/
+        });
     });
 }
