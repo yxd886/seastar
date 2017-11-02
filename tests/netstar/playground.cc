@@ -75,7 +75,7 @@ int main(int ac, char** av) {
                         sizeof(unsigned), key_buf.get_temp_buffer(),
                         sizeof(unsigned), val_buf.get_temp_buffer()).then_wrapped([](auto&& f){
                     try{
-                        f.get();
+                        auto response = std::get<0>(f.get());
                         printf("No error!!!!\n");
                     }
                     catch(...){
