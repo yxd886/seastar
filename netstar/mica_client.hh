@@ -47,7 +47,7 @@ class mica_response{
 public:
     mica_response(net::packet p) : _response_pkt(std::move(p)) {}
 
-    mica_response(mica_response&& other) :
+    mica_response(mica_response&& other) noexcept :
         _response_pkt(std::move(other._response_pkt)) {}
 
     mica_response& operator=(mica_response&& other) {
