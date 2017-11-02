@@ -80,6 +80,9 @@ int main(int ac, char** av) {
                         auto op = static_cast<uint8_t>(response.get_operation());
                         auto r = static_cast<uint8_t>(response.get_result());
                         printf("Operation %d, result %d\n", op, r);
+                        auto key_len = response.get_key_len();
+                        auto val_len = response.get_val_len();
+                        printf("key_len %d, val_len %d\n", key_len, val_len);
                     }
                     catch(...){
                         printf("We got some errors here!\n");
