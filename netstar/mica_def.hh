@@ -44,7 +44,7 @@ struct endpoint_info{
 
 struct RequestBatchHeader {
     // 0
-    uint8_t header[sizeof(net::eth_hdr)+sizeof(net::ip_hdr)+sizeof(net::udp_hdr)];
+    uint8_t header[sizeof(ether_hdr) + sizeof(ipv4_hdr) + sizeof(udp_hdr)];
     // 42
     uint8_t magic;  // 0x78 for requests; 0x79 for responses.
     uint8_t num_requests;
