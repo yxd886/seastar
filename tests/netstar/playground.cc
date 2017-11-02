@@ -37,26 +37,22 @@ int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
     per_core_objs<mica_client> all_objs;
+    vector<vector<port_pair>> queue_map;
 
-    return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs] {
+    return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs, &queue_map]{
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 1, smp::count,
             [](uint16_t port_id, uint16_t queue_num){
                 return create_fdir_device(port_id);
         }).then([&all_objs]{
             return all_objs.start(&all_objs);
-        })/*.then([&all_ports, &opts]{
-            net::ipv4_address local_ip_addr(opts["mica-client-ip"].as<std::string>());
-            net::ipv4_address remote_ip_addr(opts["mica-server-ip"].as<std::string>());
-            auto res = queue_mapping::calculate_queue_mapping(opts, 20, 20, local_ip_addr, remote_ip_addr,
-                    all_ports.get_ports(0).local_obj().get_rss_key());
-        });*/.then([&all_ports, &all_objs]{
+        }).then([&all_ports, &all_objs]{
             return all_objs.invoke_on_all([&all_ports](mica_client& mc){
                 mc.configure_ports(all_ports, 0, 0);
             });
-        }).then([&opts, &all_ports]{
-            return queue_mapping::initialize_queue_mapping(
-                        opts, all_ports.get_ports(0).local_obj());
+        }).then([&opts, &all_ports, &queue_map]{
+            queue_map = calculate_queue_mapping(
+                    opts, all_ports.get_ports(0).local_obj());
         }).then([&all_objs, &opts]{
             return all_objs.invoke_on_all([&opts](mica_client& mc){
                 mc.bootup(opts);

@@ -30,22 +30,6 @@ namespace netstar {
 using namespace seastar;
 using namespace std::chrono_literals;
 
-namespace queue_mapping {
-
-using namespace std;
-
-struct port_pair{
-    uint16_t local_port;
-    uint16_t remote_port;
-};
-
-vector<vector<port_pair>>& get_queue_mapping();
-
-future<> initialize_queue_mapping(boost::program_options::variables_map& opts,
-                                  port& pt);
-
-} // namespace queue_mapping
-
 class kill_flow : public std::exception {
 public:
     virtual const char* what() const noexcept override {
@@ -412,7 +396,8 @@ public:
         return make_ready_future<>();
     }
 
-    void bootup(boost::program_options::variables_map& opts){
+    void bootup(boost::program_options::variables_map& opts,
+                vector<vector<port_pair>>& queue_map){
         // Currently, we only support one port for mica client, and
         // one port for mica server.
         assert(ports().size() == 1);
@@ -432,7 +417,6 @@ public:
 
         uint16_t local_ei_core_id = static_cast<uint16_t>(engine().cpu_id());
         auto remote_smp_count = opts["mica-sever-smp-count"].as<uint16_t>();
-        auto& queue_map = queue_mapping::get_queue_mapping();
 
         // first, create request_assembler for each pair of remote endpoint
         // and local endpoint
@@ -493,7 +477,8 @@ public:
         }
         else{
             return _pending_work_queue.wait(1).then(
-                    [this, op, key_len, key=std::move(key), val_len, val=std::move(val)] () mutable{
+                    [this, op, key_len, key=std::move(key),
+                     val_len, val=std::move(val)] () mutable{
                 auto rd_idx = _recycled_rds.front();
                 _recycled_rds.pop_front();
                 _rds[rd_idx].new_action(op, key_len, std::move(key),
