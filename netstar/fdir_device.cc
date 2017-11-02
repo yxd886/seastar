@@ -2339,7 +2339,9 @@ void dpdk_device::set_rss_table()
     i = 0;
     for (auto& r : _redir_table) {
         r = i++ % _num_queues;
+        std::cout<<r<<" ";
     }
+    std::cout<<std::endl;
 }
 
 std::unique_ptr<qp> dpdk_device::init_local_queue(boost::program_options::variables_map opts, uint16_t qid) {
