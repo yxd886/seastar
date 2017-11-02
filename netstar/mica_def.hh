@@ -1,6 +1,10 @@
 #ifndef _MICA_DEF
 #define _MICA_DEF
 
+#include <rte_ether.h>
+#include <rte_ip.h>
+#include <rte_udp.h>
+
 #include <array>
 #include <cstdint>
 #include <utility>
