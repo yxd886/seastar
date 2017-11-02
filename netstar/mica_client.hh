@@ -37,6 +37,55 @@ public:
     }
 };
 
+// The response is shared from the received
+// response packet. There for mica_response should
+// not be held indefinitely. It should be deconstructed
+// as soon as the users of the mica_client finishes using
+// the result of the response.
+class mica_response{
+    net::packet _response_pkt;
+public:
+    mica_response(net::packet p) : _response_pkt(std::move(p)) {}
+
+    mica_response(mica_response&& other) :
+        _response_pkt(std::move(other._response_pkt)) {}
+
+    mica_response& operator=(mica_response&& other) {
+        _response_pkt = std::move(other._response_pkt);
+        return *this;
+    }
+
+    // Get the the size of the key
+    size_t get_key_len(){
+        auto rh = _response_pkt.get_header<RequestHeader>();
+        return (rh->kv_length_vec >> 24);
+    }
+    // Get the size of the rounded up key len, aka key buffer len
+    size_t get_roundup_key_len(){
+        return roundup<8>(get_key_len());
+    }
+
+    // Get the size of the value
+    size_t get_val_len(){
+        auto rh = _response_pkt.get_header<RequestHeader>();
+        return (rh->kv_length_vec & ((1 << 24) - 1));
+    }
+    // Get the size of the rounded up value len, aka value buffer len
+    size_t get_roundup_val_len(){
+       return roundup<8>(get_val_len());
+    }
+
+    Operation get_operation(){
+        auto rh = _response_pkt.get_header<RequestHeader>();
+        return static_cast<Operation>(rh->operation);
+    }
+
+    Result get_result(){
+        auto rh = _response_pkt.get_header<RequestHeader>();
+        return static_cast<Result>(rh->result);
+    }
+};
+
 class mica_client : public work_unit<mica_client>{
 public:
     static constexpr unsigned max_req_len =
