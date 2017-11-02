@@ -18,7 +18,7 @@
 /*
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
-
+/*
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
@@ -77,4 +77,55 @@ int main(int ac, char** av) {
            engine().exit(fails ? 1 : 0);
        });
     });
+}
+*/
+#include "core/seastar.hh"
+#include "core/reactor.hh"
+#include "core/future-util.hh"
+#include <iostream>
+
+
+
+
+
+const char* canned_response = "Seastar is the future!\n";
+
+seastar::future<> service_loop() {
+    seastar::listen_options lo;
+    lo.reuse_address = true;
+    return seastar::do_with(seastar::listen(seastar::make_ipv4_address({1234}), lo),
+            [] (auto& listener) {
+        return seastar::keep_doing([&listener] () {
+            return listener.accept().then(
+                [] (seastar::connected_socket s, seastar::socket_address a) {
+                    auto out = s.output();
+                    return seastar::do_with(std::move(s), std::move(out),
+                        [] (auto& s, auto& out) {
+                            return out.write(canned_response).then([&out] {
+                                return out.close();
+			    });
+		    });
+	        });
+        });
+    });
+}
+
+
+seastar::future<> f() {
+    return seastar::parallel_for_each(boost::irange<unsigned>(0, seastar::smp::count),
+            [] (unsigned c) {
+        return seastar::smp::submit_to(c, service_loop);
+    });
+}
+
+int main(int argc, char** argv) {
+    seastar::app_template app;
+    try {
+        app.run(argc, argv, f);
+    } catch(...) {
+        std::cerr << "Couldn't start application: "
+                  << std::current_exception() << "\n";
+        return 1;
+    }
+    return 0;
 }
