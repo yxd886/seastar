@@ -30,13 +30,6 @@ namespace netstar {
 using namespace seastar;
 using namespace std::chrono_literals;
 
-class kill_flow : public std::exception {
-public:
-    virtual const char* what() const noexcept override {
-        return "killflow";
-    }
-};
-
 namespace queue_mapping {
 
 using namespace std;
@@ -49,11 +42,23 @@ struct port_pair{
 vector<vector<port_pair>>
 calculate_queue_mapping(boost::program_options::variables_map& opts,
                         unsigned local_smp_count, unsigned remote_smp_count,
-                        net::ipv4_address local_ip_addr,
-                        net::ipv4_address remote_ip_addr,
-                        const rss_key_type& rss_key);
+                        std::string local_ip_addr_str,
+                        std::string remote_ip_addr_str,
+                        port& pt);
+
+vector<vector<port_pair>>& get_queue_mapping();
+
+template <typename... T>
+void initialize_queue_mapping(T&&... args);
 
 } // namespace queue_mapping
+
+class kill_flow : public std::exception {
+public:
+    virtual const char* what() const noexcept override {
+        return "killflow";
+    }
+};
 
 class mica_client : public work_unit<mica_client>{
 public:
@@ -433,13 +438,7 @@ public:
 
         uint16_t local_ei_core_id = static_cast<uint16_t>(engine().cpu_id());
         auto remote_smp_count = opts["mica-sever-smp-count"].as<uint16_t>();
-        auto queue_map = queue_mapping::calculate_queue_mapping(
-                                                 opts,
-                                                 smp::count,
-                                                 static_cast<unsigned>(remote_smp_count),
-                                                 local_ei_ip_addr,
-                                                 remote_ei_ip_addr,
-                                                 ports()[0]->get_rss_key());
+        auto& queue_map = queue_mapping::get_queue_mapping();
 
         // first, create request_assembler for each pair of remote endpoint
         // and local endpoint

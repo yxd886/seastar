@@ -119,8 +119,13 @@ public:
     net::ethernet_address get_eth_addr(){
         return _dev->hw_address();
     }
+
+    // Calculate RSS hash and mapped cpu id
     const rss_key_type& get_rss_key(){
         return _dev->rss_key();
+    }
+    unsigned hash2cpu(uint32_t hash){
+        return _dev->hash2qid(hash);
     }
 };
 

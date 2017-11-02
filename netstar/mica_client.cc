@@ -7,13 +7,11 @@ namespace queue_mapping {
 vector<vector<port_pair>>
 calculate_queue_mapping(boost::program_options::variables_map& opts,
                         unsigned local_smp_count, unsigned remote_smp_count,
-                        net::ipv4_address local_ip_addr,
-                        net::ipv4_address remote_ip_addr,
-                        const rss_key_type& rss_key){
-    // Given local_ip_addr and remote_ip_addr, the
-    // result contains the following information
-    // get<0>(res[x][y]): local port that maps local queue x to remote queue y
-    // get<1>(res[x][y]): remote port that maps local queue x to remote queue y
+                        std::string local_ip_addr_str,
+                        std::string remote_ip_addr_str,
+                        port& pt){
+    // res[x][y].local_port: local port that maps local queue x to remote queue y
+    // res[x][y].remote_port: remote port that maps local queue x to remote queue y
     vector<vector<port_pair>> res;
     res.resize(local_smp_count);
     for(auto& v : res){
@@ -28,6 +26,8 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
     }
 
     unsigned total = local_smp_count * remote_smp_count;
+    net::ipv4_address local_ip_addr(local_ip_addr_str);
+    net::ipv4_address remote_ip_addr(remote_ip_addr_str);
 
     for(uint16_t local_port = 10240; local_port < 65535; local_port ++){
         for(uint16_t remote_port = 10240; remote_port < 65535; remote_port ++){
@@ -35,8 +35,8 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
             net::l4connid<net::ipv4_traits> to_local{local_ip_addr, remote_ip_addr, local_port, remote_port};
             net::l4connid<net::ipv4_traits> to_remote{remote_ip_addr, local_ip_addr, remote_port, local_port};
 
-            unsigned local_queue = to_local.hash(rss_key) % local_smp_count;
-            unsigned remote_queue = to_remote.hash(rss_key) % remote_smp_count;
+            unsigned local_queue = pt.hash2cpu(to_local.hash(pt.get_rss_key()));
+            unsigned remote_queue = pt.hash2cpu(to_remote.hash(pt.get_rss_key()));
 
             if(!res_pos_flag[local_queue][remote_queue]){
                 res_pos_flag[local_queue][remote_queue] = true;
@@ -46,10 +46,6 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
 
                 printf("Find one valid queue mapping entry: local_queue %d <-> remote_queue %d, \\"
                        "local_port %d, remote_port %d\n", local_queue, remote_queue, local_port, remote_port);
-                printf("to_local hash value: %" PRIu32 "\n", to_local.hash(rss_key));
-                printf("to_remote hash value: %" PRIu32 "\n", to_remote.hash(rss_key));
-                std::cout<<"to_local queue id "<<local_queue<<std::endl;
-                std::cout<<"to_remote queue id "<<remote_queue<<std::endl;
             }
 
             if(total == 0){
@@ -64,6 +60,17 @@ calculate_queue_mapping(boost::program_options::variables_map& opts,
     }
 
     return res;
+}
+
+vector<vector<port_pair>>& get_queue_mapping(){
+    static vector<vector<port_pair>> qm;
+    return qm;
+}
+
+template <typename... T>
+void initialize_queue_mapping(T&&... args){
+    auto result = calculate_queue_mapping(std::forward<T>(args)...);
+    get_queue_mapping() = std::move(result);
 }
 
 } // namespace queue_mapping
