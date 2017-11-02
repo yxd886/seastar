@@ -523,7 +523,7 @@ public:
                size_t key_len, temporary_buffer<char> key,
                size_t val_len, temporary_buffer<char> val) {
         if(_pending_work_queue.waiters() > max_samephore_waiting_count){
-            return make_exception_future<>(kill_flow());
+            return make_exception_future<mica_response>(kill_flow());
         }
         if(_pending_work_queue.try_wait(1)){
             auto rd_idx = _recycled_rds.front();
