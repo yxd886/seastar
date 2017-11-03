@@ -184,7 +184,7 @@ int main(int ac, char** av) {
                     if(lo_send_count == 11){
                         // All the queries have been finished.
                         if(lo_send_error_hapen){
-                            lo_send_pr.set_exception(std::runtime_error());
+                            lo_send_pr.set_exception(std::runtime_error("wtf"));
                         }
                         else{
                             lo_send_pr.set_value();
