@@ -144,6 +144,9 @@ public:
 
         // maximum number of allowed timeout retries
         static constexpr unsigned max_retries = 4;
+
+        // Initial timeout time in millisecond
+        static constexpr unsigned initial_timeout_val = 1;
     public:
         // A series of actions that can be applied to request_descriptor.
 
@@ -203,8 +206,17 @@ public:
         }
 
         void arm_timer(){
-            assert( _retry_count < 4 && !_to.armed());
-            _to.arm(1ms);
+            assert( _retry_count < max_retries && !_to.armed());
+            // determining how long to timeout before waiting for
+            // the response to come back. I test that sometimes,
+            // We need to wait for at least 4ms for some requests.
+            // Here I'm using a count up method. For the first retry,
+            // we wait for s ms, then for each other retry, we increase
+            // the timeout time by 1ms.
+            // Finally, to fail a message for our current configuration
+            // (4 retries, 1ms initial timeout value) a request descriptor
+            // will be held for at most 10ms.
+            _to.arm(std::chrono::milliseconds(initial_timeout_val+_retry_count));
         }
     public:
         size_t get_request_size(){
