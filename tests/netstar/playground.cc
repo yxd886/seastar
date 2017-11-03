@@ -90,7 +90,7 @@ int main(int ac, char** av) {
                 });
             });
         }).then([&all_objs]{
-            return smp::submit_to(2, [&all_objs]{
+            return smp::submit_to(3, [&all_objs]{
                 unsigned key = 10276325;
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
