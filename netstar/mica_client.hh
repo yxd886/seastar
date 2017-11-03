@@ -371,10 +371,11 @@ public:
 
     private:
         void send_request_packet(){
+#if 0
             printf("Thread %d: In send_request_packet\n", engine().cpu_id());
             printf("Thread %d: The source lcore is %d\n", engine().cpu_id(), _local_ei.udp_port);
             printf("Thread %d: The destination lcore is %d\n", engine().cpu_id(), _remote_ei.udp_port);
-
+#endif
             scattered_message<char> msg;
             msg.reserve(1+3*_rd_idxs.size());
 
@@ -394,15 +395,13 @@ public:
             // setup the missing header information
             setup_ip_udp_length(p);
             setup_request_num(p);
-            // make sure that we don't trigger a linearization
-            // assert(p.nr_frags() == (1+3*_rd_idxs.size()));
 
             // flip the send state
             _is_in_send_state = true;
 
             // send
+            printf("Thread %d: The request packet with size %d is sent out\n", engine().cpu_id(), p.len());
             _port.linearize_and_send(std::move(p)).then([this]{
-                printf("Thread %d: The request packet is sent out\n", engine().cpu_id());
                 for(auto rd_idx : _rd_idxs){
                     _rds[rd_idx].arm_timer();
                 }
@@ -596,6 +595,7 @@ private:
             return make_ready_future<>();
         }
         printf("Thread %d: Receive valid response packet with length %d\n", engine().cpu_id(), p.len());
+#if 0
         auto hd = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
         printf("Thread %d: source port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->src_port));
         printf("Thread %d: destination port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->dst_port));
@@ -617,6 +617,7 @@ private:
             printf("Thread %d: src_ip,dst_ip %" PRIu32 "\n", engine().cpu_id(), to_local.hash(ports()[0]->get_rss_key()));
             printf("Thread %d: dst_ip,src_ip %" PRIu32 "\n", engine().cpu_id(), to_remote.hash(ports()[0]->get_rss_key()));
         }
+#endif
 
         size_t offset = sizeof(RequestBatchHeader);
 
