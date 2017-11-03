@@ -271,6 +271,7 @@ public:
             _rq_hd.reserved0 = 0;
             _rq_hd.kv_length_vec =
                 static_cast<uint32_t>((_key_len << 24) | _val_len);
+            printf("The key_hash is %" PRIu64 "\n", _rq_hd.key_hash);
         }
         void normal_recycle_prep(){
             // Preparation for a normal recycle.
