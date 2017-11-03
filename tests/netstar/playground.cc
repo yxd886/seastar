@@ -37,50 +37,76 @@ int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
     per_core_objs<mica_client> all_objs;
+    vector<vector<port_pair>> queue_map;
 
-    return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs] {
+    return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs, &queue_map]{
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 1, smp::count,
             [](uint16_t port_id, uint16_t queue_num){
                 return create_fdir_device(port_id);
         }).then([&all_objs]{
             return all_objs.start(&all_objs);
-        })/*.then([&all_ports, &opts]{
-            net::ipv4_address local_ip_addr(opts["mica-client-ip"].as<std::string>());
-            net::ipv4_address remote_ip_addr(opts["mica-server-ip"].as<std::string>());
-            auto res = queue_mapping::calculate_queue_mapping(opts, 20, 20, local_ip_addr, remote_ip_addr,
-                    all_ports.get_ports(0).local_obj().get_rss_key());
-        });*/.then([&all_ports, &all_objs]{
+        }).then([&all_ports, &all_objs]{
             return all_objs.invoke_on_all([&all_ports](mica_client& mc){
                 mc.configure_ports(all_ports, 0, 0);
             });
-        }).then([&opts, &all_ports]{
-            return queue_mapping::initialize_queue_mapping(
-                        opts, all_ports.get_ports(0).local_obj());
-        }).then([&all_objs, &opts]{
-            return all_objs.invoke_on_all([&opts](mica_client& mc){
-                mc.bootup(opts);
+        }).then([&opts, &all_ports, &queue_map]{
+            queue_map = calculate_queue_mapping(
+                    opts, all_ports.get_ports(0).local_obj());
+        }).then([&all_objs, &opts, &queue_map]{
+            return all_objs.invoke_on_all([&opts, &queue_map](mica_client& mc){
+                mc.bootup(opts, queue_map);
             });
         }).then([&all_objs]{
             return all_objs.invoke_on_all([](mica_client& mc){
                 mc.start_receiving();
             });
         }).then([&all_objs]{
-            return smp::submit_to(7, [&all_objs]{
-                unsigned key = 1024;
+            return smp::submit_to(3, [&all_objs]{
+                uint64_t key = 10276325;
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 
-                unsigned val = 8721;
+                uint64_t val = 8721;
                 extendable_buffer val_buf;
                 val_buf.fill_data(val);
 
                 return all_objs.local_obj().query(Operation::kSet,
-                        sizeof(unsigned), key_buf.get_temp_buffer(),
-                        sizeof(unsigned), val_buf.get_temp_buffer()).then_wrapped([](auto&& f){
+                        sizeof(uint64_t), key_buf.get_temp_buffer(),
+                        sizeof(uint64_t), val_buf.get_temp_buffer()).then_wrapped([](auto&& f){
                     try{
-                        f.get();
+                        auto response = std::get<0>(f.get());
                         printf("No error!!!!\n");
+                        auto op = static_cast<uint8_t>(response.get_operation());
+                        auto r = static_cast<uint8_t>(response.get_result());
+                        printf("Operation %d, result %d\n", op, r);
+                        auto key_len = response.get_key_len();
+                        auto val_len = response.get_val_len();
+                        std::cout<<"key_len "<<key_len<<" val_len "<<val_len<<std::endl;
+                    }
+                    catch(...){
+                        printf("We got some errors here!\n");
+                    }
+                });
+            });
+        }).then([&all_objs]{
+            return smp::submit_to(3, [&all_objs]{
+                uint64_t key = 10276325;
+                extendable_buffer key_buf;
+                key_buf.fill_data(key);
+
+                return all_objs.local_obj().query(Operation::kGet,
+                        sizeof(uint64_t), key_buf.get_temp_buffer(),
+                        0, temporary_buffer<char>{}).then_wrapped([](auto&& f){
+                    try{
+                        auto response = std::get<0>(f.get());
+                        printf("No error!!!!\n");
+                        auto op = static_cast<uint8_t>(response.get_operation());
+                        auto r = static_cast<uint8_t>(response.get_result());
+                        printf("Operation %d, result %d\n", op, r);
+                        auto key_len = response.get_key_len();
+                        auto val_len = response.get_val_len();
+                        std::cout<<"key_len "<<key_len<<" val_len "<<val_len<<std::endl;
                     }
                     catch(...){
                         printf("We got some errors here!\n");

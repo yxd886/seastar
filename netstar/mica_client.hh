@@ -30,22 +30,6 @@ namespace netstar {
 using namespace seastar;
 using namespace std::chrono_literals;
 
-namespace queue_mapping {
-
-using namespace std;
-
-struct port_pair{
-    uint16_t local_port;
-    uint16_t remote_port;
-};
-
-vector<vector<port_pair>>& get_queue_mapping();
-
-future<> initialize_queue_mapping(boost::program_options::variables_map& opts,
-                                  port& pt);
-
-} // namespace queue_mapping
-
 class kill_flow : public std::exception {
 public:
     virtual const char* what() const noexcept override {
@@ -53,13 +37,75 @@ public:
     }
 };
 
+// The response is shared from the received
+// response packet. There for mica_response should
+// not be held indefinitely. It should be deconstructed
+// as soon as the users of the mica_client finishes using
+// the result of the response.
+class mica_response{
+    net::packet _response_pkt;
+public:
+    mica_response(net::packet p) : _response_pkt(std::move(p)) {}
+
+    mica_response(mica_response&& other) noexcept :
+        _response_pkt(std::move(other._response_pkt)) {}
+
+    mica_response& operator=(mica_response&& other) {
+        _response_pkt = std::move(other._response_pkt);
+        return *this;
+    }
+
+    // Get the the size of the key
+    size_t get_key_len(){
+        auto rh = _response_pkt.get_header<RequestHeader>();
+        return (rh->kv_length_vec >> 24);
+    }
+    // Get the size of the rounded up key len, aka key buffer len
+    size_t get_roundup_key_len(){
+        return roundup<8>(get_key_len());
+    }
+
+    // Get the size of the value
+    size_t get_val_len(){
+        auto rh = _response_pkt.get_header<RequestHeader>();
+        return (rh->kv_length_vec & ((1 << 24) - 1));
+    }
+    // Get the size of the rounded up value len, aka value buffer len
+    size_t get_roundup_val_len(){
+       return roundup<8>(get_val_len());
+    }
+
+    Operation get_operation(){
+        auto rh = _response_pkt.get_header<RequestHeader>();
+        return static_cast<Operation>(rh->operation);
+    }
+
+    Result get_result(){
+        auto rh = _response_pkt.get_header<RequestHeader>();
+        return static_cast<Result>(rh->result);
+    }
+
+    template<typename T>
+    T& get_key(){
+        assert(sizeof(T) == get_key_len());
+        auto key = _response_pkt.get_header<T>(sizeof(RequestHeader));
+        return *key;
+    }
+
+    template<typename T>
+    T& get_value(){
+        assert(sizeof(T) == get_val_len());
+        auto value =
+                _response_pkt.get_header<T>(
+                        sizeof(RequestHeader)+get_roundup_key_len());
+        return *value;
+    }
+};
+
 class mica_client : public work_unit<mica_client>{
 public:
     static constexpr unsigned max_req_len =
             ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
-    static constexpr unsigned max_payload_len =
-            ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(net::eth_hdr) -
-            sizeof(net::ip_hdr) - sizeof(net::udp_hdr);
 
     enum class action {
         recycle_rd,
@@ -91,13 +137,16 @@ public:
         temporary_buffer<char> _val_buf;
 
         // the associated promise with this request
-        std::experimental::optional<promise<>> _pr;
+        std::experimental::optional<promise<mica_response>> _pr;
 
         // the size of the request
         size_t _request_size;
 
         // maximum number of allowed timeout retries
         static constexpr unsigned max_retries = 4;
+
+        // Initial timeout time in millisecond
+        static constexpr unsigned initial_timeout_val = 1;
     public:
         // A series of actions that can be applied to request_descriptor.
 
@@ -112,7 +161,7 @@ public:
         void new_action(Operation op,
                         size_t key_len, temporary_buffer<char> key,
                         size_t val_len, temporary_buffer<char> val){
-            printf("Thread %d: New action is called on %d\n", engine().cpu_id(), _rd_index);
+            printf("Request descriptor %d is used\n", _rd_index);
             // If this method is called, the rd must be popped out from
             // the fifo. When the rd is popped out from the fifo, it is either
             // in initialized state, or be recycled. This means that:
@@ -120,27 +169,29 @@ public:
             // 2. _retry_count is cleared and is zero
             // 3. _to timer is not armed.
             assert(!_pr && _retry_count == 0 && !_to.armed());
-            assert(roundup<8>(key_len) == key.size() &&
+            assert(key_len >= 8 &&
+                   (key_len < (1 << 8)) &&
+                   (val_len >= 8 || val_len == 0) &&
+                   roundup<8>(key_len) == key.size() &&
                    roundup<8>(val_len) == val.size());
 
             _key_len = key_len;
             _key_buf = std::move(key);
             _val_len = val_len;
             _val_buf = std::move(val);
-            _request_size = sizeof(RequestHeader)+key_len+val_len;
+            _request_size = sizeof(RequestHeader)+_key_buf.size()+_val_buf.size();
 
-            // some assertions adopted form mica source code
-            assert(_key_len < (1 << 8));
+            // make sure that _request_size is smaller than max_req_len
             assert(_request_size<=max_req_len);
 
             setup_request_header(op);
         }
 
-        future<> obtain_future(){
+        future<mica_response> obtain_future(){
             // This is called after new_action is called. So we
             // perform the same assertion.
             assert(!_pr && _retry_count == 0 && !_to.armed());
-            _pr = promise<>();
+            _pr = promise<mica_response>();
             return _pr->get_future();
         }
 
@@ -155,8 +206,17 @@ public:
         }
 
         void arm_timer(){
-            assert( _retry_count < 4 && !_to.armed());
-            _to.arm(1ms);
+            assert( _retry_count < max_retries && !_to.armed());
+            // determining how long to timeout before waiting for
+            // the response to come back. I test that sometimes,
+            // We need to wait for at least 4ms for some requests.
+            // Here I'm using a count up method. For the first retry,
+            // we wait for s ms, then for each other retry, we increase
+            // the timeout time by 1ms.
+            // Finally, to fail a message for our current configuration
+            // (4 retries, 1ms initial timeout value) a request descriptor
+            // will be held for at most 10ms.
+            _to.arm(std::chrono::milliseconds(initial_timeout_val+_retry_count));
         }
     public:
         size_t get_request_size(){
@@ -167,29 +227,24 @@ public:
             return _rq_hd.key_hash;
         }
     public:
-        action match_response(RequestHeader& res_hd, net::packet res_key,
-                              net::packet res_val){
+        action match_response(RequestHeader& res_hd, net::packet response_pkt){
             auto opaque = res_hd.opaque;
             uint16_t epoch = opaque & ((1 << 16) - 1);
+            printf("Request descriptor %d receives response with epoch %d, and it's own epoch is %d\n",
+                    _rd_index, epoch, _epoch);
             if(epoch != _epoch){
                 // the epoch doesn't match, the response is a late response,
                 // ignore it.
                 return action::no_action;
             }
-
+            printf("Request descriptor %d succeeds\n", _rd_index);
             // the epoch matches, we got the response for this request.
             // Here, the timer should be armed and not timed out.
             // The retry count should not exceed the maximum value.
             // the _pr must be associated with some continuations.
             assert(_to.armed() && _retry_count < max_retries && _pr);
 
-            if(res_hd.result != static_cast<uint8_t>(Result::kSuccess)){
-                _pr->set_exception(kill_flow());
-            }
-            else{
-                _pr->set_value();
-            }
-
+            _pr->set_value(mica_response(std::move(response_pkt)));
             normal_recycle_prep();
             return action::recycle_rd;
         }
@@ -198,9 +253,12 @@ public:
             // handle _to timeout
             assert(_pr);
 
+            printf("Request descriptor %d times out\n", _rd_index);
+
             _retry_count++;
 
             if(_retry_count == max_retries){
+                printf("Request descriptor %d fails with exception\n", _rd_index);
                 // we have retried four times without receiving a response,
                 // timeout
                 _pr->set_exception(kill_flow());
@@ -302,7 +360,6 @@ public:
 
         void consume_send_stream(){
             while(!_send_stream.empty() && !_is_in_send_state){
-                printf("Thread %d: Consume send stream\n", engine().cpu_id());
                 auto next_rd_idx = _send_stream.front();
                 auto& next_rd = _rds[next_rd_idx];
                 auto next_rd_size = next_rd.get_request_size();
@@ -319,17 +376,17 @@ public:
 
         void force_send(){
             if(_rd_idxs.size()>0 && !_is_in_send_state){
-                printf("Thread %d: Force send\n", engine().cpu_id());
                 send_request_packet();
             }
         }
 
     private:
         void send_request_packet(){
+#if 0
             printf("Thread %d: In send_request_packet\n", engine().cpu_id());
             printf("Thread %d: The source lcore is %d\n", engine().cpu_id(), _local_ei.udp_port);
             printf("Thread %d: The destination lcore is %d\n", engine().cpu_id(), _remote_ei.udp_port);
-
+#endif
             scattered_message<char> msg;
             msg.reserve(1+3*_rd_idxs.size());
 
@@ -349,15 +406,13 @@ public:
             // setup the missing header information
             setup_ip_udp_length(p);
             setup_request_num(p);
-            // make sure that we don't trigger a linearization
-            assert(p.nr_frags() == (1+3*_rd_idxs.size()));
 
             // flip the send state
             _is_in_send_state = true;
 
             // send
+            printf("Thread %d: The request packet with size %d is sent out\n", engine().cpu_id(), p.len());
             _port.linearize_and_send(std::move(p)).then([this]{
-                printf("Thread %d: The request packet is sent out\n", engine().cpu_id());
                 for(auto rd_idx : _rd_idxs){
                     _rds[rd_idx].arm_timer();
                 }
@@ -412,7 +467,8 @@ public:
         return make_ready_future<>();
     }
 
-    void bootup(boost::program_options::variables_map& opts){
+    void bootup(boost::program_options::variables_map& opts,
+                vector<vector<port_pair>>& queue_map){
         // Currently, we only support one port for mica client, and
         // one port for mica server.
         assert(ports().size() == 1);
@@ -432,7 +488,6 @@ public:
 
         uint16_t local_ei_core_id = static_cast<uint16_t>(engine().cpu_id());
         auto remote_smp_count = opts["mica-sever-smp-count"].as<uint16_t>();
-        auto& queue_map = queue_mapping::get_queue_mapping();
 
         // first, create request_assembler for each pair of remote endpoint
         // and local endpoint
@@ -470,18 +525,18 @@ public:
         // in case there's not enough request put into the request
         // assemblers.
         _check_ras_timer.set_callback([this]{check_request_assemblers();});
-        _check_ras_timer.arm_periodic(200us);
+        _check_ras_timer.arm_periodic(100us);
     }
     void start_receiving(){
         assert(ports().size() == 1);
         this->configure_receive_fn(0,
                 [this](net::packet pkt){return receive(std::move(pkt));});
     }
-    future<> query(Operation op,
+    future<mica_response> query(Operation op,
                size_t key_len, temporary_buffer<char> key,
                size_t val_len, temporary_buffer<char> val) {
         if(_pending_work_queue.waiters() > max_samephore_waiting_count){
-            return make_exception_future<>(kill_flow());
+            return make_exception_future<mica_response>(kill_flow());
         }
         if(_pending_work_queue.try_wait(1)){
             auto rd_idx = _recycled_rds.front();
@@ -493,7 +548,8 @@ public:
         }
         else{
             return _pending_work_queue.wait(1).then(
-                    [this, op, key_len, key=std::move(key), val_len, val=std::move(val)] () mutable{
+                    [this, op, key_len, key=std::move(key),
+                     val_len, val=std::move(val)] () mutable{
                 auto rd_idx = _recycled_rds.front();
                 _recycled_rds.pop_front();
                 _rds[rd_idx].new_action(op, key_len, std::move(key),
@@ -541,7 +597,9 @@ private:
         // Here, each ra in _ras represents a partition.
         auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
                                               _ras.size());
+#if 0
         printf("Thread %d: The partition id is %d\n", engine().cpu_id(), partition_id);
+#endif
         _ras[partition_id].append_new_request_descriptor(rd_idx);
     }
     future<> receive(net::packet p){
@@ -549,7 +607,8 @@ private:
             printf("Thread %d: Receive invalid response packet\n", engine().cpu_id());
             return make_ready_future<>();
         }
-        printf("Thread %d: Receive valid response packet\n", engine().cpu_id());
+        printf("Thread %d: Receive valid response packet with length %d\n", engine().cpu_id(), p.len());
+#if 0
         auto hd = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
         printf("Thread %d: source port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->src_port));
         printf("Thread %d: destination port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->dst_port));
@@ -570,9 +629,8 @@ private:
             net::l4connid<net::ipv4_traits> to_remote{dst_ip, src_ip, dst_port, src_port};
             printf("Thread %d: src_ip,dst_ip %" PRIu32 "\n", engine().cpu_id(), to_local.hash(ports()[0]->get_rss_key()));
             printf("Thread %d: dst_ip,src_ip %" PRIu32 "\n", engine().cpu_id(), to_remote.hash(ports()[0]->get_rss_key()));
-            std::cout<< to_local.hash(ports()[0]->get_rss_key()) % smp::count <<std::endl;
-            std::cout<< to_remote.hash(ports()[0]->get_rss_key()) % smp::count <<std::endl;
         }
+#endif
 
         size_t offset = sizeof(RequestBatchHeader);
 
@@ -584,24 +642,30 @@ private:
             size_t val_len = (rh->kv_length_vec & ((1 << 24) - 1));
             size_t roundup_val_len = roundup<8>(val_len);
 
-            size_t key_offset = offset+sizeof(RequestHeader);
-            size_t val_offset = key_offset + roundup_key_len;
-            size_t next_req_offset = val_offset + roundup_val_len;
+            // size_t key_offset = offset+sizeof(RequestHeader);
+            // size_t val_offset = key_offset + roundup_key_len;
+            // size_t next_req_offset = val_offset + roundup_val_len;
 
+            size_t total_reponse_length = sizeof(RequestHeader)+
+                    roundup_key_len+roundup_val_len;
+#if 0
+            printf("Total response length is %zu\n", total_reponse_length);
+#endif
             unsigned rd_idx = static_cast<unsigned>(rh->opaque >> 16);
-
-
             auto action_res = _rds[rd_idx].match_response(*rh,
-                                  p.share(key_offset, roundup_key_len),
-                                  p.share(val_offset, roundup_val_len));
+                                  p.share(offset, total_reponse_length));
 
             switch (action_res){
             case action::no_action : {
+#if 0
                 printf("Thread %d: Response match fails, invalid response\n", engine().cpu_id());
+#endif
                 break;
             }
             case action::recycle_rd : {
+#if 0
                 printf("Thread %d: Response match succeed, recycle the request descriptor\n", engine().cpu_id());
+#endif
                 // recycle the request descriptor.
                 _recycled_rds.push_back(rd_idx);
                 _pending_work_queue.signal(1);
@@ -615,7 +679,7 @@ private:
                 break;
             }
 
-            offset = next_req_offset;
+            offset += total_reponse_length;
         }
         assert(offset == p.len());
         return make_ready_future<>();
