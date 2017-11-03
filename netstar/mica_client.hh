@@ -166,6 +166,7 @@ public:
             // 3. _to timer is not armed.
             assert(!_pr && _retry_count == 0 && !_to.armed());
             assert(key_len >= 8 &&
+                   key_len < (1 << 8) &&
                    (val_len >= 8 || val_len == 0) &&
                    roundup<8>(key_len) == key.size() &&
                    roundup<8>(val_len) == val.size());
@@ -176,8 +177,7 @@ public:
             _val_buf = std::move(val);
             _request_size = sizeof(RequestHeader)+_key_buf.size()+_val_buf.size();
 
-            // some assertions adopted form mica source code
-            assert(_key_len < (1 << 8));
+            // make sure that _request_size is smaller than max_req_len
             assert(_request_size<=max_req_len);
 
             setup_request_header(op);

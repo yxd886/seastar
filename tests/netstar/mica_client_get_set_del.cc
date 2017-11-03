@@ -33,6 +33,13 @@
 using namespace seastar;
 using namespace netstar;
 
+// sizeof(large_object) == 104
+// roundup<8>(sizeof(large_object)) == 104
+// uint64_t key size is 8
+// the RequestHeader is 24
+// A kSet request for large_object is 136
+// max_req_len is 1466
+// A single packet can hold at most 10 large_object
 struct large_object{
     unsigned id;
     char unused_buf[100];
@@ -44,7 +51,12 @@ int main(int ac, char** av) {
     per_core_objs<mica_client> all_objs;
     vector<vector<port_pair>> queue_map;
 
-    return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs, &queue_map]{
+    promise<> lo_send_pr;
+    unsigned lo_send_count = 0;
+    bool error_happen = false;
+
+    return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs, &queue_map,
+                                       &lo_send_pr, &lo_send_count, &error_happen]{
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 1, smp::count,
             [](uint16_t port_id, uint16_t queue_num){
@@ -141,15 +153,50 @@ int main(int ac, char** av) {
                 assert(response.get_result() == Result::kNotFound);
                 printf("The key %zu is not found\n", key);
             });
+        }).then([&all_objs, &lo_send_pr, &lo_send_count, &error_happen]{
+            for(uint64_t i=0; i<11; i++){
+                // Query 11 times with large_object
+                uint64_t key = 10276327+i;
+                extendable_buffer key_buf;
+                key_buf.fill_data(key);
+
+                large_object lo;
+                lo.id = i;
+                extendable_buffer val_buf;
+                key_buf.fill_data(lo);
+
+                all_objs.local_obj().query(Operation::kSet,
+                        sizeof(key), key_buf.get_temp_buffer(),
+                        sizeof(lo), val_buf.get_temp_buffer()).then([key, i](mica_response response){
+                    assert(response.get_key_len() == 0);
+                    assert(response.get_val_len() == 0);
+                    assert(response.get_result() == Result::kSuccess);
+                    printf("Large object with index %zu is set to key %zu\n", i, key);
+                }).then_wrapped([&lo_send_pr, &lo_send_count, &error_happen](auto&& f){
+                    lo_send_count += 1;
+                    try{
+                        f.get();
+
+                    }
+                    catch(...){
+                        error_happen = true;
+                    }
+                    if(lo_send_count == 11){
+                        // All the queries have been finished.
+                        if(error_happen){
+                            lo_send_pr.set_exception(std::runtime_error());
+                        }
+                        else{
+                            lo_send_pr.set_value();
+                        }
+                    }
+                });
+            }
+            return lo_send_pr.get_future();
         }).then_wrapped([](auto&& f){
             try{
                 f.get();
-                printf("The mica client is successfully booted up\n");
-                printf("Size of the large_object is %zu\n", sizeof(large_object));
-                printf("Size of the rounded up large_object is %zu\n", roundup<8>(sizeof(large_object)));
-                printf("Size of the max request is %d\n", mica_client::max_req_len);
                 engine().exit(0);
-
             }
             catch(...){
                 printf("Failure happens\n");
