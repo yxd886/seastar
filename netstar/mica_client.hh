@@ -624,6 +624,8 @@ private:
 #endif
             return make_ready_future<>();
         }
+        auto eth_h = p.get_header<net::eth_hdr>();
+        std::cout<<"The receive packet has src eth: "<<eth_h->src_mac<<" and dst eth: "<<eth_h->dst_mac<<std::endl;
 #if 0
         printf("Thread %d: Receive valid response packet with length %d\n", engine().cpu_id(), p.len());
 
