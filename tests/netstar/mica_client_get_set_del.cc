@@ -91,6 +91,7 @@ int main(int ac, char** av) {
                 assert(response.get_key_len() == 0);
                 assert(response.get_val_len() == sizeof(uint64_t));
                 assert(response.get_result() == Result::kSuccess);
+                assert(response.get_value<uint64_t>() == 8721);
                 printf("The key %zu is read as value %zu\n", key, response.get_value<uint64_t>());
             });
         }).then([&all_objs]{
@@ -102,10 +103,16 @@ int main(int ac, char** av) {
             return all_objs.local_obj().query(Operation::kDelete,
                     sizeof(key), key_buf.get_temp_buffer(),
                     0, temporary_buffer<char>()).then([key](mica_response response){
-                assert(response.get_key_len() == 0);
+                /*assert(response.get_key_len() == 0);
                 assert(response.get_val_len() == sizeof(uint64_t));
                 assert(response.get_result() == Result::kSuccess);
-                printf("The key %zu is read as value %zu\n", key, response.get_value<uint64_t>());
+                printf("The key %zu is read as value %zu\n", key, response.get_value<uint64_t>());*/
+                auto op = static_cast<uint8_t>(response.get_operation());
+                auto r = static_cast<uint8_t>(response.get_result());
+                printf("Operation %d, result %d\n", op, r);
+                auto key_len = response.get_key_len();
+                auto val_len = response.get_val_len();
+                std::cout<<"key_len "<<key_len<<" val_len "<<val_len<<std::endl;
             });
         }).then_wrapped([](auto&& f){
             try{
