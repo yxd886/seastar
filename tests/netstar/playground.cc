@@ -63,11 +63,11 @@ int main(int ac, char** av) {
             });
         }).then([&all_objs]{
             return smp::submit_to(3, [&all_objs]{
-                unsigned key = 10276325;
+                uint64_t key = 10276325;
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 
-                unsigned val = 8721;
+                uint64_t val = 8721;
                 extendable_buffer val_buf;
                 val_buf.fill_data(val);
 
@@ -91,7 +91,7 @@ int main(int ac, char** av) {
             });
         }).then([&all_objs]{
             return smp::submit_to(3, [&all_objs]{
-                unsigned key = 10276325;
+                uint64_t key = 10276325;
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 
