@@ -225,7 +225,7 @@ public:
                 // ignore it.
                 return action::no_action;
             }
-
+            printf("Request descriptor %d succeeds\n", _rd_index);
             // the epoch matches, we got the response for this request.
             // Here, the timer should be armed and not timed out.
             // The retry count should not exceed the maximum value.
