@@ -178,7 +178,7 @@ public:
             _key_buf = std::move(key);
             _val_len = val_len;
             _val_buf = std::move(val);
-            _request_size = sizeof(RequestHeader)+_key_buf.size+_val_buf.size;
+            _request_size = sizeof(RequestHeader)+_key_buf.size()+_val_buf.size();
 
             // some assertions adopted form mica source code
             assert(_key_len < (1 << 8));
