@@ -272,7 +272,8 @@ tests = [
     'tests/netstar/per_core_objs_invoke_on_all',
     'tests/netstar/simple_send_work_unit',
     'tests/netstar/playground',
-    'tests/netstar/extendable_buffer_test'
+    'tests/netstar/extendable_buffer_test',
+    'tests/netstar/mica_client_get_set_del'
     ]
 
 apps = [
@@ -512,6 +513,7 @@ deps = {
     'tests/netstar/simple_send_work_unit': ['tests/netstar/simple_send_work_unit.cc'] + core + libnet + libnetstar,
     'tests/netstar/playground': ['tests/netstar/playground.cc'] + core + libnet + libnetstar,
     'tests/netstar/extendable_buffer_test': ['tests/netstar/extendable_buffer_test.cc'] + core + libnet + libnetstar,
+    'tests/netstar/mica_client_get_set_del': ['tests/netstar/mica_client_get_set_del.cc'] + core + libnet + libnetstar,
 }
 
 boost_tests = [

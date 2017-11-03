@@ -169,14 +169,16 @@ public:
             // 2. _retry_count is cleared and is zero
             // 3. _to timer is not armed.
             assert(!_pr && _retry_count == 0 && !_to.armed());
-            assert(roundup<8>(key_len) == key.size() &&
+            assert(key_len >= 8 &&
+                   val_len >= 8 &&
+                   roundup<8>(key_len) == key.size() &&
                    roundup<8>(val_len) == val.size());
 
             _key_len = key_len;
             _key_buf = std::move(key);
             _val_len = val_len;
             _val_buf = std::move(val);
-            _request_size = sizeof(RequestHeader)+key_len+val_len;
+            _request_size = sizeof(RequestHeader)+_key_buf.size+_val_buf.size;
 
             // some assertions adopted form mica source code
             assert(_key_len < (1 << 8));
