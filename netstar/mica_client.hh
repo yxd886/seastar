@@ -165,6 +165,7 @@ public:
             // 2. _retry_count is cleared and is zero
             // 3. _to timer is not armed.
             assert(!_pr && _retry_count == 0 && !_to.armed());
+            printf("%zu, %zu\n", roundup<8>(val_len), val.size());
             assert(key_len >= 8 &&
                    (key_len < (1 << 8)) &&
                    (val_len >= 8 || val_len == 0) &&
