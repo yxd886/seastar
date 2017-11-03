@@ -423,6 +423,10 @@ public:
 #if 0
             printf("Thread %d: The request packet with size %d is sent out\n", engine().cpu_id(), p.len());
 #endif
+            net::ethernet_address src_eth = p.get_header<net::eth_hdr>()->src_mac;
+            net::ethernet_address dst_eth = p.get_header<net::eth_hdr>()->dst_mac;
+            std::cout<<"Send request packet with src mac: "<<src_eth<<" and dst mac: "<<dst_eth<<std::endl;
+
             _port.linearize_and_send(std::move(p)).then([this]{
                 for(auto rd_idx : _rd_idxs){
                     _rds[rd_idx].arm_timer();
