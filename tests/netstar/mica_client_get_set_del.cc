@@ -80,31 +80,22 @@ int main(int ac, char** av) {
                 printf("The key %zu is set to value %zu\n", key, val);
             });
         }).then([&all_objs]{
-            return smp::submit_to(3, [&all_objs]{
-                uint64_t key = 10276325;
-                extendable_buffer key_buf;
-                key_buf.fill_data(key);
+            uint64_t key = 10276325;
+            extendable_buffer key_buf;
+            key_buf.fill_data(key);
 
-                return all_objs.local_obj().query(Operation::kGet,
-                        sizeof(uint64_t), key_buf.get_temp_buffer(),
-                        0, temporary_buffer<char>{}).then_wrapped([](auto&& f){
-                    try{
-                        auto response = std::get<0>(f.get());
-                        printf("No error!!!!\n");
-                        auto op = static_cast<uint8_t>(response.get_operation());
-                        auto r = static_cast<uint8_t>(response.get_result());
-                        printf("Operation %d, result %d\n", op, r);
-                        auto key_len = response.get_key_len();
-                        auto val_len = response.get_val_len();
-                        std::cout<<"key_len "<<key_len<<" val_len "<<val_len<<std::endl;
-                    }
-                    catch(...){
-                        printf("We got some errors here!\n");
-                    }
-                });
+            printf("Trying to read key %zu\n", key);
+            return all_objs.local_obj().query(Operation::kGet,
+                    sizeof(key), key_buf.get_temp_buffer(),
+                    0, temporary_buffer<char>()).then([key](mica_response response){
+                assert(response.get_key_len() == 0);
+                assert(response.get_val_len() == sizeof(uint64_t));
+                assert(response.get_result() == Result::kSuccess);
+                printf("The key %zu is read as value %zu\n", key, response.get_value<uint64_t>());
             });
         }).then([]{
             printf("The mica client is successfully booted up\n");
+            engine().exit(0);
         });
     });
 }
