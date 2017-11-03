@@ -107,7 +107,7 @@ int main(int ac, char** av) {
                 assert(response.get_result() == Result::kSuccess);
                 printf("The key %zu is read as value %zu\n", key, response.get_value<uint64_t>());
             });
-        }).then_warpped([](auto&& f){
+        }).then_wrapped([](auto&& f){
             try{
                 f.get();
                 printf("The mica client is successfully booted up\n");
