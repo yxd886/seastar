@@ -161,7 +161,6 @@ public:
         void new_action(Operation op,
                         size_t key_len, temporary_buffer<char> key,
                         size_t val_len, temporary_buffer<char> val){
-            printf("Thread %d: New action is called on %d\n", engine().cpu_id(), _rd_index);
             // If this method is called, the rd must be popped out from
             // the fifo. When the rd is popped out from the fifo, it is either
             // in initialized state, or be recycled. This means that:
@@ -273,7 +272,6 @@ public:
             _rq_hd.reserved0 = 0;
             _rq_hd.kv_length_vec =
                 static_cast<uint32_t>((_key_len << 24) | _val_len);
-            printf("The key_hash is %" PRIu64 "\n", _rq_hd.key_hash);
         }
         void normal_recycle_prep(){
             // Preparation for a normal recycle.
@@ -347,7 +345,6 @@ public:
 
         void consume_send_stream(){
             while(!_send_stream.empty() && !_is_in_send_state){
-                printf("Thread %d: Consume send stream\n", engine().cpu_id());
                 auto next_rd_idx = _send_stream.front();
                 auto& next_rd = _rds[next_rd_idx];
                 auto next_rd_size = next_rd.get_request_size();
@@ -364,7 +361,6 @@ public:
 
         void force_send(){
             if(_rd_idxs.size()>0 && !_is_in_send_state){
-                printf("Thread %d: Force send\n", engine().cpu_id());
                 send_request_packet();
             }
         }
@@ -586,7 +582,9 @@ private:
         // Here, each ra in _ras represents a partition.
         auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
                                               _ras.size());
+#if 0
         printf("Thread %d: The partition id is %d\n", engine().cpu_id(), partition_id);
+#endif
         _ras[partition_id].append_new_request_descriptor(rd_idx);
     }
     future<> receive(net::packet p){
