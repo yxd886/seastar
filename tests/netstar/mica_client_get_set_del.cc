@@ -93,9 +93,31 @@ int main(int ac, char** av) {
                 assert(response.get_result() == Result::kSuccess);
                 printf("The key %zu is read as value %zu\n", key, response.get_value<uint64_t>());
             });
-        }).then([]{
-            printf("The mica client is successfully booted up\n");
-            engine().exit(0);
+        }).then([&all_objs]{
+            uint64_t key = 10276325;
+            extendable_buffer key_buf;
+            key_buf.fill_data(key);
+
+            printf("Trying to delete key %zu\n", key);
+            return all_objs.local_obj().query(Operation::kDelete,
+                    sizeof(key), key_buf.get_temp_buffer(),
+                    0, temporary_buffer<char>()).then([key](mica_response response){
+                assert(response.get_key_len() == 0);
+                assert(response.get_val_len() == sizeof(uint64_t));
+                assert(response.get_result() == Result::kSuccess);
+                printf("The key %zu is read as value %zu\n", key, response.get_value<uint64_t>());
+            });
+        }).then_warpped([](auto&& f){
+            try{
+                f.get();
+                printf("The mica client is successfully booted up\n");
+                engine().exit(0);
+
+            }
+            catch(...){
+                printf("Failure happens\n");
+                engine().exit(0);
+            }
         });
     });
 }
