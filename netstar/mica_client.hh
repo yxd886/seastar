@@ -218,7 +218,7 @@ public:
         action match_response(RequestHeader& res_hd, net::packet response_pkt){
             auto opaque = res_hd.opaque;
             uint16_t epoch = opaque & ((1 << 16) - 1);
-            printf("Request descriptor %d receives response with epoch %d, but it's own epoch is %d",
+            printf("Request descriptor %d receives response with epoch %d, and it's own epoch is %d\n",
                     _rd_index, epoch, _epoch);
             if(epoch != _epoch){
                 // the epoch doesn't match, the response is a late response,
