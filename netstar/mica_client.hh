@@ -166,7 +166,7 @@ public:
             // 3. _to timer is not armed.
             assert(!_pr && _retry_count == 0 && !_to.armed());
             assert(key_len >= 8 &&
-                   key_len < (1 << 8) &&
+                   (key_len < (1 << 8)) &&
                    (val_len >= 8 || val_len == 0) &&
                    roundup<8>(key_len) == key.size() &&
                    roundup<8>(val_len) == val.size());
