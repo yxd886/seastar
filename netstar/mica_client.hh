@@ -161,7 +161,9 @@ public:
         void new_action(Operation op,
                         size_t key_len, temporary_buffer<char> key,
                         size_t val_len, temporary_buffer<char> val){
+#if 0
             printf("Request descriptor %d is used\n", _rd_index);
+#endif
             // If this method is called, the rd must be popped out from
             // the fifo. When the rd is popped out from the fifo, it is either
             // in initialized state, or be recycled. This means that:
@@ -230,14 +232,18 @@ public:
         action match_response(RequestHeader& res_hd, net::packet response_pkt){
             auto opaque = res_hd.opaque;
             uint16_t epoch = opaque & ((1 << 16) - 1);
+#if 0
             printf("Request descriptor %d receives response with epoch %d, and it's own epoch is %d\n",
                     _rd_index, epoch, _epoch);
+#endif
             if(epoch != _epoch){
                 // the epoch doesn't match, the response is a late response,
                 // ignore it.
                 return action::no_action;
             }
+#if 0
             printf("Request descriptor %d succeeds\n", _rd_index);
+#endif
             // the epoch matches, we got the response for this request.
             // Here, the timer should be armed and not timed out.
             // The retry count should not exceed the maximum value.
@@ -252,13 +258,16 @@ public:
         action timeout_handler(){
             // handle _to timeout
             assert(_pr);
-
+#if 0
             printf("Request descriptor %d times out\n", _rd_index);
+#endif
 
             _retry_count++;
 
             if(_retry_count == max_retries){
+#if 0
                 printf("Request descriptor %d fails with exception\n", _rd_index);
+#endif
                 // we have retried four times without receiving a response,
                 // timeout
                 _pr->set_exception(kill_flow());
@@ -411,7 +420,9 @@ public:
             _is_in_send_state = true;
 
             // send
+#if 0
             printf("Thread %d: The request packet with size %d is sent out\n", engine().cpu_id(), p.len());
+#endif
             _port.linearize_and_send(std::move(p)).then([this]{
                 for(auto rd_idx : _rd_idxs){
                     _rds[rd_idx].arm_timer();
@@ -604,11 +615,14 @@ private:
     }
     future<> receive(net::packet p){
         if (!is_valid(p) || !is_response(p) || p.nr_frags()!=1){
+#if 0
             printf("Thread %d: Receive invalid response packet\n", engine().cpu_id());
+#endif
             return make_ready_future<>();
         }
-        printf("Thread %d: Receive valid response packet with length %d\n", engine().cpu_id(), p.len());
 #if 0
+        printf("Thread %d: Receive valid response packet with length %d\n", engine().cpu_id(), p.len());
+
         auto hd = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
         printf("Thread %d: source port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->src_port));
         printf("Thread %d: destination port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->dst_port));
