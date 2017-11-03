@@ -181,7 +181,6 @@ int main(int ac, char** av) {
                     lo_send_count += 1;
                     try{
                         f.get();
-
                     }
                     catch(...){
                         lo_send_error_hapen = true;
@@ -216,7 +215,6 @@ int main(int ac, char** av) {
                     lo_read_count += 1;
                     try{
                         f.get();
-
                     }
                     catch(...){
                         lo_read_error_hapen = true;
