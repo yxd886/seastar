@@ -72,8 +72,8 @@ int main(int ac, char** av) {
                 val_buf.fill_data(val);
 
                 return all_objs.local_obj().query(Operation::kSet,
-                        sizeof(unsigned), key_buf.get_temp_buffer(),
-                        sizeof(unsigned), val_buf.get_temp_buffer()).then_wrapped([](auto&& f){
+                        sizeof(uint64_t), key_buf.get_temp_buffer(),
+                        sizeof(uint64_t), val_buf.get_temp_buffer()).then_wrapped([](auto&& f){
                     try{
                         auto response = std::get<0>(f.get());
                         printf("No error!!!!\n");
@@ -96,7 +96,7 @@ int main(int ac, char** av) {
                 key_buf.fill_data(key);
 
                 return all_objs.local_obj().query(Operation::kGet,
-                        sizeof(unsigned), key_buf.get_temp_buffer(),
+                        sizeof(uint64_t), key_buf.get_temp_buffer(),
                         0, temporary_buffer<char>{}).then_wrapped([](auto&& f){
                     try{
                         auto response = std::get<0>(f.get());
