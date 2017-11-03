@@ -55,8 +55,13 @@ int main(int ac, char** av) {
     unsigned lo_send_count = 0;
     bool lo_send_error_hapen = false;
 
+    promise<> lo_read_pr;
+    unsigned lo_read_count = 0;
+    bool lo_read_error_hapen = false;
+
     return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs, &queue_map,
-                                       &lo_send_pr, &lo_send_count, &lo_send_error_hapen]{
+                                       &lo_send_pr, &lo_send_count, &lo_send_error_hapen,
+                                       &lo_read_pr, &lo_read_count, &lo_read_error_hapen]{
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 1, smp::count,
             [](uint16_t port_id, uint16_t queue_num){
@@ -193,6 +198,41 @@ int main(int ac, char** av) {
                 });
             }
             return lo_send_pr.get_future();
+        }).then([&all_objs, &lo_read_pr, &lo_read_count, &lo_read_error_hapen]{
+            for(uint64_t i=0; i<11; i++){
+                // Query 11 times with large_object
+                uint64_t key = 10276327+i;
+                extendable_buffer key_buf;
+                key_buf.fill_data(key);
+
+                all_objs.local_obj().query(Operation::kGet,
+                        sizeof(key), key_buf.get_temp_buffer(),
+                        0, temporary_buffer<char>()).then([key](mica_response response){
+                    assert(response.get_key_len() == 0);
+                    assert(response.get_val_len() == sizeof(large_object));
+                    assert(response.get_result() == Result::kSuccess);
+                    printf("Large object with key %zu has index %d\n", key, response.get_value<large_object>().id);
+                }).then_wrapped([&all_objs, &lo_read_pr, &lo_read_count, &lo_read_error_hapen](auto&& f){
+                    lo_read_count += 1;
+                    try{
+                        f.get();
+
+                    }
+                    catch(...){
+                        lo_read_error_hapen = true;
+                    }
+                    if(lo_read_count == 11){
+                        // All the queries have been finished.
+                        if(lo_read_error_hapen){
+                            lo_read_pr.set_exception(std::runtime_error("wtf"));
+                        }
+                        else{
+                            lo_read_pr.set_value();
+                        }
+                    }
+                });
+            }
+            return lo_read_pr.get_future();
         }).then_wrapped([](auto&& f){
             try{
                 f.get();

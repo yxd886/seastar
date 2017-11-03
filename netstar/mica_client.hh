@@ -525,7 +525,7 @@ public:
         // in case there's not enough request put into the request
         // assemblers.
         _check_ras_timer.set_callback([this]{check_request_assemblers();});
-        _check_ras_timer.arm_periodic(200us);
+        _check_ras_timer.arm_periodic(100us);
     }
     void start_receiving(){
         assert(ports().size() == 1);
