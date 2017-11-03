@@ -158,6 +158,7 @@ public:
         void new_action(Operation op,
                         size_t key_len, temporary_buffer<char> key,
                         size_t val_len, temporary_buffer<char> val){
+            printf("Request descriptor %d is used\n", _rd_index);
             // If this method is called, the rd must be popped out from
             // the fifo. When the rd is popped out from the fifo, it is either
             // in initialized state, or be recycled. This means that:
@@ -165,7 +166,6 @@ public:
             // 2. _retry_count is cleared and is zero
             // 3. _to timer is not armed.
             assert(!_pr && _retry_count == 0 && !_to.armed());
-            printf("%zu, %zu\n", roundup<8>(val_len), val.size());
             assert(key_len >= 8 &&
                    (key_len < (1 << 8)) &&
                    (val_len >= 8 || val_len == 0) &&
@@ -218,6 +218,8 @@ public:
         action match_response(RequestHeader& res_hd, net::packet response_pkt){
             auto opaque = res_hd.opaque;
             uint16_t epoch = opaque & ((1 << 16) - 1);
+            printf("Request descriptor %d receives response with epoch %d, but it's own epoch is %d",
+                    _rd_index, epoch, _epoch);
             if(epoch != _epoch){
                 // the epoch doesn't match, the response is a late response,
                 // ignore it.
@@ -239,9 +241,12 @@ public:
             // handle _to timeout
             assert(_pr);
 
+            printf("Request descriptor %d times out\n", _rd_index);
+
             _retry_count++;
 
             if(_retry_count == max_retries){
+                printf("Request descriptor %d fails with exception\n", _rd_index);
                 // we have retried four times without receiving a response,
                 // timeout
                 _pr->set_exception(kill_flow());
@@ -631,19 +636,24 @@ private:
 
             size_t total_reponse_length = sizeof(RequestHeader)+
                     roundup_key_len+roundup_val_len;
+#if 0
             printf("Total response length is %zu\n", total_reponse_length);
-
+#endif
             unsigned rd_idx = static_cast<unsigned>(rh->opaque >> 16);
             auto action_res = _rds[rd_idx].match_response(*rh,
                                   p.share(offset, total_reponse_length));
 
             switch (action_res){
             case action::no_action : {
+#if 0
                 printf("Thread %d: Response match fails, invalid response\n", engine().cpu_id());
+#endif
                 break;
             }
             case action::recycle_rd : {
+#if 0
                 printf("Thread %d: Response match succeed, recycle the request descriptor\n", engine().cpu_id());
+#endif
                 // recycle the request descriptor.
                 _recycled_rds.push_back(rd_idx);
                 _pending_work_queue.signal(1);
