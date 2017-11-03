@@ -163,7 +163,7 @@ int main(int ac, char** av) {
                 large_object lo;
                 lo.id = i;
                 extendable_buffer val_buf;
-                key_buf.fill_data(lo);
+                val_buf.fill_data(lo);
 
                 all_objs.local_obj().query(Operation::kSet,
                         sizeof(key), key_buf.get_temp_buffer(),
