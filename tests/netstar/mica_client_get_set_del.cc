@@ -33,6 +33,11 @@
 using namespace seastar;
 using namespace netstar;
 
+struct large_object{
+    unsigned id;
+    char unused_buf[100];
+};
+
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
@@ -140,6 +145,9 @@ int main(int ac, char** av) {
             try{
                 f.get();
                 printf("The mica client is successfully booted up\n");
+                printf("Size of the large_object is %zu\n", sizeof(large_object));
+                printf("Size of the rounded up large_object is %zu\n", roundup<8>(sizeof(large_object)));
+                printf("Size of the max request is %d\n", mica_client::max_req_len);
                 engine().exit(0);
 
             }

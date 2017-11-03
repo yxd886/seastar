@@ -106,9 +106,6 @@ class mica_client : public work_unit<mica_client>{
 public:
     static constexpr unsigned max_req_len =
             ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
-    static constexpr unsigned max_payload_len =
-            ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(net::eth_hdr) -
-            sizeof(net::ip_hdr) - sizeof(net::udp_hdr);
 
     enum class action {
         recycle_rd,
