@@ -53,10 +53,10 @@ int main(int ac, char** av) {
 
     promise<> lo_send_pr;
     unsigned lo_send_count = 0;
-    bool error_happen = false;
+    bool lo_send_error_hapen = false;
 
     return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs, &queue_map,
-                                       &lo_send_pr, &lo_send_count, &error_happen]{
+                                       &lo_send_pr, &lo_send_count, &lo_send_error_hapen]{
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 1, smp::count,
             [](uint16_t port_id, uint16_t queue_num){
@@ -153,7 +153,7 @@ int main(int ac, char** av) {
                 assert(response.get_result() == Result::kNotFound);
                 printf("The key %zu is not found\n", key);
             });
-        }).then([&all_objs, &lo_send_pr, &lo_send_count, &error_happen]{
+        }).then([&all_objs, &lo_send_pr, &lo_send_count, &lo_send_error_hapen]{
             for(uint64_t i=0; i<11; i++){
                 // Query 11 times with large_object
                 uint64_t key = 10276327+i;
@@ -172,18 +172,18 @@ int main(int ac, char** av) {
                     assert(response.get_val_len() == 0);
                     assert(response.get_result() == Result::kSuccess);
                     printf("Large object with index %zu is set to key %zu\n", i, key);
-                }).then_wrapped([&lo_send_pr, &lo_send_count, &error_happen](auto&& f){
+                }).then_wrapped([&lo_send_pr, &lo_send_count, &lo_send_error_hapen](auto&& f){
                     lo_send_count += 1;
                     try{
                         f.get();
 
                     }
                     catch(...){
-                        error_happen = true;
+                        lo_send_error_hapen = true;
                     }
                     if(lo_send_count == 11){
                         // All the queries have been finished.
-                        if(error_happen){
+                        if(lo_send_error_hapen){
                             lo_send_pr.set_exception(std::runtime_error());
                         }
                         else{
