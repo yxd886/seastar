@@ -70,24 +70,14 @@ int main(int ac, char** av) {
             extendable_buffer val_buf;
             val_buf.fill_data(val);
 
+            printf("Trying to set key %zu to value %zu\n", key, val);
             return all_objs.local_obj().query(Operation::kSet,
                     sizeof(key), key_buf.get_temp_buffer(),
-                    sizeof(val), val_buf.get_temp_buffer()).then([](mica_response response){
-
-            });/*.then_wrapped([](auto&& f){
-                try{
-                    auto response = std::get<0>(f.get());
-                    printf("No error!!!!\n");
-                    auto op = static_cast<uint8_t>(response.get_operation());
-                    auto r = static_cast<uint8_t>(response.get_result());
-                    printf("Operation %d, result %d\n", op, r);
-                    auto key_len = response.get_key_len();
-                    auto val_len = response.get_val_len();
-                    std::cout<<"key_len "<<key_len<<" val_len "<<val_len<<std::endl;
-                }
-                catch(...){
-                    printf("We got some errors here!\n");
-                }*/
+                    sizeof(val), val_buf.get_temp_buffer()).then([key, val](mica_response response){
+                assert(response.get_key_len() == 0);
+                assert(response.get_val_len() == 0);
+                assert(response.get_result() == Result::kSuccess);
+                printf("The key %zu is set to value %zu\n", key, val);
             });
         }).then([&all_objs]{
             return smp::submit_to(3, [&all_objs]{
