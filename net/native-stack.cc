@@ -132,6 +132,16 @@ public:
         _inet.learn(l2, l3);
     }
     friend class native_server_socket_impl<tcp4>;
+
+    /*
+     * patch by djp
+     * Add a public interface to access _inet.
+     * This can be used to manually set IP address for
+     * the native network stack.
+     */
+    ipv4& get_inet(){
+        return _inet;
+    }
 };
 
 thread_local promise<std::unique_ptr<network_stack>> native_network_stack::ready_promise;
@@ -254,6 +264,16 @@ void arp_learn(ethernet_address l2, ipv4_address l3)
 
 void create_native_stack(boost::program_options::variables_map opts, std::shared_ptr<device> dev) {
     native_network_stack::ready_promise.set_value(std::unique_ptr<network_stack>(std::make_unique<native_network_stack>(opts, std::move(dev))));
+}
+
+/*
+ * patch by djp
+ * Add a public method for creating a native_network_stack.
+ */
+std::unique_ptr<network_stack>
+obtain_new_native_stack(boost::program_options::variables_map opts,
+                        std::shared_ptr<device> dev){
+    return std::make_unique<native_network_stack>(opts, std::move(dev));
 }
 
 boost::program_options::options_description nns_options() {
