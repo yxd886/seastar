@@ -15,6 +15,12 @@ using namespace seastar;
 
 namespace netstar{
 
+enum class port_type{
+    original,
+    netstar_dpdk,
+    fdir
+};
+
 class port{
     unsigned _failed_send_count;
     uint16_t _qid;
