@@ -1,5 +1,5 @@
 #ifndef _PORT_REFACTOR_HH
-#define _PORT__REFACTORHH
+#define _PORT_REFACTOR_HH
 
 #include <memory>
 
@@ -262,4 +262,4 @@ private:
 
 } // namespace netstar
 
-#endif // _PORT_HH
+#endif // _PORT_REFACTOR_HH
