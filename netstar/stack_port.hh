@@ -8,6 +8,8 @@
 #include "netstar/qp_wrapper.hh"
 
 #include "net/native-stack.hh"
+#include "net/net.hh"
+#include "net/ip.hh"
 
 using namespace seastar;
 
