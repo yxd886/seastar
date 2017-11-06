@@ -15,8 +15,6 @@ using namespace seastar;
 
 namespace netstar{
 
-class port_env;
-
 // This port contains a seastar native network stack.
 // So that, no matter who gets a reference to this port,
 // it can use the native network stack of seastar.
@@ -38,16 +36,17 @@ class stack_port{
     qp_wrapper _qp_wrapper;
     std::unique_ptr<minimal_network_stack> _network_stack;
 
-    friend class port_env;
+public:
     // default constructor, initialize the _qp_wrapper.
     // This triggers the start of the underlying NIC device.
+    // Only port_env can construct stack_port
     explicit stack_port(boost::program_options::variables_map& opts,
                         net::device* dev,
                         uint16_t port_id) :
         _port_id(port_id),
         _qp_wrapper(opts, dev, engine().cpu_id()){
     }
-public:
+
     // After the underlying NIC is successfully started, dev's link_ready
     // promise will be set. This should be called after link_ready promise
     // is set to initialize the network stack.
