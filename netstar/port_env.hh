@@ -2,10 +2,10 @@
 #define _PORT_ENV_HH
 
 #include "netstar/stack_port.hh"
-#include "netstar/port_refactor.hh"
 #include "netstar/per_core_objs.hh"
 #include "netstar/netstar_dpdk_device.hh"
 #include "netstar/fdir_device.hh"
+#include "netstar/port.hh"
 
 #include "net/dpdk.hh"
 

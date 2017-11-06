@@ -8,6 +8,7 @@
  *
  */
 
+#include "netstar/port.hh"
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
@@ -17,7 +18,6 @@
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
 #include "netstar/port_env.hh"
-#include "netstar/port_refactor.hh"
 
 using namespace seastar;
 using namespace netstar;

@@ -1,10 +1,10 @@
 #ifndef _MICA_CLIENT
 #define _MICA_CLIENT
 
-#include "netstar/port_refactor.hh"
 #include "netstar/work_unit.hh"
 #include "netstar/mica_def.hh"
 #include "netstar/roundup.hh"
+#include "netstar/port.hh"
 
 #include "mica/util/hash.h"
 
