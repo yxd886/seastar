@@ -497,7 +497,7 @@ public:
                 opts["mica-server-ip"].as<std::string>());
         uint16_t remote_ei_port_id = opts["mica-server-port-id"].as<uint16_t>();
 
-        net::ethernet_address local_ei_eth_addr(ports().at(0)->get_eth_addr());
+        net::ethernet_address local_ei_eth_addr(ports().at(0)->qp_wrapper().get_eth_addr());
         net::ipv4_address local_ei_ip_addr(
                 opts["mica-client-ip"].as<std::string>());
         uint16_t local_ei_port_id = 0;
