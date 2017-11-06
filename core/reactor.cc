@@ -3596,7 +3596,9 @@ void smp::configure(boost::program_options::variables_map configuration)
     _reactors.resize(nr_cpus);
     resource::configuration rc;
     if (configuration.count("memory")) {
+        printf("In here!\n");
         rc.total_memory = parse_memory_size(configuration["memory"].as<std::string>());
+        printf("In here?\n");
 #ifdef HAVE_DPDK
         if (configuration.count("hugepages") &&
             !configuration["network-stack"].as<std::string>().compare("native") &&
