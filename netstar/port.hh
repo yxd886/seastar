@@ -1,5 +1,5 @@
-#ifndef _PORT_REFACTOR_HH
-#define _PORT_REFACTOR_HH
+#ifndef _PORT_HH
+#define _PORT_HH
 
 #include <memory>
 #include <experimental/optional>
@@ -9,6 +9,7 @@
 #include "core/circular_buffer.hh"
 #include "core/semaphore.hh"
 #include "core/queue.hh"
+
 #include "netstar/qp_wrapper.hh"
 
 using namespace seastar;
@@ -112,7 +113,7 @@ public:
 
     // Expose qp_wrapper. Some functionality in netstar
     // requires to access the public methods exposed by qp_wrapper
-    qp_wrapper& qp_wrapper(){
+    qp_wrapper& get_qp_wrapper(){
         return _qp_wrapper;
     }
 public:
