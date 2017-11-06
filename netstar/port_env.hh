@@ -102,7 +102,18 @@ public:
         return new_stack_ports.start(opts, dev_ptr, port_id).then([dev_ptr]{
             return dev_ptr->link_ready();
         }).then([&new_stack_ports, &opts, dev_shared_ptr, addr_map]{
-            return make_ready_future<>();
+            auto sem = std::make_shared<semaphore>(0);
+            for(unsigned i=0; i<smp::count; i++){
+                smp::submit_to(i, [&new_stack_ports, &opts, dev_shared_ptr, addr_map]{
+                    return new_stack_ports.local_obj().
+                            initialize_network_stack(opts,
+                                                     std::move(dev_shared_ptr),
+                                                     std::move(addr_map));
+                }).then([sem]{
+                    sem->signal();
+                });
+            }
+            return sem->wait(smp::count);
         });
     }
 
