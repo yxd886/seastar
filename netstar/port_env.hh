@@ -35,7 +35,6 @@ class ports_env{
 
     std::vector<std::shared_ptr<net::device>> _devs;
     std::vector<uint16_t> _port_ids;
-    std::vector<std::vector<bool>> _core_book_keeping;
 
 public:
     explicit ports_env(){}
@@ -51,31 +50,6 @@ public:
                       uint16_t queue_num,
                       port_type pt){
         assert(port_check(opts, port_id));
-
-        /*// Depending on the port_type, perform different initialization
-        // sequence.
-        switch(pt) {
-        case(port_type::original) : {
-            _stack_ports.emplace_back();
-
-            // Create an original port.
-            auto dev = seastar::create_dpdk_net_device(port_id, queue_num);
-            auto dev_ptr = dev.release();
-            auto dev_shared_ptr = std::make_shared<net::device>(dev_ptr);
-            _devs.push_back(std::move(dev_shared_ptr));
-
-            _port_ids.push_back(port_id);
-            _core_book_keeping.push_back(std::vector<bool>(smp::count, false));
-
-            auto& new_stack_ports = _stack_ports.back();
-            return new_stack_ports.start(opts, dev_ptr, port_id).then([dev_ptr]{
-                return dev_ptr->link_ready();
-            }).then([]{
-
-            });
-
-        }
-        }*/
         _ports.emplace_back();
         switch(pt) {
         case(port_type::netstar_dpdk) : {
@@ -107,22 +81,27 @@ public:
             return dev->link_ready();
         });
     }
-    per_core_objs<port>& get_ports(unsigned id){
-        return std::ref(_ports.at(id));
-    }
-    size_t count(){
-        return _ports.size();
-    }
 
-    bool check_assigned_to_core(uint16_t port_id, uint16_t core_id){
-        assert(port_id<_core_book_keeping.size() && core_id<smp::count);
+    future<> add_stack_port(boost::program_options::variables_map& opts,
+                      uint16_t port_id,
+                      uint16_t queue_num,
+                      std::unordered_map<std::string, net::ipv4_address> addr_map){
+        assert(port_check(opts, port_id));
+        _stack_ports.emplace_back();
 
-        return _core_book_keeping[port_id][core_id];
-    }
-    void set_port_on_core(uint16_t port_id, uint16_t core_id){
-        assert(port_id<_core_book_keeping.size() && core_id<smp::count);
+        // Create an original port.
+        auto dev = seastar::create_dpdk_net_device(port_id, queue_num);
+        auto dev_ptr = dev.release();
+        std::shared_ptr<net::device> dev_shared_ptr;
+        dev_shared_ptr.reset(dev_ptr);
+        _devs.push_back(std::move(dev_shared_ptr));
 
-        _core_book_keeping[port_id][core_id] = true;
+        _port_ids.push_back(port_id);
+
+        auto& new_stack_ports = _stack_ports.back();
+        return new_stack_ports.start(opts, dev_ptr, port_id).then([dev_ptr]{
+            return dev_ptr->link_ready();
+        });
     }
 
 private:
