@@ -259,7 +259,6 @@ interface::interface(std::shared_ptr<device> dev)
             }
             return p;
         });
-    printf("Thread %d: finish construcint interface\n", engine().cpu_id());
 }
 
 subscription<packet, ethernet_address>
