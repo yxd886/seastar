@@ -51,9 +51,9 @@ int main(int ac, char** av) {
         p1_addr_map["gw-ipv4-addr"] = net::ipv4_address("10.29.1.1");
         p1_addr_map["netmask-ipv4-addr"] = net::ipv4_address("255.255.255.255");
 
-        all_ports.add_stack_port(opts, 0, smp::count, std::move(p0_addr_map)).then([]{
+        /*all_ports.add_stack_port(opts, 0, smp::count, std::move(p0_addr_map)).then([]{
             printf("Create stack_port 0\n");
-        });
+        });*/
         all_ports.add_stack_port(opts, 1, smp::count, std::move(p1_addr_map)).then([]{
             printf("Create stack_port 1\n");
         });
