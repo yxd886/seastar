@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "net/net.hh"
+#include "net/proxy.hh"
 
 using namespace seastar;
 
