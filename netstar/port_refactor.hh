@@ -2,6 +2,7 @@
 #define _PORT_REFACTOR_HH
 
 #include <memory>
+#include <experimental/optional>
 
 #include "core/future.hh"
 #include "core/stream.hh"
@@ -26,7 +27,7 @@ class port{
     circular_buffer<net::packet> _sendq;
     std::unique_ptr<semaphore> _queue_space;
     bool _receive_configured;
-    subscription<net::packet> _sub;
+    std::experimental::optional<subscription<net::packet>> _sub;
     seastar::queue<net::packet> _receiveq;
 public:
     explicit port(boost::program_options::variables_map opts,
