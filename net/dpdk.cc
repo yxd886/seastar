@@ -2284,8 +2284,12 @@ std::unique_ptr<net::device> create_dpdk_net_device(
                                     bool enable_fc)
 {
     static bool called = false;
-
-    assert(!called);
+    /*
+     * patch by djp
+     * remove the called assertion check, so that
+     * we can create multiple dpdk_net_device
+     */
+    // assert(!called);
     assert(dpdk::eal::initialized);
 
     called = true;
