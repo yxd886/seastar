@@ -343,7 +343,6 @@ libnet = [
 
 libnetstar = [
     'netstar/netstar_dpdk_device.cc',
-    'netstar/port.cc',
     'netstar/mica_client.cc',
     'mica/util/cityhash/city_mod.cc',
     'netstar/fdir_device.cc',
