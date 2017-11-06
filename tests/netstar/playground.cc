@@ -31,6 +31,7 @@
 #include "netstar/extendable_buffer.hh"
 #include "netstar/port_refactor.hh"
 #include "netstar/stack_port.hh"
+#include "netstar/port_env.hh"
 
 using namespace seastar;
 using namespace netstar;
