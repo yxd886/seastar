@@ -57,7 +57,7 @@ public:
             std::shared_ptr<net::device> dev,
             std::unordered_map<std::string, net::ipv4_address> addr_map){
         _network_stack = std::make_unique<minimal_network_stack>(std::move(dev));
-
+        printf("Thread %d: initializing network_stack\n", engine().cpu_id());
         _network_stack->inet.get_udp().set_queue_size(opts["udpv4-queue-size"].as<int>());
 
         _network_stack->inet.set_host_address(addr_map.at("host-ipv4-addr"));
