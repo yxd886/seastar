@@ -81,14 +81,16 @@ public:
         case(port_type::netstar_dpdk) : {
             auto dev = create_netstar_dpdk_net_device(port_id, queue_num);
             auto dev_ptr = dev.release();
-            auto dev_shared_ptr = std::make_shared<net::device>(dev_ptr);
+            std::shared_ptr<net::device> dev_shared_ptr;
+            dev_shared_ptr.reset(dev_ptr);
             _devs.push_back(std::move(dev_shared_ptr));
             break;
         }
         case(port_type::fdir) : {
             auto dev = create_fdir_device(port_id, queue_num);
             auto dev_ptr = dev.release();
-            auto dev_shared_ptr = std::make_shared<net::device>(dev_ptr);
+            std::shared_ptr<net::device> dev_shared_ptr;
+            dev_shared_ptr.reset(dev_ptr);
             _devs.push_back(std::move(dev_shared_ptr));
             break;
         }
