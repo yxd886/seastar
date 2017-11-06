@@ -61,8 +61,6 @@ int main(int ac, char** av) {
             catch(...){
                 printf("Error creating two stack ports\n");
             }
-
-            engine().exit(0);
         });
     });
 }
