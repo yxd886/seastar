@@ -53,8 +53,15 @@ int main(int ac, char** av) {
 
         return all_ports.add_stack_port(opts, 0, smp::count, std::move(p0_addr_map)).then([&opts, &all_ports, p1_addr_map]{
             return all_ports.add_stack_port(opts, 1, smp::count, std::move(p1_addr_map));
-        }).then([]{
-            printf("Finish creating two stack ports\n");
+        }).then_wrapped([](auto&& f){
+            try{
+                f.get();
+                printf("Finish creating two stack ports\n");
+            }
+            catch(...){
+                printf("Error creating two stack ports\n");
+            }
+
             engine().exit(0);
         });
     });

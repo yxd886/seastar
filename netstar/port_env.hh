@@ -110,13 +110,13 @@ public:
                             initialize_network_stack(opts,
                                                      dev_shared_ptr,
                                                      addr_map);
-                }).then_wrapped([sem](auto&& f){
+                }).then_wrapped([sem, i](auto&& f){
                     try{
                         f.get();
                         sem->signal();
                     }
                     catch(...){
-                        sem->broken(std::runtime_error("Fail to initialize network stack\n"));
+                        sem->broken(std::runtime_error("Fail to initialize network stack on thread %d\n", i));
                     }
                 });
             }
