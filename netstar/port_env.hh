@@ -3,6 +3,7 @@
 
 #include "netstar/stack_port.hh"
 #include "netstar/port_refactor.hh"
+#include "netstar/per_core_objs.hh"
 
 #include "net/dpdk.hh"
 
