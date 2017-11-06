@@ -10,8 +10,6 @@ using namespace seastar;
 
 namespace netstar{
 
-namespace refactor{
-
 // This is a wrapper class to net::qp.
 // The most important functionality of this class
 // is to store a unique_ptr to net::qp.
@@ -86,8 +84,6 @@ public:
         return _dev->hw_queues_count();
     }
 };
-
-} // namespace refactor
 
 } // namespace netstar
 

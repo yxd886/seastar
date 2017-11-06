@@ -15,14 +15,12 @@ using namespace seastar;
 
 namespace netstar{
 
-namespace refactor{
-
 // A regular port. Applications can directly fetch
 // and send packets from this port using the exposed
 // public methods.
 class port{
     uint16_t _port_id;
-    refactor::qp_wrapper _qp_wrapper;
+    qp_wrapper _qp_wrapper;
     unsigned _failed_send_count;
     circular_buffer<net::packet> _sendq;
     std::unique_ptr<semaphore> _queue_space;
@@ -114,7 +112,7 @@ public:
 
     // Expose qp_wrapper. Some functionality in netstar
     // requires to access the public methods exposed by qp_wrapper
-    refactor::qp_wrapper& qp_wrapper(){
+    qp_wrapper& qp_wrapper(){
         return _qp_wrapper;
     }
 public:
@@ -137,8 +135,6 @@ public:
         return _receiveq.pop_eventually();
     }
 };
-
-} // namespace refactor
 
 } // namespace netstar
 

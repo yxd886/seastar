@@ -11,8 +11,6 @@
 
 namespace netstar{
 
-namespace refactor{
-
 // port_type defines three kinds of ports
 // that we can create for netstar.
 // original: The original port defined in net/dpdk.cc.
@@ -33,8 +31,8 @@ enum class port_type{
 };
 
 class ports_env{
-    std::vector<per_core_objs<refactor::port>> _ports;
-    std::vector<per_core_objs<refactor::stack_port>> _stack_ports;
+    std::vector<per_core_objs<port>> _ports;
+    std::vector<per_core_objs<stack_port>> _stack_ports;
 
     std::vector<std::shared_ptr<net::device>> _devs;
     std::vector<uint16_t> _port_ids;
@@ -126,11 +124,11 @@ public:
         });
     }
 
-    refactor::port& local_port(unsigned env_index){
+    port& local_port(unsigned env_index){
         return _ports.at(env_index).local_obj();
     }
 
-    refactor::stack_port& local_stack_port(unsigned env_index){
+    stack_port& local_stack_port(unsigned env_index){
         return _stack_ports.at(env_index).local_obj();
     }
 
@@ -152,8 +150,6 @@ private:
         return true;
     }
 };
-
-} // namespace refactor
 
 } // namespace netstar
 

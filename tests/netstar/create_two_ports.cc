@@ -28,14 +28,14 @@ using namespace netstar;
 
 int main(int ac, char** av) {
     app_template app;
-    refactor::ports_env all_ports;
+    ports_env all_ports;
 
     return app.run_deprecated(ac, av, [&app, &all_ports] {
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 0, smp::count,
-                                  refactor::port_type::netstar_dpdk).then([&opts, &all_ports]{
+                                  port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count,
-                                      refactor::port_type::fdir);
+                                      port_type::fdir);
         }).then([]{
             printf("All the devices are successfully created\n");
             engine().exit(0);

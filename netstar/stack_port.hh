@@ -15,8 +15,6 @@ using namespace seastar;
 
 namespace netstar{
 
-namespace refactor{
-
 // This port contains a seastar native network stack.
 // So that, no matter who gets a reference to this port,
 // it can use the native network stack of seastar.
@@ -35,7 +33,7 @@ class stack_port{
                 inet(&netif){}
     };
     uint16_t _port_id;
-    refactor::qp_wrapper _qp_wrapper;
+    qp_wrapper _qp_wrapper;
     std::unique_ptr<minimal_network_stack> _network_stack;
 public:
     // default constructor, initialize the _qp_wrapper.
@@ -88,8 +86,6 @@ public:
     }
 
 };
-
-} // namespace refactor
 
 } // namespace netstar
 

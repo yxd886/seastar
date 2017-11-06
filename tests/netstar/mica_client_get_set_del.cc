@@ -36,7 +36,7 @@ struct large_object{
 
 int main(int ac, char** av) {
     app_template app;
-    refactor::ports_env all_ports;
+    ports_env all_ports;
     per_core_objs<mica_client> all_objs;
     vector<vector<port_pair>> queue_map;
 
@@ -52,7 +52,7 @@ int main(int ac, char** av) {
                                        &lo_send_pr, &lo_send_count, &lo_send_error_hapen,
                                        &lo_read_pr, &lo_read_count, &lo_read_error_hapen]{
         auto& opts = app.configuration();
-        return all_ports.add_port(opts, 1, smp::count, refactor::port_type::fdir).then([&all_objs]{
+        return all_ports.add_port(opts, 1, smp::count, port_type::fdir).then([&all_objs]{
             return all_objs.start(&all_objs);
         }).then([&all_ports, &all_objs]{
             return all_objs.invoke_on_all([&all_ports](mica_client& mc){

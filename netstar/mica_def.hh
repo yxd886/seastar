@@ -109,7 +109,7 @@ struct port_pair{
 
 vector<vector<port_pair>>
 calculate_queue_mapping(boost::program_options::variables_map& opts,
-                        refactor::port& pt);
+                        port& pt);
 } // namespace netstar
 
 #endif // _MICA_CLIENT_DEF

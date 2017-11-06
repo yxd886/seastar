@@ -13,11 +13,11 @@ class work_unit{
     using sub_option = std::experimental::optional<sub>;
 
     per_core_objs<T>* _all_objs;
-    std::vector<refactor::port*> _all_ports;
+    std::vector<port*> _all_ports;
     std::vector<sub_option> _all_subs;
     semaphore _forward_queue_length = {100};
 protected:
-    std::vector<refactor::port*>& ports(){
+    std::vector<port*>& ports(){
         return std::ref(_all_ports);
     }
     per_core_objs<T>* peers(){
@@ -34,7 +34,7 @@ protected:
 
     explicit work_unit(per_core_objs<T>* objs): _all_objs(objs) {}
 public:
-    void configure_ports(refactor::ports_env& env, unsigned first_pos, unsigned last_pos){
+    void configure_ports(ports_env& env, unsigned first_pos, unsigned last_pos){
         assert(first_pos<=last_pos && _all_ports.size() == 0);
         for(auto i = first_pos; i<=last_pos; i++){
             auto& p = env.local_port(i);

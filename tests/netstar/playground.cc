@@ -36,14 +36,14 @@ using namespace netstar;
 
 int main(int ac, char** av) {
     app_template app;
-    refactor::ports_env all_ports;
+    ports_env all_ports;
     per_core_objs<mica_client> all_objs;
     vector<vector<port_pair>> queue_map;
 
     return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs, &queue_map]{
         auto& opts = app.configuration();
 
-        return all_ports.add_port(opts, 1, smp::count, refactor::port_type::fdir).then([&all_objs]{
+        return all_ports.add_port(opts, 1, smp::count, port_type::fdir).then([&all_objs]{
             return all_objs.start(&all_objs);
         }).then([&all_ports, &all_objs]{
             return all_objs.invoke_on_all([&all_ports](mica_client& mc){
