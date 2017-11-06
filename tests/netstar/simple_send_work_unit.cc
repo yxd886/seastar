@@ -22,17 +22,16 @@
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
-#include "core/distributed.hh"
-#include "netstar/netstar_dpdk_device.hh"
-#include "netstar/fdir_device.hh"
-#include "netstar/port.hh"
-#include "netstar/work_unit.hh"
+
 #include "net/udp.hh"
 #include "net/ip_checksum.hh"
 #include "net/ip.hh"
 #include "net/net.hh"
 #include "net/packet.hh"
 #include "net/byteorder.hh"
+
+#include "netstar/work_unit.hh"
+#include "netstar/port_env.hh"
 
 using namespace seastar;
 using namespace netstar;
@@ -157,19 +156,15 @@ private:
 
 int main(int ac, char** av) {
     app_template app;
-    ports_env all_ports;
+    refactor::ports_env all_ports;
     per_core_objs<simple_send_work_unit> all_objs;
 
     return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs] {
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 0, smp::count,
-            [](uint16_t port_id, uint16_t queue_num){
-                return create_netstar_dpdk_net_device(port_id, queue_num);
-        }).then([&opts, &all_ports]{
+                    refactor::port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count,
-                [](uint16_t port_id, uint16_t queue_num){
-                    return create_fdir_device(port_id, queue_num);
-            });
+                    refactor::port_type::fdir);
         }).then([&all_objs]{
             return all_objs.start(&all_objs);
         }).then([&all_ports, &all_objs]{

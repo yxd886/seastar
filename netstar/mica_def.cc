@@ -15,7 +15,7 @@ do_calculate_queue_mapping(boost::program_options::variables_map& opts,
                         unsigned remote_smp_count,
                         std::string local_ip_addr_str,
                         std::string remote_ip_addr_str,
-                        port& pt){
+                        refactor::port& pt){
     // res[x][y].local_port:
     // local port that maps local queue x to remote queue y
     // res[x][y].remote_port:
@@ -55,10 +55,10 @@ do_calculate_queue_mapping(boost::program_options::variables_map& opts,
             net::l4connid<net::ipv4_traits>
             to_remote{remote_ip_addr, local_ip_addr, remote_port, local_port};
 
-            unsigned local_queue = pt.hash2cpu(to_local.hash(pt.get_rss_key()));
+            unsigned local_queue = pt.qp_wrapper().hash2cpu(to_local.hash(pt.qp_wrapper().get_rss_key()));
             unsigned remote_queue =
                     remote_redir_table[
-                                       to_remote.hash(pt.get_rss_key()) &
+                                       to_remote.hash(pt.qp_wrapper().get_rss_key()) &
                                        (remote_redir_table.size() - 1)
                                        ];
 
@@ -89,7 +89,7 @@ do_calculate_queue_mapping(boost::program_options::variables_map& opts,
 
 vector<vector<port_pair>>
 calculate_queue_mapping(boost::program_options::variables_map& opts,
-                        port& pt){
+                        refactor::port& pt){
     return do_calculate_queue_mapping(
             opts,
             smp::count,

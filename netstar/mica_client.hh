@@ -1,7 +1,7 @@
 #ifndef _MICA_CLIENT
 #define _MICA_CLIENT
 
-#include "netstar/port.hh"
+#include "netstar/port_refactor.hh"
 #include "netstar/work_unit.hh"
 #include "netstar/mica_def.hh"
 #include "netstar/roundup.hh"
@@ -329,7 +329,7 @@ public:
     class request_assembler{
         endpoint_info _remote_ei;
         endpoint_info _local_ei;
-        port& _port;
+        refactor::port& _port;
 
         // the batch packet header
         net::packet _batch_header_pkt;
@@ -352,7 +352,7 @@ public:
         circular_buffer<unsigned> _send_stream;
     public:
         explicit request_assembler(endpoint_info remote_ei,
-                endpoint_info local_ei, port& p,
+                endpoint_info local_ei, refactor::port& p,
                 std::vector<request_descriptor>& rds) :
                 _remote_ei(remote_ei), _local_ei(local_ei),
                 _port(p), _remaining_size(max_req_len),

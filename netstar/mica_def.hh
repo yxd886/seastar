@@ -15,7 +15,7 @@
 #include "net/net.hh"
 #include "net/byteorder.hh"
 
-#include "netstar/port.hh"
+#include "netstar/port_refactor.hh"
 
 #include <rte_ether.h>
 #include <rte_ip.h>
@@ -109,7 +109,7 @@ struct port_pair{
 
 vector<vector<port_pair>>
 calculate_queue_mapping(boost::program_options::variables_map& opts,
-                        port& pt);
+                        refactor::port& pt);
 } // namespace netstar
 
 #endif // _MICA_CLIENT_DEF
