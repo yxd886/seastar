@@ -94,13 +94,15 @@ public:
         auto dev_ptr = dev.release();
         std::shared_ptr<net::device> dev_shared_ptr;
         dev_shared_ptr.reset(dev_ptr);
-        _devs.push_back(std::move(dev_shared_ptr));
+        _devs.push_back(dev_shared_ptr);
 
         _port_ids.push_back(port_id);
 
         auto& new_stack_ports = _stack_ports.back();
         return new_stack_ports.start(opts, dev_ptr, port_id).then([dev_ptr]{
             return dev_ptr->link_ready();
+        }).then([&new_stack_ports, &opts, dev_shared_ptr, addr_map]{
+            return make_ready_future<>();
         });
     }
 
