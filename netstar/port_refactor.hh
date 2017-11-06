@@ -126,10 +126,12 @@ public:
         assert(!_receive_configured);
         _receive_configured = true;
 
-        _sub = _qp_wrapper.receive([this](net::packet pkt){
-            _receiveq.push(std::move(pkt));
-            return make_ready_future<>();
-        });
+        _sub.emplace(
+            _qp_wrapper.receive([this](net::packet pkt){
+                _receiveq.push(std::move(pkt));
+                return make_ready_future<>();
+            })
+        );
     }
     future<net::packet> on_new_pkt(){
         return _receiveq.pop_eventually();
