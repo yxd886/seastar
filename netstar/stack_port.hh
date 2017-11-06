@@ -78,6 +78,13 @@ public:
     stack_port(stack_port&& other)  = delete;
     stack_port& operator=(const stack_port& other) = delete;
     stack_port& operator=(stack_port&& other) = delete;
+
+    // stop() has to be added so that stack_port can be
+    // constructed by per_core_objs.
+    future<> stop(){
+        return make_ready_future<>();
+    }
+
 };
 
 } // namespace refactor
