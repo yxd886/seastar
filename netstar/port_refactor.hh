@@ -128,6 +128,7 @@ public:
 
         _sub = _qp_wrapper.receive([this](net::packet pkt){
             _receiveq.push(std::move(pkt));
+            return make_ready_future<>();
         });
     }
     future<net::packet> on_new_pkt(){
