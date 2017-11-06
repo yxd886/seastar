@@ -40,9 +40,8 @@ struct snd_obj{
 
 int main(int ac, char** av) {
     app_template app;
-    ports_env all_ports;
 
-    return app.run_deprecated(ac, av, [&app, &all_ports] {
+    return app.run_deprecated(ac, av, [&app] {
         fst_obj o1;
         o1.x[0] = 'f';
         o1.x[1] = 'u';
