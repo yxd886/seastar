@@ -116,7 +116,9 @@ public:
                         sem->signal();
                     }
                     catch(...){
-                        sem->broken(std::runtime_error("Fail to initialize network stack on thread %d\n", i));
+                        std::string err_msg("Fail to initialize network stack on thread");
+                        err_msg += std::to_string(i);
+                        sem->broken(std::runtime_error(err_msg));
                     }
                 });
             }
