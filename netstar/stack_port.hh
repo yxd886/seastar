@@ -26,14 +26,14 @@ namespace refactor{
 // ipv4 is statically configured.
 class stack_port{
     struct minimal_network_stack{
-        net::interface netif;
-        net::ipv4 inet;
+        seastar::net::interface netif;
+        seastar::net::ipv4 inet;
         explicit minimal_network_stack(std::shared_ptr<net::device> dev) :
                 netif(std::move(dev)),
                 inet(&netif){}
     };
     uint16_t _port_id;
-    qp_wrapper _qp_wrapper;
+    refactor::qp_wrapper _qp_wrapper;
     std::unique_ptr<minimal_network_stack> _network_stack;
 public:
     // default constructor, initialize the _qp_wrapper.
