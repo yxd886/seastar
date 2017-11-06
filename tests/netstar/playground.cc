@@ -41,9 +41,9 @@ int main(int ac, char** av) {
     return app.run_deprecated(ac, av, [&app, &all_ports]{
         auto& opts = app.configuration();
         std::unordered_map<std::string, net::ipv4_address> p0_addr_map;
-        p0_addr_map["host-ipv4-addr"] = net::ipv4_address("10.28.1.13");
-        p0_addr_map["gw-ipv4-addr"] = net::ipv4_address("10.28.1.1");
-        p0_addr_map["netmask-ipv4-addr"] = net::ipv4_address("255.255.255.255");
+        // p0_addr_map["host-ipv4-addr"] = net::ipv4_address("10.28.1.13");
+        // p0_addr_map["gw-ipv4-addr"] = net::ipv4_address("10.28.1.1");
+        // p0_addr_map["netmask-ipv4-addr"] = net::ipv4_address("255.255.255.255");
 
         return all_ports.add_stack_port(opts, 0, smp::count, std::move(p0_addr_map)).then([]{
             printf("Finish creating two stack ports\n");
