@@ -53,7 +53,6 @@ int main(int ac, char** av) {
             p1_addr_map["netmask-ipv4-addr"] = net::ipv4_address("255.255.255.255");
 
             return all_ports.add_stack_port(opts, 1, smp::count, std::move(p1_addr_map));
-            return make_ready_future<>();
         }).then_wrapped([](auto&& f){
             try{
                 f.get();
