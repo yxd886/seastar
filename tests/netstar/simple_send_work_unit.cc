@@ -140,8 +140,8 @@ private:
         iph->csum = csum.get();
 
         auto eh = pkt.prepend_header<net::eth_hdr>();
-        net::ethernet_address eth_src{0x52, 0x54, 0x00, 0xfe, 0x22, 0x11};
-        net::ethernet_address eth_dst{0x52, 0x54, 0x00, 0xfe, 0x22, 0x42};
+        net::ethernet_address eth_src{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
+        net::ethernet_address eth_dst{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62};
         eh->dst_mac = eth_dst;
         eh->src_mac = eth_src;
         eh->eth_proto = uint16_t(net::eth_protocol_num::ipv4);
@@ -176,7 +176,7 @@ int main(int ac, char** av) {
             return all_objs.invoke_on_all([&all_ports](simple_send_work_unit& wu){
                 wu.configure_ports(all_ports, 0, 1);
             });
-        }).then([&all_objs]{
+        })/*.then([&all_objs]{
             return all_objs.invoke_on(1, [](simple_send_work_unit& wu){
                 wu.send_from_port_0();
             });
@@ -196,7 +196,7 @@ int main(int ac, char** av) {
             return all_objs.invoke_on(5, [](simple_send_work_unit& wu){
                 wu.send_from_port_1();
             });
-        }).then([&all_objs]{
+        })*/.then([&all_objs]{
             return all_objs.invoke_on(6, [](simple_send_work_unit& wu){
                 wu.send_from_port_1();
             });
