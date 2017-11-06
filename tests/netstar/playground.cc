@@ -46,7 +46,7 @@ int main(int ac, char** av) {
         p0_addr_map["gw-ipv4-addr"] = net::ipv4_address("10.28.1.1");
         p0_addr_map["netmask-ipv4-addr"] = net::ipv4_address("255.255.255.255");
 
-        return all_ports.add_stack_port(opts, 0, smp::count, std::move(p0_addr_map)).then([&opts, &all_ports]{
+        return all_ports.add_stack_port(opts, 1, smp::count, std::move(p0_addr_map)).then([&opts, &all_ports]{
             /*std::unordered_map<std::string, net::ipv4_address> p1_addr_map;
             p1_addr_map["host-ipv4-addr"] = net::ipv4_address("10.29.1.13");
             p1_addr_map["gw-ipv4-addr"] = net::ipv4_address("10.29.1.1");
