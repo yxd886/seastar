@@ -126,6 +126,14 @@ public:
         });
     }
 
+    refactor::port& local_port(unsigned env_index){
+        return _ports.at(env_index).local_obj();
+    }
+
+    refactor::stack_port& local_stack_port(unsigned env_index){
+        return _stack_ports.at(env_index).local_obj();
+    }
+
 private:
     // Ensure that we do not re-use port, and that the native-network-stack
     // of seastar is not enabled by default.
