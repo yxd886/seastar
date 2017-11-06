@@ -31,14 +31,6 @@ namespace net {
 
 void create_native_stack(boost::program_options::variables_map opts, std::shared_ptr<device> dev);
 
-/*
- * patch by djp
- * Add a public method for creating a native_network_stack.
- */
-std::unique_ptr<network_stack>
-obtain_new_native_stack(boost::program_options::variables_map opts,
-                        std::shared_ptr<device> dev);
-
 }
 
 }
