@@ -143,7 +143,7 @@ public:
         size_t _request_size;
 
         // maximum number of allowed timeout retries
-        static constexpr unsigned max_retries = 4;
+        static constexpr unsigned max_retries = 32;
 
         // Initial timeout time in millisecond
         static constexpr unsigned initial_timeout_val = 1;
@@ -218,7 +218,8 @@ public:
             // Finally, to fail a message for our current configuration
             // (4 retries, 1ms initial timeout value) a request descriptor
             // will be held for at most 10ms.
-            _to.arm(std::chrono::milliseconds(initial_timeout_val+_retry_count));
+            // _to.arm(std::chrono::milliseconds(initial_timeout_val+_retry_count));
+            _to.arm(std::chrono::milliseconds(initial_timeout_val));
         }
     public:
         size_t get_request_size(){
