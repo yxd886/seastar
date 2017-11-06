@@ -107,8 +107,8 @@ public:
                 smp::submit_to(i, [&new_stack_ports, &opts, dev_shared_ptr, addr_map]{
                     return new_stack_ports.local_obj().
                             initialize_network_stack(opts,
-                                                     std::move(dev_shared_ptr),
-                                                     std::move(addr_map));
+                                                     dev_shared_ptr,
+                                                     addr_map);
                 }).then_wrapped([sem](auto&& f){
                     try{
                         f.get();
