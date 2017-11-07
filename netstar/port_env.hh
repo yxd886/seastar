@@ -126,9 +126,11 @@ public:
                     }
                 });
             }
-            return sem->wait(smp::count);/*.then([vec, &new_stack_ports]{
-                new_stack_ports.
-            });*/
+            return sem->wait(smp::count).then([vec, &new_stack_ports]{
+                return new_stack_ports.invoke_on_all([vec](stack_port& sp){
+                    sp.set_arp_for(*vec);
+                });
+            });
         });
     }
 

@@ -89,6 +89,12 @@ public:
         return make_ready_future<>();
     }
 
+public:
+    // Hijack the arp. This prevents some nasty segfault.
+    void set_arp_for(std::vector<net::arp_for<net::ipv4>*> vec){
+        _network_stack->inet.get_arp_for().set_other_arp_fors(std::move(vec));
+    }
+
 };
 
 } // namespace netstar
