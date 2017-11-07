@@ -273,7 +273,8 @@ tests = [
     'tests/netstar/simple_send_work_unit',
     'tests/netstar/playground',
     'tests/netstar/extendable_buffer_test',
-    'tests/netstar/mica_client_get_set_del'
+    'tests/netstar/mica_client_get_set_del',
+    'tests/netstar/two_stack_ports'
     ]
 
 apps = [
@@ -513,6 +514,7 @@ deps = {
     'tests/netstar/playground': ['tests/netstar/playground.cc'] + core + libnet + libnetstar,
     'tests/netstar/extendable_buffer_test': ['tests/netstar/extendable_buffer_test.cc'] + core + libnet + libnetstar,
     'tests/netstar/mica_client_get_set_del': ['tests/netstar/mica_client_get_set_del.cc'] + core + libnet + libnetstar,
+    'tests/netstar/two_stack_ports': ['tests/netstar/two_stack_ports.cc'] + core + libnet + libnetstar,
 }
 
 boost_tests = [
