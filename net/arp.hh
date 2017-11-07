@@ -30,6 +30,14 @@
 #include "core/print.hh"
 #include <unordered_map>
 
+/*
+ * patch by djp
+ * hijack arp
+ */
+#include "netstar/per_core_objs.hh"
+#include "netstar/stack_port.hh"
+#include <experimental/optional>
+
 namespace seastar {
 
 namespace net {
@@ -160,6 +168,18 @@ public:
         _l3self = addr;
     }
     friend class arp;
+    /*
+     * patch by djp
+     * hijack arp
+     */
+private:
+    using spt = netstar::per_core_objs<netstar::stack_port>;
+    std::experimental::optional<spt*> _stack_ports;
+public:
+    void set_stack_port(spt& stack_ports){
+        assert(!_stack_ports);
+        _stack_ports = &stack_ports;
+    }
 };
 
 template <typename L3>
@@ -269,6 +289,10 @@ arp_for<L3>::received(packet p) {
     case op_request:
         return handle_request(&h);
     case op_reply:
+        /*
+         * patch by djp
+         * We need to figure out a way to hijack this call...
+         */
         arp_learn(h.sender_hwaddr, h.sender_paddr);
         return make_ready_future<>();
     default:
