@@ -111,7 +111,7 @@ public:
                             initialize_network_stack(opts,
                                                      dev_shared_ptr,
                                                      addr_map);
-                })then([vec, i](net::arp_for<net::ipv4>* arp_instance){
+                }).then([vec, i](net::arp_for<net::ipv4>* arp_instance){
                     vec->at(i) = arp_instance;
                 }).then_wrapped([sem, i](auto&& f){
                     try{
