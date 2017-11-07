@@ -287,11 +287,13 @@ arp_for<L3>::received(packet p) {
             arp_learn(h.sender_hwaddr, h.sender_paddr);
         }
         else{
-            for(unsigned i=0; i<smp::count; i++){
-                smp::submit_to(i,
-                        [other_arp=_other_arp_fors.at(i), l2=h.sender_hwaddr, l3=h.sender_paddr]{
-                    other_arp->learn(l2, l3);
-                });
+            if(_other_arp_fors.size()==smp::count){
+                for(unsigned i=0; i<smp::count; i++){
+                    smp::submit_to(i,
+                            [other_arp=_other_arp_fors.at(i), l2=h.sender_hwaddr, l3=h.sender_paddr]{
+                        other_arp->learn(l2, l3);
+                    });
+                }
             }
         }
         return make_ready_future<>();
