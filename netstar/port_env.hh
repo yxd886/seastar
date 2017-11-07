@@ -104,12 +104,15 @@ public:
             return dev_ptr->link_ready();
         }).then([&new_stack_ports, &opts, dev_shared_ptr, addr_map]{
             auto sem = std::make_shared<semaphore>(0);
+            auto vec = std::make_shared<std::vector<net::arp_for<net::ipv4>*>>(smp::count);
             for(unsigned i=0; i<smp::count; i++){
                 smp::submit_to(i, [&new_stack_ports, &opts, dev_shared_ptr, addr_map]{
                     return new_stack_ports.local_obj().
                             initialize_network_stack(opts,
                                                      dev_shared_ptr,
                                                      addr_map);
+                })then([vec, i](net::arp_for<net::ipv4>* arp_instance){
+                    vec->at(i) = arp_instance;
                 }).then_wrapped([sem, i](auto&& f){
                     try{
                         f.get();
@@ -117,13 +120,15 @@ public:
                     }
                     catch(const std::exception & ex ){
                         std::cout<<ex.what()<<std::endl;
-                        std::string err_msg("Fail to initialize network stack on thread");
+                        std::string err_msg("Fail to initialize network stack");
                         err_msg += std::to_string(i);
                         sem->broken(std::runtime_error(err_msg));
                     }
                 });
             }
-            return sem->wait(smp::count);
+            return sem->wait(smp::count);/*.then([vec, &new_stack_ports]{
+                new_stack_ports.
+            });*/
         });
     }
 

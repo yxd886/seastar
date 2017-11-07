@@ -168,7 +168,7 @@ private:
     std::vector<arp_for<L3>*> _other_arp_fors{0};
 public:
     void set_other_arp_fors(std::vector<arp_for<L3>*> other_arp_fors){
-        _other_arp_fors = std::move(other_arp_fors);
+        _other_arp_fors = other_arp_fors;
     }
 };
 
