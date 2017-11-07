@@ -168,7 +168,7 @@ private:
     std::vector<arp_for<L3>*> _other_arp_fors{0};
 public:
     void set_other_arp_fors(std::vector<arp_for<L3>*> other_arp_fors){
-        printf("Thread %d: arp_for instance setting other_arp_fors with size %lu\n", other_arp_fors.size());
+        printf("Thread %d: arp_for instance setting other_arp_fors with size %lu\n", engine().cpu_id(), other_arp_fors.size());
         _other_arp_fors = std::move(other_arp_fors);
     }
 };
