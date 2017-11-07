@@ -52,7 +52,7 @@ public:
     // is set to initialize the network stack.
     // Note that the addr_map should contain three required field, otherwise
     // an exception will be thrown.
-    future<> initialize_network_stack(
+    future<net::arp_for<net::ipv4>*> initialize_network_stack(
             boost::program_options::variables_map& opts,
             std::shared_ptr<net::device> dev,
             std::unordered_map<std::string, net::ipv4_address> addr_map){
@@ -64,7 +64,9 @@ public:
         _network_stack->inet.set_gw_address(addr_map.at("gw-ipv4-addr"));
         _network_stack->inet.set_netmask_address(addr_map.at("netmask-ipv4-addr"));
 
-        return make_ready_future<>();
+        auto& arp_instance = _network_stack->inet.get_arp_for();
+
+        return make_ready_future<net::arp_for<net::ipv4>*>(&arp_instance);
     }
 
     ~stack_port(){
