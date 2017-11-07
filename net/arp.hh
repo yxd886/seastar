@@ -30,14 +30,6 @@
 #include "core/print.hh"
 #include <unordered_map>
 
-/*
- * patch by djp
- * hijack arp
- */
-#include "netstar/per_core_objs.hh"
-#include "netstar/stack_port.hh"
-#include <experimental/optional>
-
 namespace seastar {
 
 namespace net {
@@ -168,18 +160,6 @@ public:
         _l3self = addr;
     }
     friend class arp;
-    /*
-     * patch by djp
-     * hijack arp
-     */
-private:
-    using spt = netstar::per_core_objs<netstar::stack_port>;
-    std::experimental::optional<spt*> _stack_ports;
-public:
-    void set_stack_port(spt& stack_ports){
-        assert(!_stack_ports);
-        _stack_ports = &stack_ports;
-    }
 };
 
 template <typename L3>
