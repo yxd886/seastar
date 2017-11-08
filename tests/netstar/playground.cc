@@ -34,8 +34,8 @@
 using namespace seastar;
 using namespace netstar;
 
+// Circumvent invalid template
 class common_base {
-
 };
 
 template<typename CurTrait>
@@ -52,7 +52,7 @@ class tree_pipeline : public common_base{
     std::vector<stream<OutputT>> _next_streams;
 
     // Keep the ownership of all the children from the parent
-    std::vector<std::unique_ptr<common_base>> _next_tree_pipelines;
+    std::vector<NextTrait> _next_tree_pipelines;
 
 public:
     template <typename T>
