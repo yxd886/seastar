@@ -38,8 +38,8 @@ class l2_processing{
     port& _in_port;
     port& _out_port;
 
-    stream<net::packet> _arp_recv_stream;
-    stream<net::packet> _ipv4_recv_stream;
+    stream<net::packet> _arp_pkt_stream;
+    stream<net::packet> _ipv4_pkt_stream;
 public:
     explicit l2_processing(port& in_port, port& out_port) :
     _in_port(in_port), _out_port(out_port) {}
@@ -52,11 +52,11 @@ public:
 
                 switch(static_cast<net::eth_protocol_num>(eh_proto)){
                 case net::eth_protocol_num::arp: {
-                    _arp_recv_stream.produce(std::move(pkt));
+                    _arp_pkt_stream.produce(std::move(pkt));
                     return make_ready_future<>();
                 }
                 case net::eth_protocol_num::ipv4 : {
-                    _ipv4_recv_stream.produce(std::move(pkt));
+                    _ipv4_pkt_stream.produce(std::move(pkt));
                     return make_ready_future<>();
                 }
                 default :{
@@ -72,25 +72,46 @@ public:
         return _out_port.send(std::move(pkt));
     }
 
-    stream<net::packet>& get_arp_recv_stream(){
-        return _arp_recv_stream;
+    subscription<net::packet> start_arp_stream(std::function<future<>(net::packet)> fn){
+        return _arp_pkt_stream.listen(std::move(fn));
     }
 
-    stream<net::packet>& get_ipv4_recv_stream(){
-        return _ipv4_recv_stream;
+    subscription<net::packet> start_ipv4_stream(std::function<future<>(net::packet)> fn){
+        return _ipv4_pkt_stream.listen(std::move(fn));
     }
 };
 
 class l3_arp_processing {
     subscription<net::packet> _arp_pkt_sub;
     l2_processing& _l2;
+private:
+    struct arp_hdr {
+        uint16_t htype;
+        uint16_t ptype;
+
+        static arp_hdr read(const char* p) {
+            arp_hdr ah;
+            ah.htype = consume_be<uint16_t>(p);
+            ah.ptype = consume_be<uint16_t>(p);
+            return ah;
+        }
+        static constexpr size_t size() { return 4; }
+    };
 
 public:
     explicit l3_arp_processing(l2_processing& l2) : _l2(l2) {}
 
     void enable_l3_arp_in(){
-        _arp_pkt_sub = _l2.get_arp_recv_stream().listen([this](net::packet pkt){
-            return make_ready_future<>();
+        _arp_pkt_sub = _l2.start_arp_stream([this](net::packet pkt){
+            auto arp_h = pkt.get_header<arp_hdr>(sizeof(net::eth_hdr));
+            if (!arp_h) {
+                return make_ready_future<>();
+            }
+            else{
+                // arp pass through
+                _l2.l2_out(std::move(pkt));
+                return make_ready_future<>();
+            }
         });
     }
 };
