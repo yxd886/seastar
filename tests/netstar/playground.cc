@@ -82,8 +82,9 @@ public:
 };
 
 class l3_arp_processing {
-    subscription<net::packet> _arp_pkt_sub;
     l2_processing& _l2;
+    subscription<net::packet> _arp_pkt_sub;
+
 private:
     struct arp_hdr {
         uint16_t htype;
@@ -99,10 +100,8 @@ private:
     };
 
 public:
-    explicit l3_arp_processing(l2_processing& l2) : _l2(l2) {}
-
-    void enable_l3_arp_in(){
-        auto sub = _l2.start_arp_stream([this](net::packet pkt){
+    explicit l3_arp_processing(l2_processing& l2) : _l2(l2) {
+        _arp_pkt_sub = _l2.start_arp_stream([this](net::packet pkt){
             auto arp_h = pkt.get_header<arp_hdr>(sizeof(net::eth_hdr));
             if (!arp_h) {
                 return make_ready_future<>();
@@ -113,7 +112,6 @@ public:
                 return make_ready_future<>();
             }
         });
-        _arp_pkt_sub = std::move(sub);
     }
 };
 
