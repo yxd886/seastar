@@ -34,8 +34,12 @@
 using namespace seastar;
 using namespace netstar;
 
+class common_base {
+
+};
+
 template<typename CurTrait>
-class tree_pipeline {
+class tree_pipeline : public common_base{
     // Some meta programming shit.
     using InputT = typename CurTrait::InputT;
     using OutputT = typename CurTrait::OutputT;
@@ -48,7 +52,7 @@ class tree_pipeline {
     std::vector<stream<OutputT>> _next_streams;
 
     // Keep the ownership of all the children from the parent
-    std::vector<std::unique_ptr<tree_pipeline<NextTrait>> _next_tree_pipelines;
+    std::vector<std::unique_ptr<common_base> _next_tree_pipelines;
 
 public:
     template <typename T>
