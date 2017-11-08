@@ -34,29 +34,67 @@
 using namespace seastar;
 using namespace netstar;
 
-template<typename CurTrait>
-class tree_pipeline{
-    // Some meta programming shit.
-    using InputT = typename CurTrait::InputT;
-    using OutputT = typename CurTrait::OutputT;
-    using NextTrait = typename CurTrait::NextTrait;
+class l2_processing{
+    port& _in_port;
+    port& _out_port;
 
-    // This is used to subscribe from the parent.
-    subscription<InputT> _previous_sub;
-
-    // This is used to push to all the children
-    std::vector<stream<OutputT>> _next_streams;
-
-    // Keep the ownership of all the children from the parent
-    std::vector<NextTrait> _next_tree_pipelines;
-
+    stream<net::packet> _arp_recv_stream;
+    stream<net::packet> _ipv4_recv_stream;
 public:
-    template <typename T>
-    std::enable_if_t<std::is_same<T, net::packet>::value>
-    receive_from_port(port& p, std::function<future<> (net::packet)> fn) {
-        _previous_sub = p.receive(fn);
+    void enable_l2_in(){
+        _in_port.receive([this](net::packet pkt){
+            auto eh = pkt.get_header<net::eth_hdr>();
+            if(eh){
+                auto eh_proto = net::ntoh(eh->eth_proto);
+
+                switch(static_cast<net::eth_protocol_num>(eh_proto)){
+                case net::eth_protocol_num::arp: {
+                    _arp_recv_stream.produce(std::move(pkt));
+                    return make_ready_future<>();
+                }
+                case net::eth_protocol_num::ipv4 : {
+                    _ipv4_recv_stream.produce(std::move(pkt));
+                    return make_ready_future<>();
+                }
+                default :{
+                    return make_ready_future<>();
+                }
+                }
+            }
+            return make_ready_future<>();
+        });
     }
 
+    future<> l2_out(net::packet pkt){
+        return _out_port.send(std::move(pkt));
+    }
+
+    const stream<net::packet>& get_arp_recv_stream(){
+        return _arp_recv_stream;
+    }
+
+    const stream<net::packet>& get_ipv4_recv_stream(){
+        return _ipv4_recv_stream;
+    }
+
+    template<typename... Items>
+    subscription<Items...> set_stream_recv_fn(const stream<Items...>& which_stream,
+                                              std::function<future<>(Items...)> fn){
+        return which_stream.listen(std::move(fn));
+    }
+
+};
+
+class l3_arp_processing {
+    subscription<net::packet> _arp_pkt_sub;
+    l2_processing& _l2;
+
+public:
+    void enable_l3_arp_in(){
+        _arp_pkt_sub = _l2.set_stream_recv_fn(_l2.get_arp_recv_stream(), [this](net::packet){
+           return make_ready_future<>();
+        });
+    }
 };
 
 int main(int ac, char** av) {
