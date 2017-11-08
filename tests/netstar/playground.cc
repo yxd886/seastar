@@ -102,7 +102,7 @@ public:
     explicit l3_arp_processing(l2_processing& l2) : _l2(l2) {}
 
     void enable_l3_arp_in(){
-        _arp_pkt_sub = _l2.start_arp_stream([this](net::packet pkt){
+        auto sub = _l2.start_arp_stream([this](net::packet pkt){
             auto arp_h = pkt.get_header<arp_hdr>(sizeof(net::eth_hdr));
             if (!arp_h) {
                 return make_ready_future<>();
@@ -113,6 +113,7 @@ public:
                 return make_ready_future<>();
             }
         });
+        _arp_pkt_sub = std::move(sub);
     }
 };
 
