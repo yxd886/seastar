@@ -72,11 +72,11 @@ public:
         return _out_port.send(std::move(pkt));
     }
 
-    const stream<net::packet>& get_arp_recv_stream(){
+    stream<net::packet>& get_arp_recv_stream(){
         return _arp_recv_stream;
     }
 
-    const stream<net::packet>& get_ipv4_recv_stream(){
+    stream<net::packet>& get_ipv4_recv_stream(){
         return _ipv4_recv_stream;
     }
 };
