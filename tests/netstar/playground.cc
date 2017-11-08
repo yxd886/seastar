@@ -34,6 +34,31 @@
 using namespace seastar;
 using namespace netstar;
 
+template<typename CurTrait>
+class tree_pipeline {
+    // Some meta programming shit.
+    using InputT = typename CurTrait::InputT;
+    using OutputT = typename CurTrait::OutputT;
+    using NextTrait = typename CurTrait::NextTrait;
+
+    // This is used to subscribe from the parent.
+    subscription<InputT> _previous_sub;
+
+    // This is used to push to all the children
+    std::vector<stream<OutputT>> _next_streams;
+
+    // Keep the ownership of all the children from the parent
+    std::vector<std::unique_ptr<tree_pipeline<NextTrait>> _next_tree_pipelines;
+
+public:
+    template <typename T>
+    std::enable_if_t<std::is_same<T, net::packet>::value>
+    receive_from_port(port& p, std::function<future<> (net::packet)> fn) {
+        _previous_sub = p.receive(fn);
+    }
+
+};
+
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;

@@ -32,8 +32,8 @@ enum class port_type{
 
 class ports_env{
     std::vector<per_core_objs<port>> _ports;
+    std::vector<port_type> _port_types;
     std::vector<per_core_objs<stack_port>> _stack_ports;
-
     std::vector<std::shared_ptr<net::device>> _devs;
     std::vector<uint16_t> _port_ids;
 
@@ -52,6 +52,7 @@ public:
                       port_type pt){
         assert(port_check(opts, port_id));
         _ports.emplace_back();
+        _port_types.push_back(pt);
         switch(pt) {
         case(port_type::netstar_dpdk) : {
             auto dev = create_netstar_dpdk_net_device(port_id, queue_num);
@@ -136,6 +137,10 @@ public:
 
     port& local_port(unsigned env_index){
         return _ports.at(env_index).local_obj();
+    }
+
+    port_type what_port_type(unsigned env_index){
+        return _port_types.at(env_index);
     }
 
     stack_port& local_stack_port(unsigned env_index){
