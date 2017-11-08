@@ -41,6 +41,9 @@ class l2_processing{
     stream<net::packet> _arp_recv_stream;
     stream<net::packet> _ipv4_recv_stream;
 public:
+    explicit l2_processing(port& in_port, port& out_port) :
+    _in_port(in_port), _out_port(out_port) {}
+
     void enable_l2_in(){
         _in_port.receive([this](net::packet pkt){
             auto eh = pkt.get_header<net::eth_hdr>();
@@ -76,13 +79,6 @@ public:
     const stream<net::packet>& get_ipv4_recv_stream(){
         return _ipv4_recv_stream;
     }
-
-    template<typename... Items>
-    subscription<Items...> set_stream_recv_fn(const stream<Items...>& which_stream,
-                                              std::function<future<>(Items...)> fn){
-        return which_stream.listen(std::move(fn));
-    }
-
 };
 
 class l3_arp_processing {
@@ -90,9 +86,11 @@ class l3_arp_processing {
     l2_processing& _l2;
 
 public:
+    explicit l3_arp_processing(l2_processing& l2) : _l2(l2) {}
+
     void enable_l3_arp_in(){
-        _arp_pkt_sub = _l2.set_stream_recv_fn(_l2.get_arp_recv_stream(), [this](net::packet){
-           return make_ready_future<>();
+        _arp_pkt_sub = _l2.get_arp_recv_stream().listen([this](net::packet pkt){
+            return make_ready_future<>();
         });
     }
 };
