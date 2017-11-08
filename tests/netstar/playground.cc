@@ -100,18 +100,18 @@ private:
     };
 
 public:
-    explicit l3_arp_processing(l2_processing& l2) : _l2(l2) {
-        _arp_pkt_sub = _l2.start_arp_stream([this](net::packet pkt){
-            auto arp_h = pkt.get_header<arp_hdr>(sizeof(net::eth_hdr));
-            if (!arp_h) {
-                return make_ready_future<>();
-            }
-            else{
-                // arp pass through
-                _l2.l2_out(std::move(pkt));
-                return make_ready_future<>();
-            }
-        });
+    explicit l3_arp_processing(l2_processing& l2) : _l2(l2),
+    _arp_pkt_sub(l2.start_arp_stream([this](net::packet pkt){
+        auto arp_h = pkt.get_header<arp_hdr>(sizeof(net::eth_hdr));
+        if (!arp_h) {
+            return make_ready_future<>();
+        }
+        else{
+            // arp pass through
+            _l2.l2_out(std::move(pkt));
+            return make_ready_future<>();
+        }
+    })){
     }
 };
 
