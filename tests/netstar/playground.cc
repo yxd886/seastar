@@ -34,12 +34,8 @@
 using namespace seastar;
 using namespace netstar;
 
-// Circumvent invalid template
-class common_base {
-};
-
 template<typename CurTrait>
-class tree_pipeline : public common_base{
+class tree_pipeline{
     // Some meta programming shit.
     using InputT = typename CurTrait::InputT;
     using OutputT = typename CurTrait::OutputT;
