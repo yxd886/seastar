@@ -17,7 +17,15 @@ using namespace seastar;
 
 namespace netstar{
 
-namespace internal{
+// Forward declaration of public class interface.
+class async_flow;
+
+namespace internal {
+
+// Forward declarations
+template<typename FlowKeyType>
+class async_flow_manager;
+class async_flow_impl;
 
 // Possible state experienced by bidirection_async_flow.
 enum class af_state {
@@ -26,16 +34,11 @@ enum class af_state {
     ABORT           // The flow is aborted, primarily by user
 };
 
-}
-
-
-
 template<typename FlowKeyType>
 class async_flow_manager{
-    class async_flow_impl;
-
     std::unordered_map<FlowKeyType, lw_shared_ptr<async_flow_impl>> _flow_table;
     std::experimental::optional<subscription<net::packet>> _ingress_input_sub;
+    stream<net::packet> _egress_output_stream;
 
 public:
     // Register a sending stream to inject ingress packets
@@ -45,8 +48,15 @@ public:
             return make_ready_future<>();
         }));
     }
+    // Register output send function for the egress stream.
+    subscription<net::packet> register_egress_output(std::function<future<>(net::packet)> fn){
+        return _egress_output_stream.listen(std::move(fn));
+    }
+
 };
 
-}
+} // namespace internal
+
+} // namespace netstar
 
 #endif
