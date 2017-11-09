@@ -137,7 +137,7 @@ public:
 
 public:
     future<> send(directed_packet pkt){
-
+        return make_ready_future<>();
     }
 };
 
