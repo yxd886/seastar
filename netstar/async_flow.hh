@@ -77,7 +77,7 @@ public:
         // The receive queue.
         circular_buffer<directed_packet> _receiveq;
         // The promise to notify new packet arrival.
-        std::experimental::optional<future<>> _new_pkt_promise;
+        std::experimental::optional<promise<>> _new_pkt_promise;
         // The timer to timeout the master flow and the
         // packet counters.
         timer<steady_clock_type> _to;
