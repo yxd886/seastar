@@ -34,7 +34,7 @@
 using namespace seastar;
 using namespace netstar;
 
-class l2_processing{
+/*class l2_processing{
     port& _in_port;
     port& _out_port;
 
@@ -101,17 +101,72 @@ private:
 
 public:
     explicit l3_arp_processing(l2_processing& l2) : _l2(l2),
-    _arp_pkt_sub(l2.start_arp_stream([this](net::packet pkt){
-        auto arp_h = pkt.get_header<arp_hdr>(sizeof(net::eth_hdr));
-        if (!arp_h) {
+        _arp_pkt_sub(l2.start_arp_stream([this](net::packet pkt){
+            auto arp_h = pkt.get_header<arp_hdr>(sizeof(net::eth_hdr));
+            if (!arp_h) {
+                return make_ready_future<>();
+            }
+            else{
+                // arp pass through
+                _l2.l2_out(std::move(pkt));
+                return make_ready_future<>();
+            }
+        })){
+    }
+};*/
+
+class pipeline {
+    port& _in_port;
+    port& _out_port;
+
+    explicit pipeline(port& in_port, port& out_port) :
+            _in_port(in_port), _out_port(out_port) {
+        _in_port.receive([this](net::packet pkt){
+            eth_in(std::move(pkt));
             return make_ready_future<>();
+        });
+
+    }
+private:
+    void eth_in(net::packet pkt){
+        auto eh = pkt.get_header<net::eth_hdr>();
+        if(eh){
+            auto eh_proto = net::ntoh(eh->eth_proto);
+
+            switch(static_cast<net::eth_protocol_num>(eh_proto)){
+            case net::eth_protocol_num::arp: {
+                arp_in(std::move(pkt));
+                break;
+            }
+            case net::eth_protocol_num::ipv4 : {
+                ipv4_in(std::move(pkt));
+                break;
+            }
+            default :{
+                break;
+            }
+            }
         }
-        else{
-            // arp pass through
-            _l2.l2_out(std::move(pkt));
-            return make_ready_future<>();
-        }
-    })){
+    }
+
+    void arp_in(net::packet pkt) {
+
+    }
+
+    void ipv4_in(net::packet pkt){
+
+    }
+
+    void tcp_in(net::packet pkt){
+
+    }
+
+    void udp_in(net::packet pkt){
+
+    }
+
+    void icmp_in(net::packet pkt){
+
     }
 };
 
@@ -121,6 +176,8 @@ int main(int ac, char** av) {
 
     return app.run_deprecated(ac, av, [&app, &all_ports]{
         auto& opts = app.configuration();
+        circular_buffer<net::packet> buf;
+        printf("The size of a circular_buffer of seastar is %zu\n", sizeof(buf));
 
         std::unordered_map<std::string, net::ipv4_address> p0_addr_map;
         p0_addr_map["host-ipv4-addr"] = net::ipv4_address("10.28.1.13");
