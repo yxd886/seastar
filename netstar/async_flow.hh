@@ -55,7 +55,15 @@ public:
 
 };
 
+class async_flow_impl{
+
+};
+
 } // namespace internal
+
+class async_flow{
+
+};
 
 } // namespace netstar
 
