@@ -9,6 +9,7 @@
 
 #include <deque>
 #include <experimental/optional>
+#include <unordered_map>
 
 using namespace seastar;
 
@@ -21,17 +22,41 @@ public:
     }
 };
 
+class async_flow_base{
+public:
+    // Base receive interface.
+    virtual void received(net::packet pkt) = 0;
+};
+
 template<typename FKTrait>
 class async_flow_manager{
     // The type of the corresponding flow key.
     using FlowKeyType = typename FKTrait::FlowKeyType;
     // The meta data passed in together with the packet.
     using PacketMetaData = typename FKTrait::PacketMetaData;
-
+    // Possible state experienced by async_flow.
     enum class af_impl_state {
         ACTIVE,         // The flow is active.
         IDLE_TIMEOUT,   // The flow timeouts due to idleness.
         ABORT           // The flow is aborted, primarily by user
+    };
+    // Direction of the packet.
+    enum class direction{
+        INGRESS,
+        EGRESS
+    };
+    // Internal packet representation.
+    struct directed_pkt{
+        net::packet pkt;
+        const direction dir;
+    };
+public:
+    class master_flow_impl;
+    class slave_flow_impl;
+    class forward_flow_impl;
+
+    class master_flow_impl : public async_flow_base, public enable_lw_shared_from_this<master_flow_impl>{
+
     };
 
     /*class async_flow_base;
@@ -41,13 +66,6 @@ class async_flow_manager{
     class async_flow;
     class async_flow_impl;
 
-    class async_flow_base{
-    public:
-        // Base receive interface.
-        virtual void received(net::packet pkt) = 0;
-        // Basic send interface.
-        virtual future<> send_pkt(net::packet pkt) = 0;
-    };
 
     class slave_flow_impl : async_flow_base {
         static constexpr unsigned max_forwrad_num = 5;
