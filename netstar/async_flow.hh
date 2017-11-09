@@ -6,6 +6,7 @@
 #include "core/shared_ptr.hh"
 #include "core/future.hh"
 #include "core/reactor.hh"
+#include "core/timer.hh"
 
 #include <deque>
 #include <experimental/optional>
