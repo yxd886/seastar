@@ -80,7 +80,7 @@ public:
         std::experimental::optional<future<>> _new_pkt_promise;
         // The timer to timeout the master flow and the
         // packet counters.
-        timer<steady_clock> _to;
+        timer<steady_clock_type> _to;
         unsigned _pkt_counter;
         unsigned _previous_pkt_counter;
     public:
