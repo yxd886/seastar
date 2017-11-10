@@ -55,10 +55,10 @@ do_calculate_queue_mapping(boost::program_options::variables_map& opts,
             net::l4connid<net::ipv4_traits>
             to_remote{remote_ip_addr, local_ip_addr, remote_port, local_port};
 
-            unsigned local_queue = pt.hash2cpu(to_local.hash(pt.get_rss_key()));
+            unsigned local_queue = pt.get_qp_wrapper().hash2cpu(to_local.hash(pt.get_qp_wrapper().get_rss_key()));
             unsigned remote_queue =
                     remote_redir_table[
-                                       to_remote.hash(pt.get_rss_key()) &
+                                       to_remote.hash(pt.get_qp_wrapper().get_rss_key()) &
                                        (remote_redir_table.size() - 1)
                                        ];
 

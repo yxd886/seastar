@@ -22,9 +22,7 @@
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
-#include "core/distributed.hh"
-#include "netstar/netstar_dpdk_device.hh"
-#include "netstar/port.hh"
+
 #include "netstar/extendable_buffer.hh"
 
 using namespace seastar;
@@ -42,9 +40,8 @@ struct snd_obj{
 
 int main(int ac, char** av) {
     app_template app;
-    ports_env all_ports;
 
-    return app.run_deprecated(ac, av, [&app, &all_ports] {
+    return app.run_deprecated(ac, av, [&app] {
         fst_obj o1;
         o1.x[0] = 'f';
         o1.x[1] = 'u';

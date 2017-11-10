@@ -8,16 +8,16 @@
  *
  */
 
+#include "netstar/port.hh"
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
 #include "core/distributed.hh"
-#include "netstar/netstar_dpdk_device.hh"
-#include "netstar/fdir_device.hh"
-#include "netstar/port.hh"
+
 #include "netstar/per_core_objs.hh"
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
+#include "netstar/port_env.hh"
 
 using namespace seastar;
 using namespace netstar;
@@ -52,10 +52,7 @@ int main(int ac, char** av) {
                                        &lo_send_pr, &lo_send_count, &lo_send_error_hapen,
                                        &lo_read_pr, &lo_read_count, &lo_read_error_hapen]{
         auto& opts = app.configuration();
-        return all_ports.add_port(opts, 1, smp::count,
-            [](uint16_t port_id, uint16_t queue_num){
-                return create_fdir_device(port_id);
-        }).then([&all_objs]{
+        return all_ports.add_port(opts, 1, smp::count, port_type::fdir).then([&all_objs]{
             return all_objs.start(&all_objs);
         }).then([&all_ports, &all_objs]{
             return all_objs.invoke_on_all([&all_ports](mica_client& mc){
@@ -63,7 +60,7 @@ int main(int ac, char** av) {
             });
         }).then([&opts, &all_ports, &queue_map]{
             queue_map = calculate_queue_mapping(
-                    opts, all_ports.get_ports(0).local_obj());
+                    opts, all_ports.local_port(0));
         }).then([&all_objs, &opts, &queue_map]{
             return all_objs.invoke_on_all([&opts, &queue_map](mica_client& mc){
                 mc.bootup(opts, queue_map);

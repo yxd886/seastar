@@ -19,102 +19,187 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
+#include "netstar/port.hh"
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
 #include "core/distributed.hh"
-#include "netstar/netstar_dpdk_device.hh"
-#include "netstar/fdir_device.hh"
-#include "netstar/port.hh"
+
 #include "netstar/per_core_objs.hh"
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
+#include "netstar/stack_port.hh"
+#include "netstar/port_env.hh"
+#include "netstar/async_flow.hh"
 
 using namespace seastar;
 using namespace netstar;
 
+/*class l2_processing{
+    port& _in_port;
+    port& _out_port;
+
+    stream<net::packet> _arp_pkt_stream;
+    stream<net::packet> _ipv4_pkt_stream;
+public:
+    explicit l2_processing(port& in_port, port& out_port) :
+    _in_port(in_port), _out_port(out_port) {}
+
+    void enable_l2_in(){
+        _in_port.receive([this](net::packet pkt){
+            auto eh = pkt.get_header<net::eth_hdr>();
+            if(eh){
+                auto eh_proto = net::ntoh(eh->eth_proto);
+
+                switch(static_cast<net::eth_protocol_num>(eh_proto)){
+                case net::eth_protocol_num::arp: {
+                    _arp_pkt_stream.produce(std::move(pkt));
+                    return make_ready_future<>();
+                }
+                case net::eth_protocol_num::ipv4 : {
+                    _ipv4_pkt_stream.produce(std::move(pkt));
+                    return make_ready_future<>();
+                }
+                default :{
+                    return make_ready_future<>();
+                }
+                }
+            }
+            return make_ready_future<>();
+        });
+    }
+
+    future<> l2_out(net::packet pkt){
+        return _out_port.send(std::move(pkt));
+    }
+
+    subscription<net::packet> start_arp_stream(std::function<future<>(net::packet)> fn){
+        return _arp_pkt_stream.listen(std::move(fn));
+    }
+
+    subscription<net::packet> start_ipv4_stream(std::function<future<>(net::packet)> fn){
+        return _ipv4_pkt_stream.listen(std::move(fn));
+    }
+};
+
+class l3_arp_processing {
+    l2_processing& _l2;
+    subscription<net::packet> _arp_pkt_sub;
+
+private:
+    struct arp_hdr {
+        uint16_t htype;
+        uint16_t ptype;
+
+        static arp_hdr read(const char* p) {
+            arp_hdr ah;
+            ah.htype = consume_be<uint16_t>(p);
+            ah.ptype = consume_be<uint16_t>(p);
+            return ah;
+        }
+        static constexpr size_t size() { return 4; }
+    };
+
+public:
+    explicit l3_arp_processing(l2_processing& l2) : _l2(l2),
+        _arp_pkt_sub(l2.start_arp_stream([this](net::packet pkt){
+            auto arp_h = pkt.get_header<arp_hdr>(sizeof(net::eth_hdr));
+            if (!arp_h) {
+                return make_ready_future<>();
+            }
+            else{
+                // arp pass through
+                _l2.l2_out(std::move(pkt));
+                return make_ready_future<>();
+            }
+        })){
+    }
+};*/
+
+class pipeline {
+    port& _in_port;
+    port& _out_port;
+
+    explicit pipeline(port& in_port, port& out_port) :
+            _in_port(in_port), _out_port(out_port) {
+        _in_port.receive([this](net::packet pkt){
+            eth_in(std::move(pkt));
+            return make_ready_future<>();
+        });
+
+    }
+private:
+    void eth_in(net::packet pkt){
+        auto eh = pkt.get_header<net::eth_hdr>();
+        if(eh){
+            auto eh_proto = net::ntoh(eh->eth_proto);
+
+            switch(static_cast<net::eth_protocol_num>(eh_proto)){
+            case net::eth_protocol_num::arp: {
+                arp_in(std::move(pkt));
+                break;
+            }
+            case net::eth_protocol_num::ipv4 : {
+                ipv4_in(std::move(pkt));
+                break;
+            }
+            default :{
+                break;
+            }
+            }
+        }
+    }
+
+    void arp_in(net::packet pkt) {
+
+    }
+
+    void ipv4_in(net::packet pkt){
+
+    }
+
+    void tcp_in(net::packet pkt){
+
+    }
+
+    void udp_in(net::packet pkt){
+
+    }
+
+    void icmp_in(net::packet pkt){
+
+    }
+};
+
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
-    per_core_objs<mica_client> all_objs;
-    vector<vector<port_pair>> queue_map;
 
-    return app.run_deprecated(ac, av, [&app, &all_ports, &all_objs, &queue_map]{
+    return app.run_deprecated(ac, av, [&app, &all_ports]{
         auto& opts = app.configuration();
-        return all_ports.add_port(opts, 1, smp::count,
-            [](uint16_t port_id, uint16_t queue_num){
-                return create_fdir_device(port_id);
-        }).then([&all_objs]{
-            return all_objs.start(&all_objs);
-        }).then([&all_ports, &all_objs]{
-            return all_objs.invoke_on_all([&all_ports](mica_client& mc){
-                mc.configure_ports(all_ports, 0, 0);
-            });
-        }).then([&opts, &all_ports, &queue_map]{
-            queue_map = calculate_queue_mapping(
-                    opts, all_ports.get_ports(0).local_obj());
-        }).then([&all_objs, &opts, &queue_map]{
-            return all_objs.invoke_on_all([&opts, &queue_map](mica_client& mc){
-                mc.bootup(opts, queue_map);
-            });
-        }).then([&all_objs]{
-            return all_objs.invoke_on_all([](mica_client& mc){
-                mc.start_receiving();
-            });
-        }).then([&all_objs]{
-            return smp::submit_to(3, [&all_objs]{
-                uint64_t key = 10276325;
-                extendable_buffer key_buf;
-                key_buf.fill_data(key);
+        circular_buffer<net::packet> buf;
+        printf("The size of a circular_buffer of seastar is %zu\n", sizeof(buf));
 
-                uint64_t val = 8721;
-                extendable_buffer val_buf;
-                val_buf.fill_data(val);
+        std::unordered_map<std::string, net::ipv4_address> p0_addr_map;
+        p0_addr_map["host-ipv4-addr"] = net::ipv4_address("10.28.1.13");
+        p0_addr_map["gw-ipv4-addr"] = net::ipv4_address("10.28.1.1");
+        p0_addr_map["netmask-ipv4-addr"] = net::ipv4_address("255.255.255.255");
 
-                return all_objs.local_obj().query(Operation::kSet,
-                        sizeof(uint64_t), key_buf.get_temp_buffer(),
-                        sizeof(uint64_t), val_buf.get_temp_buffer()).then_wrapped([](auto&& f){
-                    try{
-                        auto response = std::get<0>(f.get());
-                        printf("No error!!!!\n");
-                        auto op = static_cast<uint8_t>(response.get_operation());
-                        auto r = static_cast<uint8_t>(response.get_result());
-                        printf("Operation %d, result %d\n", op, r);
-                        auto key_len = response.get_key_len();
-                        auto val_len = response.get_val_len();
-                        std::cout<<"key_len "<<key_len<<" val_len "<<val_len<<std::endl;
-                    }
-                    catch(...){
-                        printf("We got some errors here!\n");
-                    }
-                });
-            });
-        }).then([&all_objs]{
-            return smp::submit_to(3, [&all_objs]{
-                uint64_t key = 10276325;
-                extendable_buffer key_buf;
-                key_buf.fill_data(key);
+        return all_ports.add_stack_port(opts, 0, smp::count, std::move(p0_addr_map)).then([&opts, &all_ports]{
+            std::unordered_map<std::string, net::ipv4_address> p1_addr_map;
+            p1_addr_map["host-ipv4-addr"] = net::ipv4_address("10.29.1.13");
+            p1_addr_map["gw-ipv4-addr"] = net::ipv4_address("10.29.1.1");
+            p1_addr_map["netmask-ipv4-addr"] = net::ipv4_address("255.255.255.255");
 
-                return all_objs.local_obj().query(Operation::kGet,
-                        sizeof(uint64_t), key_buf.get_temp_buffer(),
-                        0, temporary_buffer<char>{}).then_wrapped([](auto&& f){
-                    try{
-                        auto response = std::get<0>(f.get());
-                        printf("No error!!!!\n");
-                        auto op = static_cast<uint8_t>(response.get_operation());
-                        auto r = static_cast<uint8_t>(response.get_result());
-                        printf("Operation %d, result %d\n", op, r);
-                        auto key_len = response.get_key_len();
-                        auto val_len = response.get_val_len();
-                        std::cout<<"key_len "<<key_len<<" val_len "<<val_len<<std::endl;
-                    }
-                    catch(...){
-                        printf("We got some errors here!\n");
-                    }
-                });
-            });
-        }).then([]{
-            printf("The mica client is successfully booted up\n");
+            return all_ports.add_stack_port(opts, 1, smp::count, std::move(p1_addr_map));
+        }).then_wrapped([](auto&& f){
+            try{
+                f.get();
+                printf("Finish creating two stack ports\n");
+            }
+            catch(...){
+                printf("Error creating two stack ports\n");
+            }
         });
     });
 }

@@ -1,10 +1,10 @@
 #ifndef _MICA_CLIENT
 #define _MICA_CLIENT
 
-#include "netstar/port.hh"
 #include "netstar/work_unit.hh"
 #include "netstar/mica_def.hh"
 #include "netstar/roundup.hh"
+#include "netstar/port.hh"
 
 #include "mica/util/hash.h"
 
@@ -143,7 +143,7 @@ public:
         size_t _request_size;
 
         // maximum number of allowed timeout retries
-        static constexpr unsigned max_retries = 4;
+        static constexpr unsigned max_retries = 32;
 
         // Initial timeout time in millisecond
         static constexpr unsigned initial_timeout_val = 1;
@@ -218,7 +218,8 @@ public:
             // Finally, to fail a message for our current configuration
             // (4 retries, 1ms initial timeout value) a request descriptor
             // will be held for at most 10ms.
-            _to.arm(std::chrono::milliseconds(initial_timeout_val+_retry_count));
+            // _to.arm(std::chrono::milliseconds(initial_timeout_val+_retry_count));
+            _to.arm(std::chrono::milliseconds(initial_timeout_val));
         }
     public:
         size_t get_request_size(){
@@ -496,7 +497,7 @@ public:
                 opts["mica-server-ip"].as<std::string>());
         uint16_t remote_ei_port_id = opts["mica-server-port-id"].as<uint16_t>();
 
-        net::ethernet_address local_ei_eth_addr(ports().at(0)->get_eth_addr());
+        net::ethernet_address local_ei_eth_addr(ports().at(0)->get_qp_wrapper().get_eth_addr());
         net::ipv4_address local_ei_ip_addr(
                 opts["mica-client-ip"].as<std::string>());
         uint16_t local_ei_port_id = 0;

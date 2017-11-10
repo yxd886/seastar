@@ -3,7 +3,7 @@
 
 #include <experimental/optional>
 #include "core/future.hh"
-#include "port.hh"
+#include "port_env.hh"
 
 namespace netstar{
 
@@ -35,14 +35,10 @@ protected:
     explicit work_unit(per_core_objs<T>* objs): _all_objs(objs) {}
 public:
     void configure_ports(ports_env& env, unsigned first_pos, unsigned last_pos){
-        assert(first_pos<=last_pos && last_pos<env.count() && _all_ports.size() == 0);
-
+        assert(first_pos<=last_pos && _all_ports.size() == 0);
         for(auto i = first_pos; i<=last_pos; i++){
-            assert(!env.check_assigned_to_core(i, engine().cpu_id()));
-
-            auto& ports = env.get_ports(i);
-            _all_ports.push_back(&ports.local_obj());
-            env.set_port_on_core(i, engine().cpu_id());
+            auto& p = env.local_port(i);
+            _all_ports.push_back(&p);
         }
         _all_subs.resize(_all_ports.size());
     }
