@@ -219,7 +219,7 @@ public:
         _egress.p = &p;
         return sub;
     }
-public:
+private:
     future<> send(net::packet pkt){
         return _egress.egress_output_stream.produce(std::move(pkt));
     }
