@@ -85,6 +85,7 @@ public:
     }
 public:
     future<> wait_for_new_pkt(){
+        assert(!_new_pkt_promise);
         if(!_receiveq.empty() || _status != af_state::ACTIVE){
             return make_ready_future<>();
         }
@@ -119,18 +120,21 @@ public:
             _status = af_state::ABORT;
         }
     }
+    FlowKeyType& get_flow_key(){
+        return _flow_key;
+    }
 private:
     void timeout(){
         if(_previous_pkt_counter == _pkt_counter){
             _status == af_state::IDLE_TIMEOUT;
-            if(_new_pkt_promise){
-                _new_pkt_promise->set_value();
-                _new_pkt_promise = {};
-            }
             while(!_receiveq.empty()){
                 _receiveq.pop_front();
             }
             remote_from_flow_table();
+            if(_new_pkt_promise){
+                _new_pkt_promise->set_value();
+                _new_pkt_promise = {};
+            }
         }
         _previous_pkt_counter = _pkt_counter;
         _to.arm(std::chrono::seconds(timeout_interval));
@@ -173,6 +177,9 @@ public:
     }
     void abort(){
         _impl->abort();
+    }
+    FlowKeyType& get_flow_key(){
+        return _impl->get_flow_key();
     }
 };
 
