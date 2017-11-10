@@ -109,7 +109,7 @@ public:
                 _receiveq.pop_front();
             }
             if(_new_pkt_promise){
-                _new_pkt_promise->value();
+                _new_pkt_promise->set_value();
                 _new_pkt_promise = {};
             }
             _status = af_state::ABORT;
