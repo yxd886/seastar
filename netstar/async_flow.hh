@@ -186,6 +186,8 @@ public:
 
 template<typename FlowKeyType>
 class async_flow_manager{
+    static constexpr unsigned max_flow_table_size = 100000;
+    static constexpr unsigned new_flow_queue_size = 10;
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<FlowKeyType>>> _flow_table;
     struct ingress{
         std::experimental::optional<subscription<net::packet, FlowKeyType&>> ingress_input_sub;
@@ -195,7 +197,7 @@ class async_flow_manager{
         stream<net::packet> egress_output_stream;
         port* p;
     } _egress;
-    seastar::queue<async_flow<FlowKeyType>> _q;
+    seastar::queue<async_flow<FlowKeyType>> _new_flow_q{new_flow_queue_size};
     friend class internal::async_flow_impl<FlowKeyType>;
 public:
     // Register a sending stream to inject ingress packets
@@ -204,7 +206,11 @@ public:
         _ingress.ingress_input_sub.emplace(istream.listen([this](net::packet pkt, FlowKeyType& key){
             auto afi = _flow_table.find(key);
             if(afi == _flow_table.end()){
-
+                if(!_new_flow_q.full() && _flow_table.size() < max_flow_table_size) {
+                    auto impl_lw_ptr = make_lw_shared<internal::async_flow_impl<FlowKeyType>>>(*this, key);
+                    _flow_table.insert({key, impl_lw_ptr});
+                    _new_flow_q.push(new_async_flow(std::move(impl_lw_ptr)));
+                }
             }
             else{
                 afi->second->received(std::move(pkt));
