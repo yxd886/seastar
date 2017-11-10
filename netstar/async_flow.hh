@@ -225,11 +225,15 @@ public:
         _egress.p = &p;
         return sub;
     }
+    future<async_flow<FlowKeyType>> on_new_flow(){
+        return _new_flow_q.not_empty().then([this]{
+           return make_ready_future<async_flow<FlowKeyType>>(_new_flow_q.pop());
+        });
+    }
 private:
     future<> send(net::packet pkt){
         return _egress.egress_output_stream.produce(std::move(pkt));
     }
-
 };
 
 } // namespace netstar
