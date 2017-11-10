@@ -49,8 +49,8 @@ private:
     unsigned _previous_pkt_counter;
     unsigned _drop_counter;
 public:
-    async_flow_impl(async_flow_manager<FlowKeyType>& manager,
-                    FlowKeyType& flow_key)
+    explicit async_flow_impl(async_flow_manager<FlowKeyType>& manager,
+                             FlowKeyType& flow_key)
         : _manager(manager)
         , _flow_key(flow_key)
         , _status(af_state::ACTIVE)
@@ -180,7 +180,7 @@ public:
         return _impl->get_flow_key();
     }
     unsigned peek_drop_counter(){
-        _impl->peek_drop_counter();
+        return _impl->peek_drop_counter();
     }
 };
 
