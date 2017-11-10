@@ -150,6 +150,22 @@ public:
     ~async_flow(){
         _impl->abort();
     }
+    async_flow(const async_flow& other) = delete;
+    async_flow(async_flow&& other)
+        : _impl(std::move(other._impl)) {
+    }
+    async_flow& operator=(const async_flow& other) = delete;
+    async_flow& operator=(async_flow&& other) {
+        if(&other != this){
+            this->~async_flow();
+            new (this) async_flow(std::move(other));
+        }
+        return *this;
+    }
+    future<> on_new_packet(){
+        return _impl->wait_for_new_pkt();
+    }
+
 };
 
 template<typename FlowKeyType>
