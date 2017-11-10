@@ -57,9 +57,12 @@ public:
         , _pkt_counter(0)
         , _previous_pkt_counter(0) {
         // _to.set_callback([this]{timeout();});
-        // _to.arm(std::chrono::seconds(timeout_interval));
+        _to.arm(std::chrono::seconds(timeout_interval));
     }
     void remote_from_flow_table(){
+        if(_to.armed()){
+            _to.cancel();
+        }
         _manager._flow_table.erase(_flow_key);
     }
 public:
@@ -72,6 +75,51 @@ public:
                 _new_pkt_promise = {};
             }
         }
+    }
+public:
+    future<> wait_for_new_pkt(){
+        if(!_receiveq.empty() || _status != af_state::ACTIVE){
+            return make_ready_future<>();
+        }
+        _new_pkt_promise = promise<>();
+        return _new_pkt_promise->get_future();
+    }
+    net::packet get_new_pkt(){
+        if(_status != af_state::ACTIVE){
+            return net::packet::make_null_packet();
+        }
+        auto pkt = _receiveq.front();
+        _receiveq.pop_front();
+        return pkt;
+    }
+    future<> send_pkt(net::packet pkt){
+        return _manager.send(std::move(pkt));
+    }
+    void abort(){
+        while(!_receiveq.empty()){
+            _receiveq.pop_front();
+        }
+        if(_new_pkt_promise){
+            _new_pkt_promise->set_exception(asyn_flow_abort());
+            _new_pkt_promise = {};
+        }
+        _status = af_state::ABORT;
+    }
+private:
+    void timeout(){
+        if(_previous_pkt_counter == _pkt_counter){
+            _status == af_state::IDLE_TIMEOUT;
+            if(_new_pkt_promise){
+                _new_pkt_promise->set_value();
+                _new_pkt_promise = {};
+            }
+            while(!_receiveq.empty()){
+                _receiveq.pop_front();
+            }
+            remote_from_flow_table();
+        }
+        _previous_pkt_counter = _pkt_counter;
+        _to.arm(std::chrono::seconds(timeout_interval));
     }
 };
 
@@ -98,6 +146,10 @@ public:
     // Register output send function for the egress stream.
     subscription<net::packet> register_egress_output(std::function<future<>(net::packet)> fn){
         return _egress_output_stream.listen(std::move(fn));
+    }
+public:
+    future<> send(net::packet pkt){
+        return _egress_output_stream.produce(std::move(pkt));
     }
 
 };
