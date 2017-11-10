@@ -165,7 +165,15 @@ public:
     future<> on_new_packet(){
         return _impl->wait_for_new_pkt();
     }
-
+    future<> send(net::packet pkt){
+        return _impl->send(pkt);
+    }
+    net::packet get_packet(){
+        return _impl->get_pkt();
+    }
+    void abort(){
+        _impl->abort();
+    }
 };
 
 template<typename FlowKeyType>
