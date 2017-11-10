@@ -17,6 +17,7 @@ using namespace seastar;
 
 namespace netstar{
 
+template<typename FlowKeyType>
 class async_flow;
 template<typename FlowKeyType>
 class async_flow_manager;
@@ -73,7 +74,8 @@ public:
 public:
     void received(net::packet pkt) {
         _pkt_counter += 1;
-        if(_receiveq.size() < max_receiveq_size && _status == af_state::ACTIVE) {
+        if(_receiveq.size() < max_receiveq_size &&
+           _status == af_state::ACTIVE) {
             _receiveq.push_back(std::move(pkt));
             if(_new_pkt_promise){
                 _new_pkt_promise->set_value();
@@ -137,8 +139,17 @@ private:
 
 } // namespace internal
 
+template<typename FlowKeyType>
 class async_flow{
-
+    using impl_type = lw_shared_ptr<internal::async_flow_impl<FlowKeyType>>;
+    impl_type _impl;
+public:
+    explicit async_flow(impl_type impl)
+        : _impl(std::move(impl)) {
+    }
+    ~async_flow(){
+        _impl->abort();
+    }
 };
 
 template<typename FlowKeyType>
