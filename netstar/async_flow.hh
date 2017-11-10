@@ -20,11 +20,11 @@ namespace netstar{
 // Forward declaration of public class interface.
 class async_flow;
 
-namespace internal {
-
-// Forward declarations
 template<typename FlowKeyType>
 class async_flow_manager;
+
+namespace internal {
+
 class async_flow_impl;
 
 // Possible state experienced by bidirection_async_flow.
@@ -34,9 +34,23 @@ enum class af_state {
     ABORT           // The flow is aborted, primarily by user
 };
 
+
+class async_flow_impl{
+    // Size of the receive queue
+    static constexpr unsigned max_receiveq_size = 5;
+    // 5s timeout interval
+    static constexpr unsigned timeout_interval = 5;
+};
+
+} // namespace internal
+
+class async_flow{
+
+};
+
 template<typename FlowKeyType>
 class async_flow_manager{
-    std::unordered_map<FlowKeyType, lw_shared_ptr<async_flow_impl>> _flow_table;
+    std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl>> _flow_table;
     std::experimental::optional<subscription<net::packet>> _ingress_input_sub;
     stream<net::packet> _egress_output_stream;
 
@@ -52,16 +66,6 @@ public:
     subscription<net::packet> register_egress_output(std::function<future<>(net::packet)> fn){
         return _egress_output_stream.listen(std::move(fn));
     }
-
-};
-
-class async_flow_impl{
-
-};
-
-} // namespace internal
-
-class async_flow{
 
 };
 
