@@ -22,13 +22,6 @@ class async_flow;
 template<typename FlowKeyType>
 class async_flow_manager;
 
-class asyn_flow_abort : public std::exception {
-public:
-    virtual const char* what() const noexcept override {
-        return "abort";
-    }
-};
-
 namespace internal {
 
 template<typename FlowKeyType>
@@ -54,6 +47,7 @@ private:
     timer<steady_clock_type> _to;
     unsigned _pkt_counter;
     unsigned _previous_pkt_counter;
+    unsigned _drop_counter;
 public:
     async_flow_impl(async_flow_manager<FlowKeyType>& manager,
                     FlowKeyType& flow_key)
@@ -61,14 +55,12 @@ public:
         , _flow_key(flow_key)
         , _status(af_state::ACTIVE)
         , _pkt_counter(0)
-        , _previous_pkt_counter(0) {
+        , _previous_pkt_counter(0)
+        , _drop_counter(0){
         _to.set_callback([this]{timeout();});
         _to.arm(std::chrono::seconds(timeout_interval));
     }
     void remote_from_flow_table(){
-        if(_to.armed()){
-            _to.cancel();
-        }
         _manager._flow_table.erase(_flow_key);
     }
 public:
@@ -81,6 +73,9 @@ public:
                 _new_pkt_promise->set_value();
                 _new_pkt_promise = {};
             }
+        }
+        if(_status == af_state::ACTIVE){
+            _drop_counter+=1;
         }
     }
 public:
@@ -114,7 +109,7 @@ public:
                 _receiveq.pop_front();
             }
             if(_new_pkt_promise){
-                _new_pkt_promise->set_exception(asyn_flow_abort());
+                _new_pkt_promise->value();
                 _new_pkt_promise = {};
             }
             _status = af_state::ABORT;
@@ -122,6 +117,9 @@ public:
     }
     FlowKeyType& get_flow_key(){
         return _flow_key;
+    }
+    unsigned peek_drop_counter(){
+        return _drop_counter();
     }
 private:
     void timeout(){
@@ -180,6 +178,9 @@ public:
     }
     FlowKeyType& get_flow_key(){
         return _impl->get_flow_key();
+    }
+    unsigned peek_drop_counter(){
+        _impl->peek_drop_counter();
     }
 };
 
