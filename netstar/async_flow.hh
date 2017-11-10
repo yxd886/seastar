@@ -135,6 +135,7 @@ private:
         _to.arm(std::chrono::seconds(timeout_interval));
     }
     friend class async_flow<FlowKeyType>;
+    friend class async_flow_manager<FlowKeyType>;
 };
 
 } // namespace internal
@@ -191,7 +192,7 @@ class async_flow_manager{
 public:
     // Register a sending stream to inject ingress packets
     // to the async_flow_manager.
-    void register_ingress_input(stream<net::packet> istream){
+    void register_ingress_input(stream<net::packet>& istream){
         _ingress_input_sub.emplace(istream.listen([this](net::packet pkt){
             return make_ready_future<>();
         }));
