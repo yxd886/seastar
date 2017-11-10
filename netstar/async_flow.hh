@@ -48,7 +48,7 @@ private:
     unsigned _pkt_counter;
     unsigned _previous_pkt_counter;
     unsigned _drop_counter;
-public:
+
     explicit async_flow_impl(async_flow_manager<FlowKeyType>& manager,
                              FlowKeyType& flow_key)
         : _manager(manager)
@@ -63,7 +63,6 @@ public:
     void remote_from_flow_table(){
         _manager._flow_table.erase(_flow_key);
     }
-public:
     void received(net::packet pkt) {
         _pkt_counter += 1;
         if(_receiveq.size() < max_receiveq_size &&
@@ -78,7 +77,6 @@ public:
             _drop_counter+=1;
         }
     }
-public:
     future<> wait_for_new_pkt(){
         assert(!_new_pkt_promise);
         if(!_receiveq.empty() || _status != af_state::ACTIVE){
@@ -121,7 +119,6 @@ public:
     unsigned peek_drop_counter(){
         return _drop_counter();
     }
-private:
     void timeout(){
         if(_previous_pkt_counter == _pkt_counter){
             _status == af_state::IDLE_TIMEOUT;
@@ -137,6 +134,7 @@ private:
         _previous_pkt_counter = _pkt_counter;
         _to.arm(std::chrono::seconds(timeout_interval));
     }
+    friend class async_flow<FlowKeyType>;
 };
 
 } // namespace internal
