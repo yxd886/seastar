@@ -200,6 +200,13 @@ public:
     // to the async_flow_manager.
     void register_ingress_input(stream<net::packet, FlowKeyType&>& istream, port& p){
         _ingress.ingress_input_sub.emplace(istream.listen([this](net::packet pkt, FlowKeyType& key){
+            auto afi = _flow_table.find(key);
+            if(afi == _flow_table.end()){
+
+            }
+            else{
+                afi->second->received(std::move(pkt));
+            }
             return make_ready_future<>();
         }));
         _ingress.p = &p;
