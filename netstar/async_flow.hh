@@ -7,6 +7,7 @@
 #include "core/future.hh"
 #include "core/reactor.hh"
 #include "core/timer.hh"
+#include "core/queue.hh"
 
 #include <deque>
 #include <experimental/optional>
@@ -194,6 +195,7 @@ class async_flow_manager{
         stream<net::packet> egress_output_stream;
         port* p;
     } _egress;
+    seastar::queue<async_flow<FlowKeyType>> _q;
     friend class internal::async_flow_impl<FlowKeyType>;
 public:
     // Register a sending stream to inject ingress packets
