@@ -108,16 +108,16 @@ public:
         }
     }
     void abort(){
-        // Prevent reentrent.
-        assert(_status!=af_state::ABORT);
-        while(!_receiveq.empty()){
-            _receiveq.pop_front();
+        if(_status!=af_state::ABORT){
+            while(!_receiveq.empty()){
+                _receiveq.pop_front();
+            }
+            if(_new_pkt_promise){
+                _new_pkt_promise->set_exception(asyn_flow_abort());
+                _new_pkt_promise = {};
+            }
+            _status = af_state::ABORT;
         }
-        if(_new_pkt_promise){
-            _new_pkt_promise->set_exception(asyn_flow_abort());
-            _new_pkt_promise = {};
-        }
-        _status = af_state::ABORT;
     }
 private:
     void timeout(){
