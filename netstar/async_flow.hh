@@ -56,7 +56,7 @@ public:
         , _status(af_state::ACTIVE)
         , _pkt_counter(0)
         , _previous_pkt_counter(0) {
-        // _to.set_callback([this]{timeout();});
+        _to.set_callback([this]{timeout();});
         _to.arm(std::chrono::seconds(timeout_interval));
     }
     void remote_from_flow_table(){
@@ -93,9 +93,16 @@ public:
         return pkt;
     }
     future<> send_pkt(net::packet pkt){
-        return _manager.send(std::move(pkt));
+        if(_status == af_state::ACTIVE){
+            return _manager.send(std::move(pkt));
+        }
+        else{
+            return make_ready_future<>();
+        }
     }
     void abort(){
+        // Prevent reentrent.
+        assert(_status!=af_state::ABORT);
         while(!_receiveq.empty()){
             _receiveq.pop_front();
         }
