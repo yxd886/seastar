@@ -17,11 +17,16 @@ using namespace seastar;
 
 namespace netstar{
 
-// Forward declaration of public class interface.
 class async_flow;
-
 template<typename FlowKeyType>
 class async_flow_manager;
+
+class asyn_flow_abort : public std::exception {
+public:
+    virtual const char* what() const noexcept override {
+        return "abort";
+    }
+};
 
 namespace internal {
 
