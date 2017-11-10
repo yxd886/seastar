@@ -42,10 +42,10 @@ class async_flow_impl{
     // 5s timeout interval
     static constexpr unsigned timeout_interval = 5;
 private:
-    async_flow_manager<FlowKeyType> _manager;
+    async_flow_manager<FlowKeyType>& _manager;
 
 public:
-    async_flow_impl(async_flow_manager<FlowKeyType> manager)
+    async_flow_impl(async_flow_manager<FlowKeyType>& manager)
         : _manager(manager) {
     }
 };
