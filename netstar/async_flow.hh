@@ -25,6 +25,7 @@ class async_flow_manager;
 
 namespace internal {
 
+template<typename FlowKeyType>
 class async_flow_impl;
 
 // Possible state experienced by bidirection_async_flow.
@@ -34,12 +35,19 @@ enum class af_state {
     ABORT           // The flow is aborted, primarily by user
 };
 
-
+template<typename FlowKeyType>
 class async_flow_impl{
     // Size of the receive queue
     static constexpr unsigned max_receiveq_size = 5;
     // 5s timeout interval
     static constexpr unsigned timeout_interval = 5;
+private:
+    async_flow_manager<FlowKeyType> _manager;
+
+public:
+    async_flow_impl(async_flow_manager<FlowKeyType> manager)
+        : _manager(manager) {
+    }
 };
 
 } // namespace internal
@@ -50,7 +58,7 @@ class async_flow{
 
 template<typename FlowKeyType>
 class async_flow_manager{
-    std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl>> _flow_table;
+    std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<FlowKeyType>>> _flow_table;
     std::experimental::optional<subscription<net::packet>> _ingress_input_sub;
     stream<net::packet> _egress_output_stream;
 
