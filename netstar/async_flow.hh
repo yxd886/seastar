@@ -37,16 +37,41 @@ enum class af_state {
 
 template<typename FlowKeyType>
 class async_flow_impl{
-    // Size of the receive queue
     static constexpr unsigned max_receiveq_size = 5;
-    // 5s timeout interval
     static constexpr unsigned timeout_interval = 5;
 private:
     async_flow_manager<FlowKeyType>& _manager;
-
+    FlowKeyType _flow_key;
+    af_state _status;
+    circular_buffer<net::packet> _receiveq;
+    std::experimental::optional<promise<>> _new_pkt_promise;
+    timer<steady_clock_type> _to;
+    unsigned _pkt_counter;
+    unsigned _previous_pkt_counter;
 public:
-    async_flow_impl(async_flow_manager<FlowKeyType>& manager)
-        : _manager(manager) {
+    async_flow_impl(async_flow_manager<FlowKeyType>& manager,
+                    FlowKeyType& flow_key)
+        : _manager(manager)
+        , _flow_key(flow_key)
+        , _status(af_state::ACTIVE)
+        , _pkt_counter(0)
+        , _previous_pkt_counter(0) {
+        // _to.set_callback([this]{timeout();});
+        // _to.arm(std::chrono::seconds(timeout_interval));
+    }
+    void remote_from_flow_table(){
+        _manager._flow_table.erase(_flow_key);
+    }
+public:
+    void received(net::packet pkt) {
+        _pkt_counter += 1;
+        if(_receiveq.size() < max_receiveq_size && _status == af_state::ACTIVE) {
+            _receiveq.push_back(std::move(pkt));
+            if(_new_pkt_promise){
+                _new_pkt_promise->set_value();
+                _new_pkt_promise = {};
+            }
+        }
     }
 };
 
@@ -61,7 +86,7 @@ class async_flow_manager{
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<FlowKeyType>>> _flow_table;
     std::experimental::optional<subscription<net::packet>> _ingress_input_sub;
     stream<net::packet> _egress_output_stream;
-
+    friend class internal::async_flow_impl<FlowKeyType>;
 public:
     // Register a sending stream to inject ingress packets
     // to the async_flow_manager.
