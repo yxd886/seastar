@@ -186,24 +186,33 @@ public:
 template<typename FlowKeyType>
 class async_flow_manager{
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<FlowKeyType>>> _flow_table;
-    std::experimental::optional<subscription<net::packet>> _ingress_input_sub;
-    stream<net::packet> _egress_output_stream;
+    struct ingress{
+        std::experimental::optional<subscription<net::packet, FlowKeyType&>> ingress_input_sub;
+        port* p;
+    } _ingress;
+    struct egress{
+        stream<net::packet> egress_output_stream;
+        port* p;
+    } _egress;
     friend class internal::async_flow_impl<FlowKeyType>;
 public:
     // Register a sending stream to inject ingress packets
     // to the async_flow_manager.
-    void register_ingress_input(stream<net::packet>& istream){
-        _ingress_input_sub.emplace(istream.listen([this](net::packet pkt){
+    void register_ingress_input(stream<net::packet, FlowKeyType&>& istream, port& p){
+        _ingress.ingress_input_sub.emplace(istream.listen([this](net::packet pkt, FlowKeyType& key){
             return make_ready_future<>();
         }));
+        _ingress.p = &p;
     }
     // Register output send function for the egress stream.
-    subscription<net::packet> register_egress_output(std::function<future<>(net::packet)> fn){
-        return _egress_output_stream.listen(std::move(fn));
+    subscription<net::packet> register_egress_output(std::function<future<>(net::packet)> fn, port& p){
+        auto sub = _egress.egress_output_stream.listen(std::move(fn));
+        _egress.p = &p;
+        return sub;
     }
 public:
     future<> send(net::packet pkt){
-        return _egress_output_stream.produce(std::move(pkt));
+        return _egress.egress_output_stream.produce(std::move(pkt));
     }
 
 };
