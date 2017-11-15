@@ -27,7 +27,7 @@ enum class direction{
 
 struct directed_pkt{
     net::packet pkt;
-    const direction dir;
+    const direction d;
 };
 
 namespace internal{
@@ -35,7 +35,7 @@ namespace internal{
 class tcp_monitor_impl;
 
 struct cur_pkt_ctx {
-    directed_pkt pkt;
+    directed_pkt dpkt;
 };
 
 class tcp_monitor_impl {
