@@ -43,13 +43,11 @@ class tcp_monitor_impl {
     static constexpr unsigned max_receiveq_size = 5;
     circular_buffer<directed_pkt> _receiveq;
     bool _end;
-    bool _working;
     std::experimental::optional<promise<>> _new_pkt_promise;
     std::experimental::optional<cur_pkt_ctx> _pkt_ctx;
 public:
     tcp_monitor_impl()
-        : _end(false)
-        , _working(false){
+        : _end(false){
         _receiveq.reserve(max_receiveq_size);
     }
     void receive_pkt(net::packet pkt, direction dir){
