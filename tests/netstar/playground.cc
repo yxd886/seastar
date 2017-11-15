@@ -45,6 +45,7 @@ public:
 
     future<> run(){
         return _monitor->on_new_packet().then([this]{
+            printf("Monitor receives packet\n");
             _monitor->read_packet();
             if(_monitor->is_impl_ended()){
                 return make_ready_future<>();
