@@ -63,11 +63,11 @@ public:
             // the _pkt_ctx does not exist
             if(!_pkt_ctx){
                 // Build the packet context.
-                _pkt_ctx.emplace({std::move(_receiveq.front())});
+                _pkt_ctx.emplace(std::move(_receiveq.front()));
                 _receiveq.pop_front();
 
                 // Performs sender side tcp stack management
-                _pkt_ctx->pkt.size();
+                _pkt_ctx->dpkt.pkt.size();
             }
 
 
