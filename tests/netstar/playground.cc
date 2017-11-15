@@ -40,9 +40,8 @@ class mock_monitor{
     bool _end;
     std::experimental::optional<promise<>> _new_pkt_promise;
 public:
-    mock_monitor(size_t size)
-        : _receiveq(size)
-        , _end(false) {
+    mock_monitor()
+        : _end(false) {
     }
 
     future<> on_new_packet(){
@@ -82,7 +81,7 @@ int main(int ac, char** av) {
     // timer<steady_clock_type>
 
     return app.run_deprecated(ac, av, [&app, &all_ports]{
-        auto monitor = make_lw_shared<mock_monitor>(5);
+        auto monitor = make_lw_shared<mock_monitor>();
         auto monitor_ptr = monitor.get();
         return do_until([monitor]{return monitor->get_end();}, [monitor_ptr]{
             return monitor_ptr->on_new_packet().then([monitor_ptr]{
