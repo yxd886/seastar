@@ -35,9 +35,26 @@
 using namespace seastar;
 using namespace netstar;
 
+class mock_monitor{
+    circular_buffer<net::packet> _receiveq;
+    std::experimental::optional<promise<>> _new_pkt_promise;
+public:
+    mock_monitor(size_t size)
+        : _receiveq(size) {
+
+    }
+
+    future<> on_new_packet(){
+        assert(!_new_pkt_promise);
+        _new_pkt_promise = promise<>;
+        return _new_pkt_promise->get_future();
+    }
+};
+
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
+    // timer<steady_clock_type>
 
     return app.run_deprecated(ac, av, [&app, &all_ports]{
         return do_until([]{return false;}, []{
