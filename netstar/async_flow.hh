@@ -58,6 +58,7 @@ private:
         , _pkt_counter(0)
         , _previous_pkt_counter(0)
         , _drop_counter(0){
+        _receiveq.reserve(max_receiveq_size);
         _to.set_callback([this]{timeout();});
         _to.arm(std::chrono::seconds(timeout_interval));
     }

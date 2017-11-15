@@ -34,22 +34,44 @@ namespace internal{
 
 class tcp_monitor_impl;
 
+struct cur_pkt_ctx {
+    directed_pkt pkt;
+};
+
 class tcp_monitor_impl {
     static constexpr unsigned max_receiveq_size = 5;
     circular_buffer<directed_pkt> _receiveq;
     bool _end;
+    bool _working;
     std::experimental::optional<promise<>> _new_pkt_promise;
+    std::experimental::optional<cur_pkt_ctx> _pkt_ctx;
 public:
     tcp_monitor_impl()
-        : _end(false) {
+        : _end(false)
+        , _working(false){
+        _receiveq.reserve(max_receiveq_size);
     }
     void receive_pkt(net::packet pkt, direction dir){
         if(_receiveq.size()<=max_receiveq_size){
-            _receiveq.push_back(directed_pkt{std::move(pkt), dir});
+            /*_receiveq.push_back(directed_pkt{std::move(pkt), dir});
             if(_new_pkt_promise){
                 _new_pkt_promise->set_value();
                 _new_pkt_promise = {};
+            }*/
+
+            // start the actual processing in case that
+            // the _pkt_ctx does not exist
+            if(!_pkt_ctx){
+                // Build the packet context.
+                _pkt_ctx.emplace({std::move(_receiveq.front())});
+                _receiveq.pop_front();
+
+                // Performs sender side tcp stack management
+                _pkt_ctx->pkt.size();
             }
+
+
+
         }
     }
 private:
