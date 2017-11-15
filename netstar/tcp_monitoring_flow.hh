@@ -35,6 +35,7 @@ namespace internal{
 class tcp_monitor_impl;
 
 class tcp_monitor_impl {
+    static constexpr unsigned max_receiveq_size = 5;
     circular_buffer<directed_pkt> _receiveq;
     bool _end;
     std::experimental::optional<promise<>> _new_pkt_promise;
@@ -43,9 +44,11 @@ public:
         : _end(false) {
     }
     void receive_pkt(net::packet pkt, direction dir){
-        _receiveq.push_back(directed_pkt{std::move(pkt), dir});
-        if(_new_pkt_promise){
-            _new_pkt_promise->set_value();
+        if(_receiveq.size()<=max_receiveq_size){
+            _receiveq.push_back(directed_pkt{std::move(pkt), dir});
+            if(_new_pkt_promise){
+                _new_pkt_promise->set_value();
+            }
         }
     }
 private:

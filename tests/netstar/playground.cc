@@ -34,6 +34,7 @@
 
 using namespace seastar;
 using namespace netstar;
+using namespace std::chrono_literals;
 
 class tester{
     lw_shared_ptr<tcp_monitor> _monitor;
@@ -60,9 +61,13 @@ int main(int ac, char** av) {
 
     return app.run_deprecated(ac, av, [&app]{
         auto mon_impl = make_lw_shared<netstar::internal::tcp_monitor_impl>();
-        auto mon = make_lw_shared<tcp_monitor>(std::move(mon_impl));
+        auto mon = make_lw_shared<tcp_monitor>(mon_impl);
         auto tester_ptr = new tester(std::move(mon));
-
+        timer<steady_clock_type> to;
+        to.set_callback([mon_impl]{
+            mon_impl->receive_pkt(net::packet(), direction::EGRESS);
+        });
+        to.arm_periodic(1s);
 
         return tester_ptr->run().then([tester_ptr]{
             delete tester_ptr;
