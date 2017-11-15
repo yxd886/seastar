@@ -35,8 +35,6 @@ namespace internal{
 class tcp_monitor_impl;
 
 class tcp_monitor_impl {
-    friend class netstar::tcp_monitor;
-
     circular_buffer<directed_pkt> _receiveq;
     bool _end;
     std::experimental::optional<promise<>> _new_pkt_promise;
@@ -70,16 +68,16 @@ private:
     bool get_end(){
         return _end;
     }
+    friend class netstar::tcp_monitor;
 };
 
 } // namespace internal
 
 class tcp_monitor{
-
     lw_shared_ptr<internal::tcp_monitor_impl> _impl;
 public:
     tcp_monitor(lw_shared_ptr<internal::tcp_monitor_impl> impl)
-        : _impl(impl) {
+        : _impl(std::move(impl)) {
     }
     future<> on_new_packet(){
         return _impl->on_new_packet();

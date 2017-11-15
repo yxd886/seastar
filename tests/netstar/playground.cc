@@ -35,6 +35,26 @@
 using namespace seastar;
 using namespace netstar;
 
+class tester{
+    lw_shared_ptr<tcp_monitor> _monitor;
+public:
+    tester(lw_shared_ptr<tcp_monitor> monitor)
+        : _monitor(std::move(monitor)){
+    }
+
+    future<> run(){
+        return _monitor->on_new_packet().then([this]{
+            _monitor->read_packet();
+            if(_monitor->is_impl_ended()){
+                return make_ready_future<>();
+            }
+            else{
+                return run();
+            }
+        });
+    }
+};
+
 int main(int ac, char** av) {
     app_template app;
 
