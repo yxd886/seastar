@@ -62,7 +62,7 @@ public:
     }
 
     net::packet read_packet(){
-        net::packet p(_receiveq.front());
+        net::packet p(std::move(_receiveq.front()));
         _receiveq.pop_front();
         return p;
     }
@@ -86,7 +86,7 @@ int main(int ac, char** av) {
         auto monitor_ptr = monitor.get();
         return do_until([monitor]{return monitor->get_end();}, [monitor_ptr]{
             return monitor_ptr->on_new_packet().then([monitor_ptr]{
-                // monitor_ptr->read_packet();
+                monitor_ptr->read_packet();
                 printf("monitor receives new packet");
             });
         });
