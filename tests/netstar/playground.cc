@@ -38,7 +38,7 @@ using namespace netstar;
 int main(int ac, char** av) {
     app_template app;
 
-    return app.run_deprecated(ac, av, [&app, &all_ports]{
+    return app.run_deprecated(ac, av, [&app]{
 
     });
 }
