@@ -59,6 +59,12 @@ int main(int ac, char** av) {
     app_template app;
 
     return app.run_deprecated(ac, av, [&app]{
+        auto mon_impl = make_lw_shared<netstar::internal::tcp_monitor_impl>();
+        auto mon = make_lw_shared<tcp_monitor>(std::move(mon_impl));
+        auto tester_ptr = new tester(std::move(mon));
 
+        return tester_ptr->run().then([tester_ptr]{
+            delete tester_ptr;
+        });
     });
 }
