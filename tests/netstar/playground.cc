@@ -66,6 +66,7 @@ int main(int ac, char** av) {
         auto tester_ptr = new tester(std::move(mon));
         timer<steady_clock_type> to;
         to.set_callback([mon_impl]{
+            printf("Timer called\n");
             mon_impl->receive_pkt(net::packet(), direction::EGRESS);
         });
         to.arm_periodic(1s);

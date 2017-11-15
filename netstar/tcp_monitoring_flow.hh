@@ -48,6 +48,7 @@ public:
             _receiveq.push_back(directed_pkt{std::move(pkt), dir});
             if(_new_pkt_promise){
                 _new_pkt_promise->set_value();
+                _new_pkt_promise = {};
             }
         }
     }
