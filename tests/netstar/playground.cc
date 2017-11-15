@@ -37,16 +37,42 @@ using namespace netstar;
 
 class mock_monitor{
     circular_buffer<net::packet> _receiveq;
+    bool _end;
     std::experimental::optional<promise<>> _new_pkt_promise;
 public:
     mock_monitor(size_t size)
-        : _receiveq(size) {
+        : _receiveq(size)
+        , _end(false) {
     }
 
     future<> on_new_packet(){
         assert(!_new_pkt_promise);
+        if(_receiveq.size()>0){
+            return make_ready_future<>();
+        }
         _new_pkt_promise = promise<>();
         return _new_pkt_promise->get_future();
+    }
+
+    void receive_pkt(net::packet pkt){
+        _receiveq.push_back(std::move(pkt));
+        if(_new_pkt_promise){
+            _new_pkt_promise->set_value();
+        }
+    }
+
+    net::packet read_packet(){
+        net::packet p(_receiveq.front());
+        _receiveq.pop_front();
+        return p;
+    }
+
+    void set_end(){
+        _end = true;
+    }
+
+    bool get_end(){
+        return _end;
     }
 };
 
@@ -56,6 +82,13 @@ int main(int ac, char** av) {
     // timer<steady_clock_type>
 
     return app.run_deprecated(ac, av, [&app, &all_ports]{
-
+        auto monitor = make_lw_shared<mock_monitor>(5);
+        auto monitor_ptr = monitor.get();
+        return do_until([monitor]{return monitor->get_end();}, [monitor_ptr]{
+            return monitor_ptr->on_new_packet().then([monitor_ptr]{
+                monitor_ptr->read_packet();
+                printf("monitor receives new packet");
+            });
+        });
     });
 }
