@@ -88,6 +88,7 @@ public:
     bool is_impl_ended(){
         return _impl->get_end();
     }
+    friend class internal::tcp_monitor_impl;
 };
 
 } // namespace netstar
