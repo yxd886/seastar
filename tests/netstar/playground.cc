@@ -41,12 +41,11 @@ class mock_monitor{
 public:
     mock_monitor(size_t size)
         : _receiveq(size) {
-
     }
 
     future<> on_new_packet(){
         assert(!_new_pkt_promise);
-        _new_pkt_promise = promise<>;
+        _new_pkt_promise = promise<>();
         return _new_pkt_promise->get_future();
     }
 };
@@ -57,10 +56,6 @@ int main(int ac, char** av) {
     // timer<steady_clock_type>
 
     return app.run_deprecated(ac, av, [&app, &all_ports]{
-        return do_until([]{return false;}, []{
-                return make_ready_future<>();
-        }).then([]{
-                engine().exit(0);
-        });
+
     });
 }
