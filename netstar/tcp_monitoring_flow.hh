@@ -67,7 +67,7 @@ public:
                 _receiveq.pop_front();
 
                 // Performs sender side tcp stack management
-                _pkt_ctx->dpkt.pkt.size();
+                _pkt_ctx->dpkt.pkt.len();
             }
 
 
