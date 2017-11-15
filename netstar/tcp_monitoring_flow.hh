@@ -37,6 +37,8 @@ class tcp_monitor_impl;
 struct cur_pkt_ctx {
     net::packet pkt;
     direction d;
+    cur_pkt_ctx(net::packet&& new_pkt, direction new_d)
+        : pkt(new_pkt), d(new_d){}
 };
 
 class tcp_monitor_impl {
