@@ -104,6 +104,7 @@ private:
     }
     void abort(){
         if(_status!=af_state::ABORT){
+            _status = af_state::ABORT;
             while(!_receiveq.empty()){
                 _receiveq.pop_front();
             }
@@ -111,7 +112,6 @@ private:
                 _new_pkt_promise->set_value();
                 _new_pkt_promise = {};
             }
-            _status = af_state::ABORT;
         }
     }
     FlowKeyType& get_flow_key(){
@@ -235,6 +235,39 @@ private:
         return _egress.egress_output_stream.produce(std::move(pkt));
     }
 };
+
+/*
+ * class flow_context{
+ *  async_flow<TCPType> _af;
+ *  net::packt _cur_pkt;
+ *
+ *  future<> run(){
+ *      _af.on_new_packet().then([]{
+ *
+ *          _cur_pkt = _af.get_packet();
+ *          if(!_cur_pkt){
+ *              return make_ready_future<>();
+ *          }
+ *          return mica_query()
+ *      }).then([this](mica_query_response){
+ *
+ *      }).then([]{
+ *          return run();
+ *      })
+ *  }
+ * }
+ *
+ * async_flow_manager<TCPType> _manager;
+ *
+ * _manager.on_new_flow().then([](async_flow<TCPType> f){
+ *      new (flow_context) c
+ *      c.run().then([]{
+ *          delete c;
+ *      })
+ *
+ * })
+ *
+ */
 
 } // namespace netstar
 
