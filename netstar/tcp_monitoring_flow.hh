@@ -35,7 +35,7 @@ namespace internal{
 class tcp_monitor_impl;
 
 class tcp_monitor_impl {
-    friend class tcp_monitor;
+    friend class netstar::tcp_monitor;
 
     circular_buffer<directed_pkt> _receiveq;
     bool _end;
@@ -75,7 +75,6 @@ private:
 } // namespace internal
 
 class tcp_monitor{
-    friend class internal::tcp_monitor_impl;
 
     lw_shared_ptr<internal::tcp_monitor_impl> _impl;
 public:
