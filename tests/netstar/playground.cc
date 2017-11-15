@@ -59,12 +59,13 @@ public:
 
 int main(int ac, char** av) {
     app_template app;
+    timer<steady_clock_type> to;
 
-    return app.run_deprecated(ac, av, [&app]{
+    return app.run_deprecated(ac, av, [&app, &to]{
         auto mon_impl = make_lw_shared<netstar::internal::tcp_monitor_impl>();
         auto mon = make_lw_shared<tcp_monitor>(mon_impl);
         auto tester_ptr = new tester(std::move(mon));
-        timer<steady_clock_type> to;
+
         to.set_callback([mon_impl]{
             printf("Timer called\n");
             mon_impl->receive_pkt(net::packet(), direction::EGRESS);
