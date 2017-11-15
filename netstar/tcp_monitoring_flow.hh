@@ -27,7 +27,7 @@ enum class direction{
 
 struct directed_pkt{
     net::packet pkt;
-    const direction d;
+    direction d;
 };
 
 namespace internal{
