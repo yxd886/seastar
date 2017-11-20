@@ -50,7 +50,7 @@
 
 #define ISSET(a, i) (a & (1 << i))
 #define MAX(a, b) (a > b ? a : b)
-#define htons(n) (((((unsigned short)(n) & 0xFF)) << 8) | (((unsigned short)(n) & 0xFF00) >> 8))
+//#define htons(n) (((((unsigned short)(n) & 0xFF)) << 8) | (((unsigned short)(n) & 0xFF00) >> 8))
 
 #define CPE2(val, msg, error, fault) \
 	if(val) {fflush(stdout); rte_exit(EXIT_FAILURE, msg, error, fault);}
