@@ -407,9 +407,9 @@ boost_test_lib = [
 ]
 
 aho_corasick = [
-    'nf/aho-corasick/aho.c',
-    'nf/aho-corasick/ds_queue.c',
-    'nf/aho-corasick/util.c'
+    'nf/aho-corasick/aho.cc',
+    'nf/aho-corasick/ds_queue.cc',
+    'nf/aho-corasick/util.cc'
 
 ]
 
