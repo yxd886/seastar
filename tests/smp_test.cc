@@ -89,7 +89,7 @@ int main(int ac, char** av) {
 
 
 
-
+/*
 const char* canned_response = "Seastar is the future!\n";
 
 seastar::future<> service_loop() {
@@ -131,4 +131,35 @@ int main(int argc, char** argv) {
         return 1;
     }
     return 0;
+}*/
+int number=0;
+
+future<int> get(){
+    // promises an int will be produced eventually
+    return make_ready_future<int>(number);
 }
+future<> put(int i){
+    // promises to store an int
+    number=i;
+    return make_ready_future<>();
+}
+
+future<> loop_to(int end) {
+    if (number == end) {
+        print("loop end\n");
+        return make_ready_future<>();
+    }
+    print("number: %d \n",number);
+    get().then([end] (int value) {
+        return put(value + 1);
+    }).then([end] {
+        return loop_to(end);
+    });
+}
+
+int main(int ac, char** av) {
+    return app_template().run_deprecated(ac, av, [] {
+            return loop_to(100);
+    });
+}
+
