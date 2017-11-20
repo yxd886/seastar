@@ -88,7 +88,7 @@ int main(int ac, char** av) {
 #include "core/print.hh"
 
 
-
+using namespace seastar;
 /*
 const char* canned_response = "Seastar is the future!\n";
 
