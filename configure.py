@@ -393,6 +393,12 @@ boost_test_lib = [
    'tests/test_runner.cc',
 ]
 
+aho_corasick = [
+    'nf/aho-corasick/aho.cc',
+    'nf/aho-corasick/dsqueue.cc',
+    'nf/aho-corasick/util.cc'
+]
+
 
 def maybe_static(flag, libs):
     if flag and not args.static:
@@ -453,7 +459,7 @@ deps = {
     'tests/foreign_ptr_test': ['tests/foreign_ptr_test.cc'] + core,
     'tests/semaphore_test': ['tests/semaphore_test.cc'] + core,
     'tests/expiring_fifo_test': ['tests/expiring_fifo_test.cc'] + core,
-    'tests/smp_test': ['tests/smp_test.cc'] + core,
+    'tests/smp_test': ['tests/smp_test.cc'] + core +aho_corasick,
     'tests/thread_test': ['tests/thread_test.cc'] + core,
     'tests/thread_context_switch': ['tests/thread_context_switch.cc'] + core,
     'tests/udp_server': ['tests/udp_server.cc'] + core + libnet,
