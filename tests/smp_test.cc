@@ -134,17 +134,17 @@ int main(int argc, char** argv) {
 }*/
 int number=0;
 
-future<int> get(){
+seastar::future<> get(){
     // promises an int will be produced eventually
     return make_ready_future<int>(number);
 }
-future<> put(int i){
+seastar::future<> put(int i){
     // promises to store an int
     number=i;
     return make_ready_future<>();
 }
 
-future<> loop_to(int end) {
+seastar::future<> loop_to(int end) {
     if (number == end) {
         print("loop end\n");
         return make_ready_future<>();
