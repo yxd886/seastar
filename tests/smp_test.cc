@@ -158,7 +158,8 @@ seastar::future<> loop_to(int end) {
 }
 
 int main(int ac, char** av) {
-    return app_template().run_deprecated(ac, av, [] {
+    seastar::app_template app;
+    return app.run_deprecated(ac, av, [] {
             return loop_to(100);
     });
 }
