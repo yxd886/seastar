@@ -393,11 +393,7 @@ boost_test_lib = [
    'tests/test_runner.cc',
 ]
 
-aho_corasick = [
-    'nf/aho-corasick/aho.cc',
-    'nf/aho-corasick/dsqueue.cc',
-    'nf/aho-corasick/util.cc'
-]
+
 
 
 def maybe_static(flag, libs):

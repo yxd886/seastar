@@ -22,6 +22,10 @@
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
+#include "nf/aho-corasick/fpp.h"
+#include "nf/aho-corasick/aho.h"
+
+
 
 using namespace seastar;
 
