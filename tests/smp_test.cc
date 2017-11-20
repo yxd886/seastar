@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
 }*/
 int number=0;
 
-seastar::future<> get(){
+seastar::future<int> get(){
     // promises an int will be produced eventually
     return make_ready_future<int>(number);
 }
