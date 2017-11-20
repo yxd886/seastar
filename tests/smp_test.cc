@@ -144,6 +144,12 @@ seastar::future<> put(int i){
     return make_ready_future<>();
 }
 
+seastar::future<> donothing(){
+    // promises to store an int
+
+    return make_ready_future<>();
+}
+/*
 seastar::future<> loop_to(int end) {
     if (number == end) {
         print("loop end\n");
@@ -155,6 +161,23 @@ seastar::future<> loop_to(int end) {
     }).then([end] {
         return loop_to(end);
     });
+}*/
+
+
+seastar::future<> loop_to(int end) {
+    donothing().then([end]{
+        if (number == end) {
+            print("loop end\n");
+            return make_ready_future<>();
+        }
+        print("number: %d \n",number);
+        return get();
+    }).then([end](int value){
+        return put(value);
+    }).then([end]{
+        return loop_to(end);
+    });
+
 }
 
 int main(int ac, char** av) {
