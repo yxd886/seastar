@@ -2310,7 +2310,26 @@ get_dpdk_net_options_description()
     opts.add_options()
         ("hw-fc",
                 boost::program_options::value<std::string>()->default_value("on"),
-                "Enable HW Flow Control (on / off)");
+                "Enable HW Flow Control (on / off)")
+        /*
+         * patch by djp
+         * add several command line parameters for mica clients
+         */
+        ("mica-sever-smp-count",
+                boost::program_options::value<uint16_t>()->default_value(10),
+                "The number of the cores used by the mica server.")
+        ("mica-server-mac",
+                boost::program_options::value<std::string>()->default_value("3c:fd:fe:06:09:62"),
+                "The MAC address of the port on the mica server.")
+        ("mica-server-ip",
+                boost::program_options::value<std::string>()->default_value("10.0.0.2"),
+                "The IP address of the port on the mica server.")
+        ("mica-server-port-id",
+                boost::program_options::value<uint16_t>()->default_value(1),
+                "The port id of the port on the mica server.")
+        ("mica-client-ip",
+                boost::program_options::value<std::string>()->default_value("10.0.1.2"),
+                "The IP address of the port for contacting mica server.");
 #if 0
     opts.add_options()
         ("csum-offload",

@@ -95,6 +95,10 @@ public:
         _data_len = 0;
         return std::move(_buffer);
     }
+
+    temporary_buffer<char> share_temp_buffer(){
+        return _buffer.share();
+    }
 };
 
 } // namespace netstar

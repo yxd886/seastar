@@ -21,10 +21,7 @@
 
 #include "core/reactor.hh"
 #include "core/app-template.hh"
-#include "core/print.hh"
-#include "core/distributed.hh"
-#include "netstar/netstar_dpdk_device.hh"
-#include "netstar/port.hh"
+#include "netstar/port_env.hh"
 
 using namespace seastar;
 using namespace netstar;
@@ -36,13 +33,9 @@ int main(int ac, char** av) {
     return app.run_deprecated(ac, av, [&app, &all_ports] {
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 0, smp::count,
-            [](uint16_t port_id, uint16_t queue_num){
-                return create_netstar_dpdk_net_device(port_id, queue_num);
-        }).then([&opts, &all_ports]{
+                                  port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count,
-                [](uint16_t port_id, uint16_t queue_num){
-                    return create_netstar_dpdk_net_device(port_id, queue_num);
-            });
+                                      port_type::fdir);
         }).then([]{
             printf("All the devices are successfully created\n");
             engine().exit(0);

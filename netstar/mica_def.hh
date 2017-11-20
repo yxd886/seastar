@@ -1,14 +1,12 @@
 #ifndef _MICA_DEF
 #define _MICA_DEF
 
-#include <rte_ethdev.h>
-#include <rte_ether.h>
-#include <rte_ip.h>
-#include <rte_udp.h>
-
 #include <array>
 #include <cstdint>
 #include <utility>
+#include <vector>
+#include <boost/program_options/variables_map.hpp>
+#include <string>
 
 #include "net/packet.hh"
 #include "net/udp.hh"
@@ -17,7 +15,14 @@
 #include "net/net.hh"
 #include "net/byteorder.hh"
 
+#include <rte_ether.h>
+#include <rte_ip.h>
+#include <rte_udp.h>
+
+#include "netstar/port.hh"
+
 using namespace seastar;
+using namespace std;
 
 namespace netstar{
 
@@ -31,7 +36,10 @@ struct endpoint_info{
                            net::ipv4_address ipaddr,
                            uint16_t u_port,
                            std::pair<uint16_t, uint16_t> lp_pair) :
-            eth_addr(eaddr), ip_addr(ipaddr), udp_port(u_port), lcore_port_pair(lp_pair) {}
+            eth_addr(eaddr),
+            ip_addr(ipaddr),
+            udp_port(u_port),
+            lcore_port_pair(lp_pair) {}
 };
 
 struct RequestBatchHeader {
@@ -88,6 +96,20 @@ enum class Result : uint8_t {
     kRejected,
 };
 
+// The following definitions and functions are used to initialize
+// a so-called "queue mapping". This is used to direct packet from
+// one core on the mica client to a specific core on the mica server.
+// If the fdir functionality works correctly on our x710 NIC, we wouldn't
+// need to calculate the queue mapping in such a complicated manner.
+
+struct port_pair{
+    uint16_t local_port;
+    uint16_t remote_port;
+};
+
+vector<vector<port_pair>>
+calculate_queue_mapping(boost::program_options::variables_map& opts,
+                        port& pt);
 } // namespace netstar
 
 #endif // _MICA_CLIENT_DEF

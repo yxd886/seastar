@@ -1894,7 +1894,7 @@ void dpdk_device::check_port_link_status()
             _link_ready_promise.set_value();
 
             // We may start collecting statistics only after the Link is UP.
-            // _stats_collector.arm_periodic(2s);
+            _stats_collector.arm_periodic(2s);
         } else if (count++ < max_check_time) {
              std::cout << "." << std::flush;
              return;
