@@ -62,6 +62,7 @@ future<bool> test_smp_exception() {
 }
 
 int tests, fails;
+struct aho_dfa *dfa_arr=nullptr;
 
 future<>
 report(sstring msg, future<bool>&& result) {
