@@ -406,7 +406,7 @@ boost_test_lib = [
    'tests/test_runner.cc',
 ]
 
-aho-corasick = [
+aho_corasick = [
     'nf/aho-corasick/aho.c',
     'nf/aho-corasick/ds_queue.c',
     'nf/aho-corasick/util.c'
@@ -472,7 +472,7 @@ deps = {
     'tests/foreign_ptr_test': ['tests/foreign_ptr_test.cc'] + core,
     'tests/semaphore_test': ['tests/semaphore_test.cc'] + core,
     'tests/expiring_fifo_test': ['tests/expiring_fifo_test.cc'] + core,
-    'tests/smp_test': ['tests/smp_test.cc'] + core +aho-corasick,
+    'tests/smp_test': ['tests/smp_test.cc'] + core +aho_corasick,
     'tests/thread_test': ['tests/thread_test.cc'] + core,
     'tests/thread_context_switch': ['tests/thread_context_switch.cc'] + core,
     'tests/udp_server': ['tests/udp_server.cc'] + core + libnet,
