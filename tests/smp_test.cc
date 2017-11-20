@@ -150,7 +150,7 @@ seastar::future<> loop_to(int end) {
         return make_ready_future<>();
     }
     print("number: %d \n",number);
-    get().then([end] (int value) {
+    return get().then([end] (int value) {
         return put(value + 1);
     }).then([end] {
         return loop_to(end);
