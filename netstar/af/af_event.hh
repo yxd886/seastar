@@ -72,8 +72,8 @@ public:
 public:
     // generate registered, interested events, one shot
     // call, clear _generated_events after the call.
-    generated_events generate_events(){
-        generated_events e(_registered_events&_generated_events);
+    generated_events<Enum> generate_events(){
+        generated_events<Enum> e(_registered_events&_generated_events);
         _generated_events = 0;
         return e;
     }
