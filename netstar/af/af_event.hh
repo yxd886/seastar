@@ -25,10 +25,10 @@ public:
         return _events == 0;
     }
 
-    bool on_event(Enum event_type) {
-        static_assert((static_cast<uint8_t>(event_type) < sizeof(est)*8),
+    template<Enum EvT> bool on_event() {
+        static_assert((static_cast<uint8_t>(EvT) < sizeof(est)*8),
                       "event_type must be smaller than 64.\n");
-        uint64_t mask = 1 << event_type;
+        uint64_t mask = 1 << EvT;
         return (_events&mask) != 0;
     }
 };
@@ -45,28 +45,28 @@ public:
     }
 public:
     // registration/unregistration pair
-    void register_event(Enum event_type) {
-        static_assert((static_cast<uint8_t>(event_type) < sizeof(est)*8),
+    template<Enum EvT> void register_event() {
+        static_assert((static_cast<uint8_t>(EvT) < sizeof(est)*8),
                       "event_type must be smaller than 64.\n");
-        uint64_t mask = 1 << event_type;
+        uint64_t mask = 1 << EvT;
 
         // Use an assertion to prevent re-registering the
         // same type of events.
         assert((_registered_events & mask) == 0);
         _registered_events |= mask;
     }
-    void unregister_event(Enum event_type) {
-        static_assert((static_cast<uint8_t>(event_type) < sizeof(est)*8),
+    template<Enum EvT> void unregister_event() {
+        static_assert((static_cast<uint8_t>(EvT) < sizeof(est)*8),
                       "event_type must be smaller than 64.\n");
-        uint64_t mask = ~(1 << event_type);
+        uint64_t mask = ~(1 << EvT);
         _registered_events &= mask;
     }
 public:
     // generate an new event
-    void new_event(Enum event_type){
-        static_assert((static_cast<uint8_t>(event_type) < sizeof(est)*8),
+    template<Enum EvT> void new_event(){
+        static_assert((static_cast<uint8_t>(EvT) < sizeof(est)*8),
                       "event_type must be smaller than 64.\n");
-        uint64_t mask = 1 << event_type;
+        uint64_t mask = 1 << EvT;
         _generated_events |= mask;
     }
 public:
