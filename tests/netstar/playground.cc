@@ -30,50 +30,47 @@
 #include "netstar/extendable_buffer.hh"
 #include "netstar/stack_port.hh"
 #include "netstar/port_env.hh"
-#include "netstar/tcp_monitoring_flow.hh"
+#include "netstar/af/af_event.hh"
 
 using namespace seastar;
 using namespace netstar;
 using namespace std::chrono_literals;
 
-class tester{
-    lw_shared_ptr<tcp_monitor> _monitor;
-public:
-    tester(lw_shared_ptr<tcp_monitor> monitor)
-        : _monitor(std::move(monitor)){
-    }
-
-    future<> run(){
-        return _monitor->on_new_packet().then([this]{
-            printf("Monitor receives packet\n");
-            _monitor->read_packet();
-            if(_monitor->is_impl_ended()){
-                return make_ready_future<>();
-            }
-            else{
-                return run();
-            }
-        });
-    }
+enum class fk_events : uint8_t{
+    fk_me,
+    fk_you,
+    fk_everybody
 };
 
 int main(int ac, char** av) {
-    app_template app;
+    /*app_template app;
     timer<steady_clock_type> to;
 
     return app.run_deprecated(ac, av, [&app, &to]{
-        auto mon_impl = make_lw_shared<netstar::internal::tcp_monitor_impl>();
-        auto mon = make_lw_shared<tcp_monitor>(mon_impl);
-        auto tester_ptr = new tester(std::move(mon));
 
-        to.set_callback([mon_impl]{
-            printf("Timer called\n");
-            mon_impl->receive_pkt(net::packet(), direction::EGRESS);
-        });
-        to.arm_periodic(1s);
+    });*/
 
-        return tester_ptr->run().then([tester_ptr]{
-            delete tester_ptr;
-        });
-    });
+    registered_events<fk_events> e;
+    e.register_event(fk_events::fk_me);
+
+    auto ge1 = e.generate_events();
+    assert(ge1.empty());
+
+    e.new_event(fk_events::fk_me);
+    auto ge2 = e.generate_events();
+    assert(ge2.on_event(fk_events::fk_me));
+    assert(!ge2.on_event(fk_events::fk_you));
+
+    e.new_event(fk_events::fk_you);
+    auto ge3 = e.generate_events();
+    assert(ge3.empty());
+
+    e.new_event(fk_events::fk_me);
+    e.new_event(fk_events::fk_you);
+    auto ge4 = e.generate_events();
+    assert(ge2.on_event(fk_events::fk_me));
+    assert(!ge2.on_event(fk_events::fk_you));
+
+    auto ge5 = e.generate_events();
+    assert(ge5.empty());
 }
