@@ -274,7 +274,7 @@ tests = [
     'tests/netstar/playground',
     'tests/netstar/extendable_buffer_test',
     'tests/netstar/mica_client_get_set_del',
-    'tests/netstar/two_stack_ports'
+    'tests/netstar/two_stack_ports',
     'tests/netstar/test_af_event'
     ]
 
