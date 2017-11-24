@@ -30,7 +30,7 @@
 #include "netstar/extendable_buffer.hh"
 #include "netstar/stack_port.hh"
 #include "netstar/port_env.hh"
-#include "netstar/af/af_event.hh"
+#include "netstar/af/async_flow_event.hh"
 
 using namespace seastar;
 using namespace netstar;
@@ -50,7 +50,7 @@ int main(int ac, char** av) {
 
     });*/
 
-    registered_events<fk_events> e;
+    /*registered_events<fk_events> e;
     e.register_event<fk_events::fk_me>();
 
     auto ge1 = e.generate_events();
@@ -72,5 +72,5 @@ int main(int ac, char** av) {
     assert(!ge4.on_event<fk_events::fk_you>());
 
     auto ge5 = e.generate_events();
-    assert(ge5.empty());
+    assert(ge5.empty());*/
 }
