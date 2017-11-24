@@ -41,6 +41,10 @@ public:
         return (_filtered_events&mask) != 0;
     }
 
+    bool no_event(){
+        return _filtered_events == 0;
+    }
+
 };
 
 template<typename Enum>

@@ -50,27 +50,17 @@ int main(int ac, char** av) {
 
     });*/
 
-    /*registered_events<fk_events> e;
-    e.register_event<fk_events::fk_me>();
+    registered_events<fk_events> re;
+    re.register_event<fk_events::fk_me>();
+    re.register_event<fk_events::fk_you>();
 
-    auto ge1 = e.generate_events();
-    assert(ge1.empty());
-
-    e.new_event<fk_events::fk_me>();
-    auto ge2 = e.generate_events();
-    assert(ge2.on_event<fk_events::fk_me>());
-    assert(!ge2.on_event<fk_events::fk_you>());
-
-    e.new_event<fk_events::fk_you>();
-    auto ge3 = e.generate_events();
-    assert(ge3.empty());
-
-    e.new_event<fk_events::fk_me>();
-    e.new_event<fk_events::fk_you>();
-    auto ge4 = e.generate_events();
-    assert(ge4.on_event<fk_events::fk_me>());
-    assert(!ge4.on_event<fk_events::fk_you>());
-
-    auto ge5 = e.generate_events();
-    assert(ge5.empty());*/
+    {
+        generated_events<fk_events> ge;
+        ge.event_happen<fk_events::fk_me>();
+        auto fe = re.filter(ge);
+        assert(fe.on_event<fk_events::fk_me>());
+        assert(!fe.on_event<fk_events::fk_you>());
+        assert(!fe.on_event<fk_events::fk_everybody>());
+        assert(!fe.on_close_event());
+    }
 }
