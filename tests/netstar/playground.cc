@@ -44,13 +44,21 @@ enum class fk_events : uint8_t{
 
 class dummy_ppr{
 private:
-    side _s;
+    bool _is_client;
 public:
     using EventEnumType = fk_events;
     using FlowKeyType = int;
 
-    dummy_ppr(side s)
-        : _s(s) {
+    dummy_ppr(bool is_client)
+        : _is_client(is_client) {
+    }
+public:
+    filtered_events<EventEnumType> handle_packet_send(net::packet& pkt){
+        return filtered_events<EventEnumType>();
+    }
+
+    filtered_events<EventEnumType> handle_packet_recv(net::packet& pkt){
+        return filtered_events<EventEnumType>();
     }
 };
 
