@@ -65,6 +65,7 @@ public:
 int main(int ac, char** av) {
     app_template app;
     timer<steady_clock_type> to;
+    circular_buffer<af_evq_item<dummy_ppr>> q;
 
     return app.run_deprecated(ac, av, [&app, &to]{
         async_flow_impl<dummy_ppr> af(1, 1);
