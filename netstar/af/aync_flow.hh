@@ -9,6 +9,8 @@
 #include "core/timer.hh"
 #include "core/queue.hh"
 
+#include "netstar/af/async_flow_event.hh"
+
 #include <deque>
 #include <experimental/optional>
 #include <unordered_map>
@@ -70,34 +72,45 @@ namespace netstar {
  *
  */
 
-template<typename Ppr>
-class async_flow_manager;
+enum side : uint8_t {
+    client,
+    server
+};
 
-namespace internal {
+enum send_recv : uint8_t {
+    send,
+    recv
+}; // or use a bool is_send
+
+template<typename Ppr>
+struct side_instance {
+    Ppr ppr;
+    std::experimental::optional<promise<>> async_loop_pr;
+    registered_events<Ppr::EventEnumType> send_events;
+    registered_events<Ppr::EventEnumType> recv_events;
+    circular_buffer<net::packet> _buffer_q;
+    Ppr::FlowKeyType flow_key;
+    uint16_t direction;
+    side local_side;
+    bool loop_started;
+    bool loop_has_context;
+};
 
 template<typename Ppr>
 class asyn_flow_impl;
+template<typename Ppr>
+class async_flow;
+template<typename Ppr>
+class async_flow_manager;
 
 template<typename Ppr>
 class async_flow_impl{
-    async_flow_manager<Ppr>& _manager;
-    Ppr _client_side;
-    unsigned _client_direction;
-    bool _interested_in_client_send_event;
-    bool _interested_in_client_receive_event;
-    Ppr _server_side;
-public:
-    void received(net::packet pkt, unsigned direction){
-        // assert(direction!=_client_side || _server_ptr);
-        Ppr& sender = (direction == _client_side)?
-                      _client_side : _server_side;
-
-
-    }
 
 };
 
-} // namespace internal
+template<typename Ppr>
+class async_flow{
+};
 
 template<typename Ppr>
 class async_flow_manager{
