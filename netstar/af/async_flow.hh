@@ -92,11 +92,21 @@ struct side_instance {
     registered_events<EventEnumType> send_events;
     registered_events<EventEnumType> recv_events;
     circular_buffer<net::packet> _buffer_q;
-    FlowKeyType flow_key;
+    std::experimental::optional<FlowKeyType> flow_key;
     uint16_t direction;
     side local_side;
     bool loop_started;
     bool loop_has_context;
+
+    side_instance(side side_arg,
+                  uint16_t direction_arg)
+        : ppr(side_arg)
+        , direction(direction_arg)
+        , local_side(side_arg)
+        , loop_started(false)
+        , loop_has_context(false) {
+        _buffer_q.reserve(5);
+    }
 };
 
 template<typename Ppr>
@@ -108,7 +118,23 @@ class async_flow_manager;
 
 template<typename Ppr>
 class async_flow_impl{
+    using EventEnumType = typename Ppr::EventEnumType;
+    using FlowKeyType = typename Ppr::FlowKeyType;
 
+    side_instance<Ppr> _client;
+    side_instance<Ppr> _server;
+public:
+    async_flow_impl(uint16_t client_direction,
+                    FlowKeyType client_flow_key)
+        : _client(side::client, client_direction)
+        , _server(side::server, get_reverse_direction(client_direction)){
+        _client.flow_key = client_flow_key;
+    }
+
+private:
+    uint16_t get_reverse_direction(const uint16_t direction){
+        return direction;
+    }
 };
 
 template<typename Ppr>
