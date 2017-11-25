@@ -84,12 +84,15 @@ enum send_recv : uint8_t {
 
 template<typename Ppr>
 struct side_instance {
+    using EventEnumType = typename Ppr::EventEnumType;
+    using FlowKeyType = typename Ppr::FlowKeyType;
+
     Ppr ppr;
     std::experimental::optional<promise<>> async_loop_pr;
-    registered_events<Ppr::EventEnumType> send_events;
-    registered_events<Ppr::EventEnumType> recv_events;
+    registered_events<EventEnumType> send_events;
+    registered_events<EventEnumType> recv_events;
     circular_buffer<net::packet> _buffer_q;
-    Ppr::FlowKeyType flow_key;
+    FlowKeyType flow_key;
     uint16_t direction;
     side local_side;
     bool loop_started;
