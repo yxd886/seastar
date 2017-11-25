@@ -80,9 +80,9 @@ public:
     }
 
     void handle_packet_send(net::packet pkt, uint16_t direction){
-        bool client_work = (direction == _client.direction);
+        bool is_client = (direction == _client.direction);
 
-        af_work_unit<Ppr>& send_unit = client_work ? _client : _server;
+        af_work_unit<Ppr>& send_unit = is_client ? _client : _server;
 
         generated_events<EventEnumType> ge = send_unit.ppr.handle_packet_send(pkt);
         filtered_events<EventEnumType> fe = send_unit.send_events.filter(ge);
@@ -90,11 +90,11 @@ public:
         if(send_unit.loop_started){
             if(send_unit.async_loop_pr && fe.no_event()){
                 // unconditionally forward the packet to receive side.
-                handle_packet_recv(std::move(pkt), ~client_work);
+                handle_packet_recv(std::move(pkt), ~is_client);
                 return;
             }
 
-            send_unit.buffer_q.emplace_back(std::move(pkt), fe, client_work, true);
+            send_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, true);
             if(send_unit.async_loop_pr){
                 assert(send_unit.loop_has_context == false);
                 send_unit.loop_has_context = true;
@@ -102,23 +102,46 @@ public:
             }
         }
         else{
-            handle_packet_recv(std::move(pkt), ~client_work);
+            handle_packet_recv(std::move(pkt), ~is_client);
         }
     }
 
-    void handle_packet_recv(net::packet pkt, bool client_work){
-        if(client_work == false){
+    void handle_packet_recv(net::packet pkt, bool is_client){
+        if(is_client == false){
             // try to fill in the correct server side flow key
             // and register the flow key into the flow table.
         }
 
-        af_work_unit<Ppr>& recv_unit = client_work? _client : _server;
+        af_work_unit<Ppr>& recv_unit = is_client? _client : _server;
 
         generated_events<EventEnumType> ge = recv_unit.ppr.handle_packet_recv(pkt);
         filtered_events<EventEnumType> fe = recv_unit.recv_events.filter(ge);
 
         if(recv_unit.loop_started){
+            if(recv_unit.async_loop_pr && fe.no_event()){
+                // unconditionally forward the packet to receive side.
+                send_packet_out(std::move(pkt), is_client);
+                return;
+            }
 
+            recv_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, false);
+            if(recv_unit.async_loop_pr){
+                assert(recv_unit.loop_has_context == false);
+                recv_unit.loop_has_context = true;
+                recv_unit.async_loop_pr->set_value();
+            }
+        }
+        else{
+            send_packet_out(std::move(pkt), is_client);
+        }
+    }
+
+    void send_packet_out(net::packet pkt, bool is_client){
+        if(is_client){
+            // send the packet out from _client.direction
+        }
+        else{
+            // send the packet out from _server.direction
         }
     }
 
