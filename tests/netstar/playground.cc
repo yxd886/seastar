@@ -42,13 +42,25 @@ enum class fk_events : uint8_t{
     fk_everybody
 };
 
+class dummy_ppr{
+private:
+    side _s;
+public:
+    using EventEnumType = fk_events;
+    using FlowKeyType = int;
+
+    dummy_ppr(side s)
+        : _s(s) {
+    }
+};
+
 int main(int ac, char** av) {
-    /*app_template app;
+    app_template app;
     timer<steady_clock_type> to;
 
     return app.run_deprecated(ac, av, [&app, &to]{
-
-    });*/
+        async_flow_impl<dummy_ppr> af(1, 1);
+    });
 
 
 }
