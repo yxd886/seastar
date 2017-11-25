@@ -54,11 +54,11 @@ public:
     }
 public:
     filtered_events<EventEnumType> handle_packet_send(net::packet& pkt){
-        return filtered_events<EventEnumType>();
+        return filtered_events<EventEnumType>(1);
     }
 
     filtered_events<EventEnumType> handle_packet_recv(net::packet& pkt){
-        return filtered_events<EventEnumType>();
+        return filtered_events<EventEnumType>(1);
     }
 };
 
