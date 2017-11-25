@@ -131,6 +131,25 @@ public:
         _client.flow_key = client_flow_key;
     }
 
+    void handle_packet_send(net::packet pkt, uint16_t direction){
+        side_instance<Ppr>* send_side_instance;
+        if(direction == _client.direction){
+            send_side_instance = &(_client);
+        }
+        else{
+            send_side_instance = &(_server);
+        }
+
+        generated_events<EventEnumType> ge = send_side_instance->ppr->handle_packet_send(pkt);
+        filtered_events<EventEnumType> fe = send_side_instance->send_events.filter(ge);
+
+        if(send_side_instance->loop_started){
+            if(send_side_instance->async_loop_pr && fe.no_event()){
+                // unconditionally forward the packet to receive side.
+            }
+        }
+    }
+
 private:
     uint16_t get_reverse_direction(const uint16_t direction){
         return direction;
