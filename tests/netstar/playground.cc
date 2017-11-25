@@ -67,8 +67,9 @@ int main(int ac, char** av) {
     timer<steady_clock_type> to;
     circular_buffer<af_evq_item<dummy_ppr>> q;
 
-    return app.run_deprecated(ac, av, [&app, &to]{
+    return app.run_deprecated(ac, av, [&app, &to, &q]{
         async_flow_impl<dummy_ppr> af(1, 1);
+        q.emplace_back(af_evq_item<dummy_ppr>{net::packet(), filtered_events<fk_events>(1), false, false});
     });
 
 
