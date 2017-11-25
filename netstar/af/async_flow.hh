@@ -21,7 +21,7 @@ using namespace seastar;
 namespace netstar {
 
 template<typename Ppr>
-struct work_unit {
+struct af_work_unit {
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
 
@@ -36,8 +36,8 @@ struct work_unit {
     bool loop_started;
     bool loop_has_context;
 
-    work_unit(bool is_client_arg,
-              uint16_t direction_arg)
+    af_work_unit(bool is_client_arg,
+                 uint16_t direction_arg)
         : ppr(is_client_arg)
         , direction(direction_arg)
         , is_client(is_client_arg)
@@ -59,8 +59,8 @@ class async_flow_impl{
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
 
-    work_unit<Ppr> _client;
-    work_unit<Ppr> _server;
+    af_work_unit<Ppr> _client;
+    af_work_unit<Ppr> _server;
 public:
     async_flow_impl(uint16_t client_direction,
                     FlowKeyType client_flow_key)
@@ -72,8 +72,8 @@ public:
     void handle_packet_send(net::packet pkt, uint16_t direction){
         bool client_work = (direction == _client.direction);
 
-        work_unit<Ppr>& send_unit = client_work ? _client : _server;
-        work_unit<Ppr>& recv_unit = client_work ? _server : _client;
+        af_work_unit<Ppr>& send_unit = client_work ? _client : _server;
+        af_work_unit<Ppr>& recv_unit = client_work ? _server : _client;
 
         generated_events<EventEnumType> ge = send_unit.ppr.handle_packet_send(pkt);
         filtered_events<EventEnumType> fe = send_unit.send_events.filter(ge);
@@ -86,7 +86,7 @@ public:
     }
 
     void handle_packet_recv(net::packet pkt, bool client_work){
-        work_unit<Ppr>& recv_unit = client_work? _client : _server;
+        af_work_unit<Ppr>& recv_unit = client_work? _client : _server;
 
         generated_events<EventEnumType> ge = recv_unit.ppr.handle_packet_recv(pkt);
         filtered_events<EventEnumType> fe = recv_unit.recv_events.filter(ge);
