@@ -21,6 +21,16 @@ using namespace seastar;
 namespace netstar {
 
 template<typename Ppr>
+struct af_evq_item{
+    using EventEnumType = typename Ppr::EventEnumType;
+
+    net::packet pkt;
+    const filtered_events<EventEnumType> fe;
+    const bool is_client;
+    const bool is_send;
+};
+
+template<typename Ppr>
 struct af_work_unit {
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
@@ -29,7 +39,7 @@ struct af_work_unit {
     std::experimental::optional<promise<>> async_loop_pr;
     registered_events<EventEnumType> send_events;
     registered_events<EventEnumType> recv_events;
-    circular_buffer<net::packet> _buffer_q;
+    circular_buffer<net::packet> buffer_q;
     std::experimental::optional<FlowKeyType> flow_key;
     uint16_t direction;
     bool is_client;
@@ -43,7 +53,7 @@ struct af_work_unit {
         , is_client(is_client_arg)
         , loop_started(false)
         , loop_has_context(false) {
-        _buffer_q.reserve(5);
+        buffer_q.reserve(5);
     }
 };
 
@@ -73,7 +83,6 @@ public:
         bool client_work = (direction == _client.direction);
 
         af_work_unit<Ppr>& send_unit = client_work ? _client : _server;
-        af_work_unit<Ppr>& recv_unit = client_work ? _server : _client;
 
         generated_events<EventEnumType> ge = send_unit.ppr.handle_packet_send(pkt);
         filtered_events<EventEnumType> fe = send_unit.send_events.filter(ge);
@@ -81,7 +90,19 @@ public:
         if(send_unit.loop_started){
             if(send_unit.async_loop_pr && fe.no_event()){
                 // unconditionally forward the packet to receive side.
+                handle_packet_recv(std::move(pkt), ~client_work);
+                return;
             }
+
+            send_unit.buffer_q.emplace_back(std::move(pkt));
+            if(send_unit.async_loop_pr){
+                assert(send_unit.loop_has_context == false);
+                send_unit.loop_has_context = true;
+                send_unit.async_loop_pr->set_value();
+            }
+        }
+        else{
+            handle_packet_recv(std::move(pkt), ~client_work);
         }
     }
 
