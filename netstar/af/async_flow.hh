@@ -39,7 +39,7 @@ struct af_work_unit {
     std::experimental::optional<promise<>> async_loop_pr;
     registered_events<EventEnumType> send_events;
     registered_events<EventEnumType> recv_events;
-    circular_buffer<net::packet> buffer_q;
+    circular_buffer<af_evq_item<Ppr>> buffer_q;
     std::experimental::optional<FlowKeyType> flow_key;
     uint16_t direction;
     bool is_client;
@@ -94,7 +94,7 @@ public:
                 return;
             }
 
-            send_unit.buffer_q.emplace_back(std::move(pkt));
+            send_unit.buffer_q.emplace_back(std::move(pkt), fe, client_work, true);
             if(send_unit.async_loop_pr){
                 assert(send_unit.loop_has_context == false);
                 send_unit.loop_has_context = true;
@@ -107,6 +107,11 @@ public:
     }
 
     void handle_packet_recv(net::packet pkt, bool client_work){
+        if(client_work == false){
+            // try to fill in the correct server side flow key
+            // and register the flow key into the flow table.
+        }
+
         af_work_unit<Ppr>& recv_unit = client_work? _client : _server;
 
         generated_events<EventEnumType> ge = recv_unit.ppr.handle_packet_recv(pkt);
