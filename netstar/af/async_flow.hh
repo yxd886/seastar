@@ -21,43 +21,6 @@ using namespace seastar;
 namespace netstar {
 
 template<typename Ppr>
-struct af_evq_item{
-    using EventEnumType = typename Ppr::EventEnumType;
-
-    net::packet pkt;
-    filtered_events<EventEnumType> fe;
-    bool is_client;
-    bool is_send;
-};
-
-template<typename Ppr>
-struct af_work_unit {
-    using EventEnumType = typename Ppr::EventEnumType;
-    using FlowKeyType = typename Ppr::FlowKeyType;
-
-    Ppr ppr;
-    std::experimental::optional<promise<>> async_loop_pr;
-    registered_events<EventEnumType> send_events;
-    registered_events<EventEnumType> recv_events;
-    circular_buffer<af_evq_item<Ppr>> buffer_q;
-    std::experimental::optional<FlowKeyType> flow_key;
-    uint16_t direction;
-    bool is_client;
-    bool loop_started;
-    bool loop_has_context;
-
-    af_work_unit(bool is_client_arg,
-                 uint16_t direction_arg)
-        : ppr(is_client_arg)
-        , direction(direction_arg)
-        , is_client(is_client_arg)
-        , loop_started(false)
-        , loop_has_context(false) {
-        buffer_q.reserve(5);
-    }
-};
-
-template<typename Ppr>
 class af_ev_context{
     using EventEnumType = typename Ppr::EventEnumType;
 
@@ -89,6 +52,33 @@ public:
 };
 
 template<typename Ppr>
+struct af_work_unit {
+    using EventEnumType = typename Ppr::EventEnumType;
+    using FlowKeyType = typename Ppr::FlowKeyType;
+
+    Ppr ppr;
+    std::experimental::optional<promise<>> async_loop_pr;
+    registered_events<EventEnumType> send_events;
+    registered_events<EventEnumType> recv_events;
+    circular_buffer<af_ev_context<Ppr>> buffer_q;
+    std::experimental::optional<FlowKeyType> flow_key;
+    uint16_t direction;
+    bool is_client;
+    bool loop_started;
+    bool loop_has_context;
+
+    af_work_unit(bool is_client_arg,
+                 uint16_t direction_arg)
+        : ppr(is_client_arg)
+        , direction(direction_arg)
+        , is_client(is_client_arg)
+        , loop_started(false)
+        , loop_has_context(false) {
+        buffer_q.reserve(5);
+    }
+};
+
+template<typename Ppr>
 class asyn_flow_impl;
 template<typename Ppr>
 class async_flow;
@@ -99,6 +89,7 @@ template<typename Ppr>
 class async_flow_impl{
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
+    static constexpr bool packet_recv = true;
 
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
@@ -127,10 +118,9 @@ public:
                 handle_packet_recv(std::move(pkt), ~is_client);
                 return;
             }
-            send_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, true);
+            send_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, packet_recv);
             if(send_unit.async_loop_pr){
                 assert(send_unit.loop_has_context == false);
-                send_unit.loop_has_context = true;
                 send_unit.async_loop_pr->set_value();
             }
         }
@@ -150,14 +140,12 @@ public:
 
         if(recv_unit.loop_started){
             if(recv_unit.async_loop_pr && fe.no_event()){
-                // unconditionally forward the packet to receive side.
                 send_packet_out(std::move(pkt), is_client);
                 return;
             }
-            recv_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, false);
+            recv_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, ~packet_recv);
             if(recv_unit.async_loop_pr){
                 assert(recv_unit.loop_has_context == false);
-                recv_unit.loop_has_context = true;
                 recv_unit.async_loop_pr->set_value();
             }
         }
