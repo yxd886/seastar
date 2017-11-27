@@ -25,9 +25,9 @@ struct af_evq_item{
     using EventEnumType = typename Ppr::EventEnumType;
 
     net::packet pkt;
-    const filtered_events<EventEnumType> fe;
-    const bool is_client;
-    const bool is_send;
+    filtered_events<EventEnumType> fe;
+    bool is_client;
+    bool is_send;
 };
 
 template<typename Ppr>
@@ -58,6 +58,27 @@ struct af_work_unit {
 };
 
 template<typename Ppr>
+class af_ev_context{
+    using EventEnumType = typename Ppr::EventEnumType;
+
+    net::packet _pkt;
+    const filtered_events<EventEnumType> _fe;
+    const bool _is_client;
+    const bool _is_send;
+
+public:
+    af_ev_context(net::packet pkt,
+                  filtered_events<EventEnumType> fe,
+                  bool is_client,
+                  bool is_send)
+        : _pkt(std::move(pkt))
+        , _fe(fe)
+        , _is_client(is_client)
+        , _is_send(is_send) {
+    }
+};
+
+template<typename Ppr>
 class asyn_flow_impl;
 template<typename Ppr>
 class async_flow;
@@ -80,10 +101,13 @@ public:
     }
 
     void handle_packet_send(net::packet pkt, uint16_t direction){
+        if(_client.buffer_q.size()>5){
+            // drop the packet due to buffer overflow.
+            return;
+        }
+
         bool is_client = (direction == _client.direction);
-
         af_work_unit<Ppr>& send_unit = is_client ? _client : _server;
-
         generated_events<EventEnumType> ge = send_unit.ppr.handle_packet_send(pkt);
         filtered_events<EventEnumType> fe = send_unit.send_events.filter(ge);
 
@@ -93,7 +117,6 @@ public:
                 handle_packet_recv(std::move(pkt), ~is_client);
                 return;
             }
-
             send_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, true);
             if(send_unit.async_loop_pr){
                 assert(send_unit.loop_has_context == false);
@@ -111,9 +134,7 @@ public:
             // try to fill in the correct server side flow key
             // and register the flow key into the flow table.
         }
-
         af_work_unit<Ppr>& recv_unit = is_client? _client : _server;
-
         generated_events<EventEnumType> ge = recv_unit.ppr.handle_packet_recv(pkt);
         filtered_events<EventEnumType> fe = recv_unit.recv_events.filter(ge);
 
@@ -123,7 +144,6 @@ public:
                 send_packet_out(std::move(pkt), is_client);
                 return;
             }
-
             recv_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, false);
             if(recv_unit.async_loop_pr){
                 assert(recv_unit.loop_has_context == false);
@@ -144,6 +164,8 @@ public:
             // send the packet out from _server.direction
         }
     }
+
+
 
 private:
     uint16_t get_reverse_direction(const uint16_t direction){
