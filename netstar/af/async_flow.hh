@@ -163,6 +163,20 @@ public:
         }
     }
 
+    af_ev_context<Ppr> peek_event_context(bool is_client) {
+        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+
+        // Use assertion to protect the async loop from incorrect
+        // use of peek_event_context API.
+        assert( (working_unit.loop_has_context == false) &&
+                (!working_unit.buffer_q.empty()) );
+
+        working_unit.loop_has_context = true;
+        auto ret(std::move(working_unit.buffer_q.front()));
+        working_unit.buffer_q.pop_front();
+        return ret;
+    }
+
 
 
 private:
