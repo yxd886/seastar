@@ -62,9 +62,9 @@ class af_ev_context{
     using EventEnumType = typename Ppr::EventEnumType;
 
     net::packet _pkt;
-    filtered_events<EventEnumType> _fe;
-    bool _is_client;
-    bool _is_send;
+    const filtered_events<EventEnumType> _fe;
+    const bool _is_client;
+    const bool _is_send;
 
 public:
     af_ev_context(net::packet pkt,
@@ -77,7 +77,7 @@ public:
         , _is_send(is_send) {
     }
 
-    const filtered_events<EventEnumType>& cur_events(){
+    filtered_events<EventEnumType> cur_events(){
         return _fe;
     }
 };
