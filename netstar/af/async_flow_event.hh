@@ -29,19 +29,19 @@ public:
         : _filtered_events(fe){
     }
 public:
-    template<Enum EvT> bool on_event(){
+    template<Enum EvT> bool on_event() const {
         static_assert((static_cast<uint8_t>(EvT) < (sizeof(est)*8-1)),
                       "event_type too large.\n");
         est mask = 1 << static_cast<est>(EvT);
         return (_filtered_events&mask) != 0;
     }
 
-    bool on_close_event(){
+    bool on_close_event() const {
         est mask = 1<< (static_cast<est>(sizeof(est)*8-1));
         return (_filtered_events&mask) != 0;
     }
 
-    bool no_event(){
+    bool no_event() const {
         return _filtered_events == 0;
     }
 
