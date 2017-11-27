@@ -72,7 +72,7 @@ int main(int ac, char** av) {
         q.emplace_back(af_ev_context<dummy_ppr>{net::packet(), filtered_events<fk_events>(1), false, false});
         af_ev_context<dummy_ppr> context = std::move(q.front());
         q.pop_front();
-        assert(context.cur_events().on_event<fk_events::fk_you>());
+        assert(context.events().on_event<fk_events::fk_you>());
     });
 
 

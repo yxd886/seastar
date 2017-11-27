@@ -77,8 +77,14 @@ public:
         , _is_send(is_send) {
     }
 
-    filtered_events<EventEnumType> cur_events(){
+    const filtered_events<EventEnumType>& events(){
         return _fe;
+    }
+    bool is_client(){
+        return _is_client;
+    }
+    bool is_send(){
+        return _is_send;
     }
 };
 
