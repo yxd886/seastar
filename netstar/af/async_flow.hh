@@ -76,6 +76,10 @@ public:
         , _is_client(is_client)
         , _is_send(is_send) {
     }
+
+    const filtered_events<EventEnumType>& cur_events(){
+        return _fe;
+    }
 };
 
 template<typename Ppr>
