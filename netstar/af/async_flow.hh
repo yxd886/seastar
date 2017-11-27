@@ -21,6 +21,15 @@ using namespace seastar;
 namespace netstar {
 
 template<typename Ppr>
+class af_ev_context;
+template<typename Ppr>
+class async_flow_impl;
+template<typename Ppr>
+class async_flow;
+template<typename Ppr>
+class async_flow_manager;
+
+template<typename Ppr>
 class af_ev_context{
     using EventEnumType = typename Ppr::EventEnumType;
 
@@ -28,6 +37,8 @@ class af_ev_context{
     const filtered_events<EventEnumType> _fe;
     const bool _is_client;
     const bool _is_send;
+
+    friend class async_flow_impl<Ppr>;
 
 public:
     af_ev_context(net::packet pkt,
@@ -48,6 +59,10 @@ public:
     }
     bool is_send(){
         return _is_send;
+    }
+private:
+    net::packet extract_packet() {
+        return std::move(_pkt);
     }
 };
 
@@ -77,13 +92,6 @@ struct af_work_unit {
         buffer_q.reserve(5);
     }
 };
-
-template<typename Ppr>
-class asyn_flow_impl;
-template<typename Ppr>
-class async_flow;
-template<typename Ppr>
-class async_flow_manager;
 
 template<typename Ppr>
 class async_flow_impl{
@@ -177,6 +185,51 @@ public:
         return ret;
     }
 
+    void destroy_event_context(af_ev_context<Ppr> context) {
+        af_work_unit<Ppr>& working_unit = context.is_client() ?
+                                          _client : _server;
+        working_unit.loop_has_context = true;
+    }
+
+    void forward_event_context(af_ev_context<Ppr> context) {
+        bool is_client = context.is_client();
+        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        working_unit.loop_has_conetxt = false;
+        if(context.is_send()){
+            handle_packet_recv(context.extract_packet(), ~is_client);
+        }
+        else{
+            send_packet_out(context.extract_packet(), is_client);
+        }
+    }
+
+    future<> on_new_events(bool is_client) {
+        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        assert((working_unit.loop_has_context == false) &&
+                (!working_unit.async_loop_pr));
+
+        if(!working_unit.buffer_q.empty()){
+            while(!working_unit.buffer_q.empty()) {
+                auto& next_context = working_unit.buffer_q.front();
+                if(next_context.events().no_event()){
+                    if(next_context.is_send()){
+                        handle_packet_recv(next_context.extract_packet(), ~next_context.is_client());
+                    }
+                    else{
+                        send_packet_out(next_context.extract_packet(), next_context.is_client());
+                    }
+                    working_unit.buffer_q.pop_front();
+                }
+                else{
+                    return make_ready_future<>();
+                }
+            }
+        }
+
+
+        working_unit.async_loop_pr = promise<>();
+        return working_unit.async_loop_pr->get_future();
+    }
 
 
 private:
