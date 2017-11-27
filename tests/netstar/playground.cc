@@ -37,9 +37,9 @@ using namespace netstar;
 using namespace std::chrono_literals;
 
 enum class fk_events : uint8_t{
-    fk_me,
-    fk_you,
-    fk_everybody
+    fk_me=0,
+    fk_you=1,
+    fk_everybody=2
 };
 
 class dummy_ppr{
