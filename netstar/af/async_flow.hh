@@ -259,7 +259,7 @@ class async_flow_manager{
     struct io_direction {
         std::experimental::optional<subscription<net::packet, FlowKeyType&>> input_sub;
         stream<net::packet> output_stream;
-        uint8_t direction;
+        uint8_t reverse_direction;
     };
 
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<FlowKeyType>>> _flow_table;
@@ -267,11 +267,16 @@ class async_flow_manager{
     seastar::queue<async_flow<Ppr>> _new_flow_q{new_flow_queue_size};
     friend class internal::async_flow_impl<Ppr>;
 public:
-    subscription<net::packet> direction_registration(uint8_t direction,
+    subscription<net::packet> direction_registration(uint8_t direction, uint8_t reverse_direction,
                                                      stream<net::packet, FlowKeyType&>& istream,
                                                      std::function<future<>(net::packet)> fn) {
-        _directions.emplace_back({}, {}, direction);
-        _directions.back().input_sub.emplace(istream.listen([this, direction](net::packet pkt, FlowKeyType& key){
+        if(direction < _directions.size()){
+            assert(!_directions[direction].input_sub);
+        }
+        else{
+            _directions.resize(direction+1);
+        }
+        _directions[direction].input_sub.emplace(istream.listen([this, direction](net::packet pkt, FlowKeyType& key){
             auto afi = _flow_table.find(key);
             if(afi == _flow_table.end()){
                 if(!_new_flow_q.full() && _flow_table.size() < max_flow_table_size) {
@@ -283,8 +288,10 @@ public:
             else{
                 afi->second->handle_packet_send(std::move(pkt), direction);
             }
+
+            return make_ready_future<>();
         }));
-        auto sub = _directions.back().output_stream.listen(std::move(fn));
+        auto sub = _directions[direction].output_stream.listen(std::move(fn));
         return sub;
     }
 
@@ -292,6 +299,14 @@ public:
         return _new_flow_q.not_empty().then([this]{
            return make_ready_future<async_flow<Ppr>>(_new_flow_q.pop());
         });
+    }
+
+    future<> send(net::packet pkt, uint8_t direction){
+        return _directions[direction].output_stream.produce(std::move(pkt));
+    }
+
+    uint8_t get_reverse_direction(uint8_t direction){
+        return _directions[direction].reverse_direction;
     }
 };
 
