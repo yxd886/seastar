@@ -253,7 +253,41 @@ class async_flow{
 
 template<typename Ppr>
 class async_flow_manager{
+    using FlowKeyType = typename Ppr::FlowKeyType;
+    static constexpr unsigned max_flow_table_size = 100000;
+    static constexpr unsigned new_flow_queue_size = 10;
+    struct io_direction {
+        std::experimental::optional<subscription<net::packet, FlowKeyType&>> input_sub;
+        stream<net::packet> output_stream;
+        uint8_t direction;
+    };
 
+    std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<FlowKeyType>>> _flow_table;
+    std::vector<io_direction> _directions;
+    seastar::queue<async_flow<Ppr>> _new_flow_q{new_flow_queue_size};
+    friend class internal::async_flow_impl<Ppr>;
+public:
+    subscription<net::packet> direction_registration(uint8_t direction,
+                                                     stream<net::packet, FlowKeyType&>& istream,
+                                                     std::function<future<>(net::packet)> fn) {
+        _directions.emplace_back({}, {}, direction);
+        _directions.back().input_sub.emplace(istream.listen([this, direction](net::packet pkt, FlowKeyType& key){
+            auto afi = _flow_table.find(key);
+            if(afi == _flow_table.end()){
+                if(!_new_flow_q.full() && _flow_table.size() < max_flow_table_size) {
+                    auto impl_lw_ptr = make_lw_shared<internal::async_flow_impl<Ppr>>>(direction, key);
+                    _flow_table.insert({key, impl_lw_ptr});
+                    _new_flow_q.push(new_async_flow(std::move(impl_lw_ptr)));
+                }
+            }
+            else{
+                afi->second->handle_packet_send(std::move(pkt), direction);
+            }
+        }));
+
+        auto sub = _directions.back().output_stream.listen(std::move(fn));
+        return sub;
+    }
 };
 
 } // namespace netstar
