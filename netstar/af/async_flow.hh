@@ -311,7 +311,7 @@ class async_flow_manager{
         uint8_t reverse_direction;
     };
 
-    std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<FlowKeyType>>> _flow_table;
+    std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>> _flow_table;
     std::vector<io_direction> _directions;
     seastar::queue<async_flow<Ppr>> _new_flow_q{new_flow_queue_size};
     friend class internal::async_flow_impl<Ppr>;
