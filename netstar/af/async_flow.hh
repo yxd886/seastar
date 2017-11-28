@@ -47,7 +47,6 @@ struct af_work_unit {
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
 
-    async_flow_manager<Ppr>& _manager;
     Ppr ppr;
     std::experimental::optional<promise<>> async_loop_pr;
     registered_events<EventEnumType> send_events;
@@ -59,11 +58,9 @@ struct af_work_unit {
     bool loop_started;
     bool loop_has_context;
 
-    af_work_unit(async_flow_manager<Ppr>& manager,
-                 bool is_client_arg,
+    af_work_unit(bool is_client_arg,
                  uint8_t direction_arg)
-        : _manager(manager)
-        , ppr(is_client_arg)
+        : ppr(is_client_arg)
         , direction(direction_arg)
         , is_client(is_client_arg)
         , loop_started(false)
@@ -78,12 +75,15 @@ class async_flow_impl{
     using FlowKeyType = typename Ppr::FlowKeyType;
     static constexpr bool packet_recv = true;
 
+    async_flow_manager<Ppr> _manager;
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
 public:
-    async_flow_impl(uint8_t client_direction,
+    async_flow_impl(async_flow_manager<Ppr> manager,
+                    uint8_t client_direction,
                     FlowKeyType client_flow_key)
-        : _client(true, client_direction)
+        : _manager(manager)
+        , _client(true, client_direction)
         , _server(false, get_reverse_direction(client_direction)) {
         _client.flow_key = client_flow_key;
     }
