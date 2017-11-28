@@ -77,13 +77,13 @@ struct af_work_unit {
     registered_events<EventEnumType> recv_events;
     circular_buffer<af_ev_context<Ppr>> buffer_q;
     std::experimental::optional<FlowKeyType> flow_key;
-    uint16_t direction;
+    uint8_t direction;
     bool is_client;
     bool loop_started;
     bool loop_has_context;
 
     af_work_unit(bool is_client_arg,
-                 uint16_t direction_arg)
+                 uint8_t direction_arg)
         : ppr(is_client_arg)
         , direction(direction_arg)
         , is_client(is_client_arg)
@@ -102,14 +102,14 @@ class async_flow_impl{
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
 public:
-    async_flow_impl(uint16_t client_direction,
+    async_flow_impl(uint8_t client_direction,
                     FlowKeyType client_flow_key)
         : _client(true, client_direction)
         , _server(false, get_reverse_direction(client_direction)){
         _client.flow_key = client_flow_key;
     }
 
-    void handle_packet_send(net::packet pkt, uint16_t direction){
+    void handle_packet_send(net::packet pkt, uint8_t direction){
         if(_client.buffer_q.size()>5){
             // drop the packet due to buffer overflow.
             return;
@@ -226,14 +226,12 @@ public:
             }
         }
 
-
         working_unit.async_loop_pr = promise<>();
         return working_unit.async_loop_pr->get_future();
     }
 
-
 private:
-    uint16_t get_reverse_direction(const uint16_t direction){
+    uint8_t get_reverse_direction(const uint8_t direction){
         return direction;
     }
 };
