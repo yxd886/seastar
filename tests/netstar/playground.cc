@@ -62,6 +62,40 @@ public:
     }
 };
 
+/*class flow_processor {
+    async_flow<TCP> _af;
+    gate _g;
+
+};
+
+do_with(flow_processor(std::move(af)), [](auto& obj){
+    _g.enter();
+    repeat([obj]{
+        return obj.on_client_side_events().then([](bool side_flag){
+            auto cur_context = obj.get_current_context(side_flag);
+            if(cur_context.close_event_happen()){
+                return iteration::no;
+            }
+            else{
+                cur_context.event_happen<fk_event::wtf>(send){
+
+                }
+            }
+        });
+    }).then([obj]{
+        obj_g.leave();
+    })
+
+    _g.enter();
+    repeat([obj]{
+
+    }).then([obj]{
+        obj_g.leave();
+    })
+
+    return _g.close();
+});*/
+
 int main(int ac, char** av) {
     app_template app;
     timer<steady_clock_type> to;

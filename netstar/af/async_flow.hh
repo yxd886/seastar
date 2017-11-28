@@ -27,6 +27,16 @@ class async_flow;
 template<typename Ppr>
 class async_flow_manager;
 
+enum class af_side : bool {
+    client=true,
+    server=false
+};
+
+enum class af_trigger : bool {
+    send = true,
+    recv = false
+};
+
 namespace internal {
 
 template<typename Ppr>
@@ -71,12 +81,12 @@ public:
     async_flow_impl(uint8_t client_direction,
                     FlowKeyType client_flow_key)
         : _client(true, client_direction)
-        , _server(false, get_reverse_direction(client_direction)){
+        , _server(false, get_reverse_direction(client_direction)) {
         _client.flow_key = client_flow_key;
     }
 
-    void handle_packet_send(net::packet pkt, uint8_t direction){
-        if(_client.buffer_q.size()>5){
+    void handle_packet_send(net::packet pkt, uint8_t direction) {
+        if(_client.buffer_q.size()>5) {
             // drop the packet due to buffer overflow.
             return;
         }
@@ -86,25 +96,25 @@ public:
         generated_events<EventEnumType> ge = send_unit.ppr.handle_packet_send(pkt);
         filtered_events<EventEnumType> fe = send_unit.send_events.filter(ge);
 
-        if(send_unit.loop_started){
-            if(send_unit.async_loop_pr && fe.no_event()){
+        if(send_unit.loop_started) {
+            if(send_unit.async_loop_pr && fe.no_event()) {
                 // unconditionally forward the packet to receive side.
                 handle_packet_recv(std::move(pkt), ~is_client);
                 return;
             }
             send_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, packet_recv);
-            if(send_unit.async_loop_pr){
+            if(send_unit.async_loop_pr) {
                 assert(send_unit.loop_has_context == false);
                 send_unit.async_loop_pr->set_value();
             }
         }
-        else{
+        else {
             handle_packet_recv(std::move(pkt), ~is_client);
         }
     }
 
     void handle_packet_recv(net::packet pkt, bool is_client){
-        if(is_client == false){
+        if(is_client == false) {
             // try to fill in the correct server side flow key
             // and register the flow key into the flow table.
         }
@@ -112,13 +122,13 @@ public:
         generated_events<EventEnumType> ge = recv_unit.ppr.handle_packet_recv(pkt);
         filtered_events<EventEnumType> fe = recv_unit.recv_events.filter(ge);
 
-        if(recv_unit.loop_started){
-            if(recv_unit.async_loop_pr && fe.no_event()){
+        if(recv_unit.loop_started) {
+            if(recv_unit.async_loop_pr && fe.no_event()) {
                 send_packet_out(std::move(pkt), is_client);
                 return;
             }
             recv_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, ~packet_recv);
-            if(recv_unit.async_loop_pr){
+            if(recv_unit.async_loop_pr) {
                 assert(recv_unit.loop_has_context == false);
                 recv_unit.async_loop_pr->set_value();
             }
@@ -202,6 +212,14 @@ public:
         events.register_event<EvT>(1);
     }
 
+    void close_async_loop (bool is_client) {
+        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        working_unit.loop_started = false;
+        while(!working_unit.buffer_q.empty()){
+            working_unit.buffer_q.pop_front();
+        }
+    }
+
 private:
     uint8_t get_reverse_direction(const uint8_t direction){
         return direction;
@@ -249,6 +267,37 @@ private:
 
 template<typename Ppr>
 class async_flow{
+    using impl_type = lw_shared_ptr<internal::async_flow_impl<Ppr>>;
+    impl_type _impl;
+public:
+    explicit async_flow(impl_type impl)
+        : _impl(std::move(impl)) {
+    }
+    ~async_flow(){
+        _impl->close_async_loop(true);
+        _impl->close_async_loop(false);
+    }
+    async_flow(const async_flow& other) = delete;
+    async_flow(async_flow&& other)
+        : _impl(std::move(other._impl)) {
+    }
+    async_flow& operator=(const async_flow& other) = delete;
+    async_flow& operator=(async_flow&& other) {
+        if(&other != this){
+            this->~async_flow();
+            new (this) async_flow(std::move(other));
+        }
+        return *this;
+    }
+
+    future<> on_client_side_events() {
+        return _impl->on_new_events(true);
+    }
+    future<> on_server_side_events() {
+        return _impl->on_new_events(true);
+    }
+
+
 };
 
 template<typename Ppr>
