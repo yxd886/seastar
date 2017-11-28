@@ -230,10 +230,10 @@ public:
         return working_unit.async_loop_pr->get_future();
     }
 
-    template<EventEnumType EvT> void register_events (bool is_client, bool is_send) {
+    template<EventEnumType EvT> void event_registration (bool is_client, bool is_send) {
         auto& working_unit = is_client ? _client : _server;
         auto& events = is_send ? working_unit.send_events : working_unit.recv_events;
-        events.register_event<EvT>(void);
+        events.register_event<EvT>();
     }
 
 private:
