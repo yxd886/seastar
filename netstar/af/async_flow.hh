@@ -233,7 +233,7 @@ public:
     template<EventEnumType EvT> void register_events (bool is_client, bool is_send) {
         auto& working_unit = is_client ? _client : _server;
         auto& events = is_send ? working_unit.send_events : working_unit.recv_events;
-        events.register_event<EvT>(1);
+        events.register_event<EvT>( );
     }
 
 private:
