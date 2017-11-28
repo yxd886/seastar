@@ -23,48 +23,14 @@ namespace netstar {
 template<typename Ppr>
 class af_ev_context;
 template<typename Ppr>
-class async_flow_impl;
-template<typename Ppr>
 class async_flow;
 template<typename Ppr>
 class async_flow_manager;
 
+namespace internal {
+
 template<typename Ppr>
-class af_ev_context{
-    using EventEnumType = typename Ppr::EventEnumType;
-
-    net::packet _pkt;
-    const filtered_events<EventEnumType> _fe;
-    const bool _is_client;
-    const bool _is_send;
-
-    friend class async_flow_impl<Ppr>;
-
-public:
-    af_ev_context(net::packet pkt,
-                  filtered_events<EventEnumType> fe,
-                  bool is_client,
-                  bool is_send)
-        : _pkt(std::move(pkt))
-        , _fe(fe)
-        , _is_client(is_client)
-        , _is_send(is_send) {
-    }
-
-    const filtered_events<EventEnumType>& events(){
-        return _fe;
-    }
-    bool is_client(){
-        return _is_client;
-    }
-    bool is_send(){
-        return _is_send;
-    }
-private:
-    net::packet extract_packet() {
-        return std::move(_pkt);
-    }
-};
+class async_flow_impl;
 
 template<typename Ppr>
 struct af_work_unit {
@@ -239,6 +205,45 @@ public:
 private:
     uint8_t get_reverse_direction(const uint8_t direction){
         return direction;
+    }
+};
+
+} // namespace internal
+
+template<typename Ppr>
+class af_ev_context{
+    using EventEnumType = typename Ppr::EventEnumType;
+
+    net::packet _pkt;
+    const filtered_events<EventEnumType> _fe;
+    const bool _is_client;
+    const bool _is_send;
+
+    friend class internal::async_flow_impl<Ppr>;
+
+public:
+    af_ev_context(net::packet pkt,
+                  filtered_events<EventEnumType> fe,
+                  bool is_client,
+                  bool is_send)
+        : _pkt(std::move(pkt))
+        , _fe(fe)
+        , _is_client(is_client)
+        , _is_send(is_send) {
+    }
+
+    const filtered_events<EventEnumType>& events(){
+        return _fe;
+    }
+    bool is_client(){
+        return _is_client;
+    }
+    bool is_send(){
+        return _is_send;
+    }
+private:
+    net::packet extract_packet() {
+        return std::move(_pkt);
     }
 };
 
