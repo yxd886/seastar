@@ -284,9 +284,14 @@ public:
                 afi->second->handle_packet_send(std::move(pkt), direction);
             }
         }));
-
         auto sub = _directions.back().output_stream.listen(std::move(fn));
         return sub;
+    }
+
+    future<async_flow<Ppr>> on_new_flow(){
+        return _new_flow_q.not_empty().then([this]{
+           return make_ready_future<async_flow<Ppr>>(_new_flow_q.pop());
+        });
     }
 };
 
