@@ -75,11 +75,11 @@ class async_flow_impl{
     using FlowKeyType = typename Ppr::FlowKeyType;
     static constexpr bool packet_recv = true;
 
-    async_flow_manager<Ppr> _manager;
+    async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
 public:
-    async_flow_impl(async_flow_manager<Ppr> manager,
+    async_flow_impl(async_flow_manager<Ppr>& manager,
                     uint8_t client_direction,
                     FlowKeyType client_flow_key)
         : _manager(manager)
