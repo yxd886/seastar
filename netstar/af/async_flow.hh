@@ -230,6 +230,12 @@ public:
         return working_unit.async_loop_pr->get_future();
     }
 
+    template<EventEnumType EvT> void register_events(bool is_client, bool is_send) {
+        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        registered_events<EventEnumType> &events = is_send ? working_unit.send_events : working_unit.recv_events;
+        events.register_event<EvT>();
+    }
+
 private:
     uint8_t get_reverse_direction(const uint8_t direction){
         return direction;
