@@ -47,6 +47,7 @@ struct af_work_unit {
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
 
+    async_flow_manager<Ppr>& _manager;
     Ppr ppr;
     std::experimental::optional<promise<>> async_loop_pr;
     registered_events<EventEnumType> send_events;
@@ -58,9 +59,11 @@ struct af_work_unit {
     bool loop_started;
     bool loop_has_context;
 
-    af_work_unit(bool is_client_arg,
+    af_work_unit(async_flow_manager<Ppr>& manager,
+                 bool is_client_arg,
                  uint8_t direction_arg)
-        : ppr(is_client_arg)
+        : _manager(manager)
+        , ppr(is_client_arg)
         , direction(direction_arg)
         , is_client(is_client_arg)
         , loop_started(false)
@@ -329,7 +332,7 @@ public:
             auto afi = _flow_table.find(key);
             if(afi == _flow_table.end()){
                 if(!_new_flow_q.full() && _flow_table.size() < max_flow_table_size) {
-                    auto impl_lw_ptr = make_lw_shared<internal::async_flow_impl<Ppr>>>(direction, key);
+                    auto impl_lw_ptr = make_lw_shared<internal::async_flow_impl<Ppr>>>((*this), direction, key);
                     _flow_table.insert({key, impl_lw_ptr});
                     _new_flow_q.push(new_async_flow(std::move(impl_lw_ptr)));
                 }
