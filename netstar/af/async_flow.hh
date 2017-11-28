@@ -78,8 +78,7 @@ class async_flow_impl{
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
 public:
-    async_flow_impl(async_flow_manager<Ppr> manager,
-                    uint8_t client_direction,
+    async_flow_impl(uint8_t client_direction,
                     FlowKeyType client_flow_key)
         : _client(true, client_direction)
         , _server(false, get_reverse_direction(client_direction)) {
@@ -330,7 +329,7 @@ public:
             auto afi = _flow_table.find(key);
             if(afi == _flow_table.end()){
                 if(!_new_flow_q.full() && _flow_table.size() < max_flow_table_size) {
-                    auto impl_lw_ptr = make_lw_shared<internal::async_flow_impl<Ppr>>>((*this), direction, key);
+                    auto impl_lw_ptr = make_lw_shared<internal::async_flow_impl<Ppr>>>(direction, key);
                     _flow_table.insert({key, impl_lw_ptr});
                     _new_flow_q.push(new_async_flow(std::move(impl_lw_ptr)));
                 }
