@@ -46,6 +46,7 @@ template<typename Ppr>
 struct af_work_unit {
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
+    using Iter = typename std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>>::iterator;
 
     Ppr ppr;
     std::experimental::optional<promise<>> async_loop_pr;
