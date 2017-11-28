@@ -100,7 +100,7 @@ int main(int ac, char** av) {
     app_template app;
     timer<steady_clock_type> to;
     circular_buffer<af_ev_context<dummy_ppr>> q;
-    // async_flow_manager<dummy_ppr> manager;
+    async_flow_manager<dummy_ppr> manager;
 
     return app.run_deprecated(ac, av, [&app, &to, &q]{
         netstar::internal::async_flow_impl<dummy_ppr> af( 1, 1);
