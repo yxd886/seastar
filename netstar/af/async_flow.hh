@@ -82,7 +82,7 @@ class async_flow_impl{
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
 
-private:
+public:
     // General helper utility function, useful for reducing the
     // boilerplates used in this class.
 
