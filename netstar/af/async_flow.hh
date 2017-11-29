@@ -102,17 +102,8 @@ public:
                                     filtered_events<EventEnumType> fe,
                                     net::packet pkt,
                                     bool is_client, bool is_send) {
-        if(work_unit.loop_started) {
-            if(work_unit.async_loop_pr && fe.no_event()) {
-                // unconditionally forward the packet to receive side.
-                if(is_send) {
-                    handle_packet_recv(std::move(pkt), ~is_client);
-                }
-                else{
-                    send_packet_out(std::move(pkt), is_client);
-                }
-                return;
-            }
+        if((work_unit.loop_started) &&
+           (!work_unit.async_loop_pr || !fe.no_event())) {
             if(work_unit.async_loop_pr) {
                 assert(work_unit.loop_has_context == false);
                 work_unit.loop_has_context = true;
