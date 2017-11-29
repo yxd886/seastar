@@ -46,10 +46,9 @@ template<typename Ppr>
 struct af_work_unit {
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
-    using Iter = typename std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>>::iterator;
 
     Ppr ppr;
-    std::experimental::optional<promise<>> async_loop_pr;
+    std::experimental::optional<promise<af_ev_context<Ppr>> async_loop_pr;
     registered_events<EventEnumType> send_events;
     registered_events<EventEnumType> recv_events;
     circular_buffer<af_ev_context<Ppr>> buffer_q;
@@ -106,10 +105,12 @@ public:
                 handle_packet_recv(std::move(pkt), ~is_client);
                 return;
             }
-            send_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, packet_recv);
             if(send_unit.async_loop_pr) {
                 assert(send_unit.loop_has_context == false);
-                send_unit.async_loop_pr->set_value();
+                send_unit.async_loop_pr->set_value(af_ev_context<Ppr>{std::move(pkt), fe, is_client, true /*is_send*/});
+            }
+            else{
+                send_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, true /*is_send*/);
             }
         }
         else {
@@ -131,10 +132,12 @@ public:
                 send_packet_out(std::move(pkt), is_client);
                 return;
             }
-            recv_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, ~packet_recv);
             if(recv_unit.async_loop_pr) {
                 assert(recv_unit.loop_has_context == false);
-                recv_unit.async_loop_pr->set_value();
+                recv_unit.async_loop_pr->set_value(af_ev_context<Ppr>{std::move(pkt), fe, is_client, false /*is_send*/});
+            }
+            else{
+                recv_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, false /*is_send*/);
             }
         }
         else{
@@ -149,20 +152,6 @@ public:
         else{
             // send the packet out from _server.direction
         }
-    }
-
-    af_ev_context<Ppr> peek_event_context(bool is_client) {
-        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
-
-        // Use assertion to protect the async loop from incorrect
-        // use of peek_event_context API.
-        assert( (working_unit.loop_has_context == false) &&
-                (!working_unit.buffer_q.empty()) );
-
-        working_unit.loop_has_context = true;
-        auto ret(std::move(working_unit.buffer_q.front()));
-        working_unit.buffer_q.pop_front();
-        return ret;
     }
 
     void destroy_event_context(af_ev_context<Ppr> context) {
@@ -183,10 +172,10 @@ public:
         }
     }
 
-    future<> on_new_events(bool is_client) {
+    future<af_ev_context<Ppr>> on_new_events(bool is_client) {
         af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
         assert((working_unit.loop_has_context == false) &&
-                (!working_unit.async_loop_pr));
+               (!working_unit.async_loop_pr));
 
         if(!working_unit.buffer_q.empty()){
             while(!working_unit.buffer_q.empty()) {
@@ -201,12 +190,14 @@ public:
                     working_unit.buffer_q.pop_front();
                 }
                 else{
-                    return make_ready_future<>();
+                    auto future = make_ready_future<af_ev_context<Ppr>>(std::move(working_unit.buffer_q.front()));
+                    working_unit.buffer_q.pop_front();
+                    return future;
                 }
             }
         }
 
-        working_unit.async_loop_pr = promise<>();
+        working_unit.async_loop_pr = promise<af_ev_context<Ppr>>();
         return working_unit.async_loop_pr->get_future();
     }
 
@@ -294,10 +285,10 @@ public:
         return *this;
     }
 
-    future<> on_client_side_events() {
+    future<af_ev_context<Ppr>> on_client_side_events() {
         return _impl->on_new_events(true);
     }
-    future<> on_server_side_events() {
+    future<af_ev_context<Ppr>> on_server_side_events() {
         return _impl->on_new_events(true);
     }
 
