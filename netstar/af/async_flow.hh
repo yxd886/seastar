@@ -92,20 +92,24 @@ public:
     }
 
     void handle_packet_send(net::packet pkt, uint8_t direction) {
-        if(_client.buffer_q.size() >
-           Ppr::async_flow_config::max_event_context_queue_size) {
+        bool is_client = (direction == _client.direction);
+        af_work_unit<Ppr>& send_unit = is_client ? _client : _server;
+
+        if( (send_unit.buffer_q.size() >=
+             Ppr::async_flow_config::max_event_context_queue_size) ||
+             send_unit.ppr_close) {
             // drop the packet due to buffer overflow.
             return;
         }
 
-        bool is_client = (direction == _client.direction);
-        af_work_unit<Ppr>& send_unit = is_client ? _client : _server;
         generated_events<EventEnumType> ge = send_unit.ppr.handle_packet_send(pkt);
         filtered_events<EventEnumType> fe = send_unit.send_events.filter(ge);
         if(fe.on_close_event()) {
             send_unit.ppr_close = true;
-            // check whether the recv_unit.ppr_close==true, then
-            // remove the flow key from the flow table.
+            if(send_unit.flow_key) {
+                _manager.remove_mapping_on_flow_table(*(send_unit.flow_key));
+                send_unit.flow_key = std::experimental::nullopt;
+            }
         }
 
         if(send_unit.loop_started) {
@@ -136,17 +140,23 @@ public:
     }
 
     void handle_packet_recv(net::packet pkt, bool is_client){
-        if(is_client == false) {
-            // try to fill in the correct server side flow key
-            // and register the flow key into the flow table.
-        }
         af_work_unit<Ppr>& recv_unit = is_client? _client : _server;
+
+        if( (recv_unit.buffer_q.size() >=
+             Ppr::async_flow_config::max_event_context_queue_size) ||
+             recv_unit.ppr_close) {
+            // drop the packet due to buffer overflow.
+            return;
+        }
+
         generated_events<EventEnumType> ge = recv_unit.ppr.handle_packet_recv(pkt);
         filtered_events<EventEnumType> fe = recv_unit.recv_events.filter(ge);
         if(fe.on_close_event()) {
             recv_unit.ppr_close = true;
-            // check whether the recv_unit.ppr_close==true, then
-            // remove the flow key from the flow table.
+            if(recv_unit.flow_key) {
+                _manager.remove_mapping_on_flow_table(*(recv_unit.flow_key));
+                recv_unit.flow_key = std::experimental::nullopt;
+            }
         }
 
         if(recv_unit.loop_started) {
