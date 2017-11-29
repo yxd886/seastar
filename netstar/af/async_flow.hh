@@ -92,7 +92,8 @@ public:
     }
 
     void handle_packet_send(net::packet pkt, uint8_t direction) {
-        if(_client.buffer_q.size()>5) {
+        if(_client.buffer_q.size() >
+           Ppr::async_flow_config::max_event_context_queue_size) {
             // drop the packet due to buffer overflow.
             return;
         }
@@ -116,11 +117,17 @@ public:
             if(send_unit.async_loop_pr) {
                 assert(send_unit.loop_has_context == false);
                 send_unit.loop_has_context = true;
-                send_unit.async_loop_pr->set_value(af_ev_context<Ppr>{std::move(pkt), fe, is_client, true /*is_send*/});
+                send_unit.async_loop_pr->set_value(af_ev_context<Ppr>{
+                    std::move(pkt), fe,
+                    is_client, true /*is_send*/
+                });
                 send_unit.async_loop_pr = {};
             }
             else{
-                send_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, true /*is_send*/);
+                send_unit.buffer_q.emplace_back(
+                    std::move(pkt), fe,
+                    is_client, true /*is_send*/
+                );
             }
         }
         else {
@@ -150,11 +157,18 @@ public:
             if(recv_unit.async_loop_pr) {
                 assert(recv_unit.loop_has_context == false);
                 recv_unit.loop_has_context = true;
-                recv_unit.async_loop_pr->set_value(af_ev_context<Ppr>{std::move(pkt), fe, is_client, false /*is_send*/});
+                recv_unit.async_loop_pr->set_value(af_ev_context<Ppr>{
+                    std::move(pkt),
+                    fe,
+                    is_client, false /*is_send*/
+                });
                 recv_unit.async_loop_pr = {};
             }
             else{
-                recv_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, false /*is_send*/);
+                recv_unit.buffer_q.emplace_back(
+                    std::move(pkt), fe,
+                    is_client, false /*is_send*/
+                );
             }
         }
         else{
@@ -203,15 +217,19 @@ public:
                 auto& next_context = working_unit.buffer_q.front();
                 if(next_context.events().no_event()) {
                     if(next_context.is_send()) {
-                        handle_packet_recv(next_context.extract_packet(), ~next_context.is_client());
+                        handle_packet_recv(next_context.extract_packet(),
+                                           ~next_context.is_client());
                     }
                     else {
-                        send_packet_out(next_context.extract_packet(), next_context.is_client());
+                        send_packet_out(next_context.extract_packet(),
+                                        next_context.is_client());
                     }
                     working_unit.buffer_q.pop_front();
                 }
                 else {
-                    auto future = make_ready_future<af_ev_context<Ppr>>(std::move(working_unit.buffer_q.front()));
+                    auto future = make_ready_future<af_ev_context<Ppr>>(
+                        std::move(working_unit.buffer_q.front())
+                    );
                     working_unit.buffer_q.pop_front();
                     working_unit.loop_has_context = true;
                     return future;
@@ -219,13 +237,13 @@ public:
             }
         }
 
-        if(working_unit.ppr_close == true){
-            return make_ready_future<af_ev_context<Ppr>>(
-                    { net::packet::make_null_packet(),
-                      filtered_events<EventEnumType>::make_close_event(),
-                      is_client,
-                      true
-                    });
+        if(working_unit.ppr_close == true) {
+            return make_ready_future<af_ev_context<Ppr>>({
+                net::packet::make_null_packet(),
+                filtered_events<EventEnumType>::make_close_event(),
+                is_client,
+                true
+            });
         }
         else{
             working_unit.async_loop_pr = promise<af_ev_context<Ppr>>();
@@ -250,10 +268,12 @@ public:
         while(!working_unit.buffer_q.empty()) {
             auto& next_context = working_unit.buffer_q.front();
             if(next_context.is_send()){
-                handle_packet_recv(next_context.extract_packet(), ~next_context.is_client());
+                handle_packet_recv(next_context.extract_packet(),
+                                   ~next_context.is_client());
             }
             else {
-                send_packet_out(next_context.extract_packet(), next_context.is_client());
+                send_packet_out(next_context.extract_packet(),
+                                next_context.is_client());
             }
             working_unit.buffer_q.pop_front();
         }
@@ -365,8 +385,6 @@ public:
 template<typename Ppr>
 class async_flow_manager {
     using FlowKeyType = typename Ppr::FlowKeyType;
-    static constexpr unsigned max_flow_table_size = 100000;
-    static constexpr unsigned new_flow_queue_size = 10;
     struct io_direction {
         std::experimental::optional<subscription<net::packet, FlowKeyType&>> input_sub;
         stream<net::packet> output_stream;
@@ -375,7 +393,7 @@ class async_flow_manager {
 
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>> _flow_table;
     std::vector<io_direction> _directions;
-    seastar::queue<async_flow<Ppr>> _new_flow_q{new_flow_queue_size};
+    seastar::queue<async_flow<Ppr>> _new_flow_q{Ppr::async_flow_config::new_flow_queue_size};
     friend class internal::async_flow_impl<Ppr>;
 public:
     subscription<net::packet> direction_registration(uint8_t direction, uint8_t reverse_direction,
@@ -387,11 +405,17 @@ public:
         else {
             _directions.resize(direction+1);
         }
-        _directions[direction].input_sub.emplace(istream.listen([this, direction](net::packet pkt, FlowKeyType& key) {
+        _directions[direction].input_sub.emplace(
+                istream.listen([this, direction](net::packet pkt, FlowKeyType& key) {
             auto afi = _flow_table.find(key);
             if(afi == _flow_table.end()) {
-                if(!_new_flow_q.full() && _flow_table.size() < max_flow_table_size) {
-                    auto impl_lw_ptr = make_lw_shared<internal::async_flow_impl<Ppr>>>((*this), direction, key);
+                if(!_new_flow_q.full() &&
+                   (_flow_table.size() <
+                    Ppr::async_flow_config::max_flow_table_size) ){
+                    auto impl_lw_ptr =
+                            make_lw_shared<internal::async_flow_impl<Ppr>>>(
+                                (*this), direction, key
+                            );
                     _flow_table.insert({key, impl_lw_ptr});
                     _new_flow_q.push(new_async_flow(std::move(impl_lw_ptr)));
                 }

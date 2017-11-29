@@ -60,6 +60,12 @@ public:
     filtered_events<EventEnumType> handle_packet_recv(net::packet& pkt){
         return filtered_events<EventEnumType>(1);
     }
+public:
+    struct async_flow_config {
+        static constexpr int max_event_context_queue_size = 5;
+        static constexpr int new_flow_queue_size = 100;
+        static constexpr int max_flow_table_size = 10000;
+    };
 };
 
 /*class flow_processor {
