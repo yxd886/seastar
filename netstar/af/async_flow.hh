@@ -48,7 +48,7 @@ struct af_work_unit {
     using FlowKeyType = typename Ppr::FlowKeyType;
 
     Ppr ppr;
-    std::experimental::optional<promise<af_ev_context<Ppr>> async_loop_pr;
+    std::experimental::optional<promise<af_ev_context<Ppr>>> async_loop_pr;
     registered_events<EventEnumType> send_events;
     registered_events<EventEnumType> recv_events;
     circular_buffer<af_ev_context<Ppr>> buffer_q;
