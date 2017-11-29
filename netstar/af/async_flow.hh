@@ -107,6 +107,7 @@ public:
             }
             if(send_unit.async_loop_pr) {
                 assert(send_unit.loop_has_context == false);
+                send_unit.loop_has_context = true;
                 send_unit.async_loop_pr->set_value(af_ev_context<Ppr>{std::move(pkt), fe, is_client, true /*is_send*/});
             }
             else{
@@ -134,6 +135,7 @@ public:
             }
             if(recv_unit.async_loop_pr) {
                 assert(recv_unit.loop_has_context == false);
+                recv_unit.loop_has_context = true;
                 recv_unit.async_loop_pr->set_value(af_ev_context<Ppr>{std::move(pkt), fe, is_client, false /*is_send*/});
             }
             else{
@@ -157,7 +159,7 @@ public:
     void destroy_event_context(af_ev_context<Ppr> context) {
         af_work_unit<Ppr>& working_unit = context.is_client() ?
                                           _client : _server;
-        working_unit.loop_has_context = true;
+        working_unit.loop_has_context = false;
     }
 
     void forward_event_context(af_ev_context<Ppr> context) {
@@ -192,6 +194,7 @@ public:
                 else{
                     auto future = make_ready_future<af_ev_context<Ppr>>(std::move(working_unit.buffer_q.front()));
                     working_unit.buffer_q.pop_front();
+                    working_unit.loop_has_context = true;
                     return future;
                 }
             }
