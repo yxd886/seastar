@@ -81,7 +81,17 @@ class async_flow_impl{
     async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
-public:
+private:
+    // General helper utility function, useful for reducing the
+    // boilerplates used in this class.
+
+    af_work_unit<Ppr>& get_work_unit(bool is_client){
+        return is_client ? _client : _server;
+    }
+
+private:
+    // Internal interfaces, exposed to async_flow and
+    // async_flow manager.
     async_flow_impl(async_flow_manager<Ppr>& manager,
                     uint8_t client_direction,
                     FlowKeyType client_flow_key)
