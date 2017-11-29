@@ -266,12 +266,13 @@ public:
         // if so, remove the flow key from the flow table.
 
         if(working_unit.loop_started && working_unit.async_loop_pr) {
-            working_unit.async_loop_pr->set_value<af_ev_context<Ppr>>(
-                { net::packet::make_null_packet(),
-                  filtered_events<EventEnumType>::make_close_event(),
-                  is_client,
-                  true
-                }
+            working_unit.async_loop_pr->set_value(
+                af_ev_context<Ppr>({
+                      net::packet::make_null_packet(),
+                      filtered_events<EventEnumType>::make_close_event(),
+                      is_client,
+                      true
+                })
             );
             working_unit.async_loop_pr = {};
         }
