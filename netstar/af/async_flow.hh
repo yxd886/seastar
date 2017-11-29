@@ -228,7 +228,8 @@ public:
         af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
 
         assert(working_unit.loop_has_context == false &&
-               !working_unit.async_loop_pr);
+               !working_unit.async_loop_pr &&
+               working_unit.loop_started == true);
 
         working_unit.loop_started = false;
         while(!working_unit.buffer_q.empty()) {
@@ -241,6 +242,16 @@ public:
             }
             working_unit.buffer_q.pop_front();
         }
+    }
+
+    void ppr_passive_close(bool is_client){
+        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        if(working_unit.loop_started && working_unit.async_loop_pr) {
+            working_unit.async_loop_pr
+
+
+        }
+
     }
 
 private:
