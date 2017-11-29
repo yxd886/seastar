@@ -103,7 +103,7 @@ public:
 
     void handle_packet_send(net::packet pkt, uint8_t direction) {
         bool is_client = (direction == _client.direction);
-        af_work_unit<Ppr>& send_unit = is_client ? _client : _server;
+        auto& send_unit = get_work_unit(is_client);
 
         if( (send_unit.buffer_q.size() >=
              Ppr::async_flow_config::max_event_context_queue_size) ||
@@ -150,7 +150,7 @@ public:
     }
 
     void handle_packet_recv(net::packet pkt, bool is_client){
-        af_work_unit<Ppr>& recv_unit = is_client? _client : _server;
+        auto& recv_unit = get_work_unit(is_client);
 
         if( (recv_unit.buffer_q.size() >=
              Ppr::async_flow_config::max_event_context_queue_size) ||
@@ -197,19 +197,18 @@ public:
     }
 
     void send_packet_out(net::packet pkt, bool is_client){
-        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        auto& working_unit = get_work_unit(is_client);
         _manager.send(std::move(pkt), working_unit.direction);
     }
 
     void destroy_event_context(af_ev_context<Ppr> context) {
-        af_work_unit<Ppr>& working_unit = context.is_client() ?
-                                          _client : _server;
+        auto& working_unit = get_work_unit(context.is_client());
         working_unit.loop_has_context = false;
     }
 
     void forward_event_context(af_ev_context<Ppr> context) {
         bool is_client = context.is_client();
-        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        auto& working_unit = get_work_unit(is_client);
         working_unit.loop_has_conetxt = false;
         if(context.is_send()){
             handle_packet_recv(context.extract_packet(), ~is_client);
@@ -220,7 +219,7 @@ public:
     }
 
     future<af_ev_context<Ppr>> on_new_events(bool is_client) {
-        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        auto& working_unit = get_work_unit(is_client);
         assert((working_unit.loop_has_context == false) &&
                (!working_unit.async_loop_pr));
 
@@ -275,7 +274,7 @@ public:
     }
 
     void close_async_loop (bool is_client) {
-        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        auto& working_unit = get_work_unit(is_client);
 
         assert(working_unit.loop_has_context == false &&
                !working_unit.async_loop_pr &&
@@ -297,7 +296,7 @@ public:
     }
 
     void ppr_passive_close(bool is_client){
-        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        auto& working_unit = get_work_unit(is_client);
         working_unit.ppr_close = true;
         if(working_unit.flow_key) {
             _manager.remove_mapping_on_flow_table(*(working_unit.flow_key));
