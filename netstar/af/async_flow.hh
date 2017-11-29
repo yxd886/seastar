@@ -289,8 +289,10 @@ public:
     void ppr_passive_close(bool is_client){
         af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
         working_unit.ppr_close = true;
-        // check whether all working_unit.ppr_close equals to true,
-        // if so, remove the flow key from the flow table.
+        if(working_unit.flow_key) {
+            _manager.remove_mapping_on_flow_table(*(working_unit.flow_key));
+            working_unit.flow_key = std::experimental::nullopt;
+        }
 
         if(working_unit.loop_started && working_unit.async_loop_pr) {
             working_unit.async_loop_pr->set_value(
