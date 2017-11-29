@@ -90,6 +90,14 @@ public:
         return is_client ? _client : _server;
     }
 
+    void close_ppr_and_remove_flow_key(af_work_unit<Ppr>& work_unit) {
+        work_unit.ppr_close = true;
+        if(work_unit.flow_key) {
+            _manager.remove_mapping_on_flow_table(*(work_unit.flow_key));
+            work_unit.flow_key = std::experimental::nullopt;
+        }
+    }
+
     // Internal interfaces, exposed to async_flow and
     // async_flow manager.
     async_flow_impl(async_flow_manager<Ppr>& manager,
@@ -115,11 +123,7 @@ public:
         generated_events<EventEnumType> ge = send_unit.ppr.handle_packet_send(pkt);
         filtered_events<EventEnumType> fe = send_unit.send_events.filter(ge);
         if(fe.on_close_event()) {
-            send_unit.ppr_close = true;
-            if(send_unit.flow_key) {
-                _manager.remove_mapping_on_flow_table(*(send_unit.flow_key));
-                send_unit.flow_key = std::experimental::nullopt;
-            }
+            close_ppr_and_remove_flow_key(send_unit);
         }
 
         if(send_unit.loop_started) {
@@ -162,11 +166,7 @@ public:
         generated_events<EventEnumType> ge = recv_unit.ppr.handle_packet_recv(pkt);
         filtered_events<EventEnumType> fe = recv_unit.recv_events.filter(ge);
         if(fe.on_close_event()) {
-            recv_unit.ppr_close = true;
-            if(recv_unit.flow_key) {
-                _manager.remove_mapping_on_flow_table(*(recv_unit.flow_key));
-                recv_unit.flow_key = std::experimental::nullopt;
-            }
+            close_ppr_and_remove_flow_key(recv_unit);
         }
 
         if(recv_unit.loop_started) {
@@ -297,11 +297,7 @@ public:
 
     void ppr_passive_close(bool is_client){
         auto& working_unit = get_work_unit(is_client);
-        working_unit.ppr_close = true;
-        if(working_unit.flow_key) {
-            _manager.remove_mapping_on_flow_table(*(working_unit.flow_key));
-            working_unit.flow_key = std::experimental::nullopt;
-        }
+        close_ppr_and_remove_flow_key(work_unit);
 
         if(working_unit.loop_started && working_unit.async_loop_pr) {
             working_unit.async_loop_pr->set_value(
