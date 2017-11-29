@@ -244,7 +244,7 @@ public:
         }
     }
 
-    void ppr_passive_close(bool is_client){
+    /*void ppr_passive_close(bool is_client){
         af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
         if(working_unit.loop_started && working_unit.async_loop_pr) {
             working_unit.async_loop_pr
@@ -252,7 +252,7 @@ public:
 
         }
 
-    }
+    }*/
 
 private:
     uint8_t get_reverse_direction(const uint8_t direction) {
