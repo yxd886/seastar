@@ -57,6 +57,7 @@ struct af_work_unit {
     bool is_client;
     bool loop_started;
     bool loop_has_context;
+    bool ppr_close;
 
     af_work_unit(bool is_client_arg,
                  uint8_t direction_arg)
@@ -64,7 +65,8 @@ struct af_work_unit {
         , direction(direction_arg)
         , is_client(is_client_arg)
         , loop_started(false)
-        , loop_has_context(false) {
+        , loop_has_context(false)
+        , ppr_close(false) {
         buffer_q.reserve(5);
     }
 };
@@ -99,6 +101,11 @@ public:
         af_work_unit<Ppr>& send_unit = is_client ? _client : _server;
         generated_events<EventEnumType> ge = send_unit.ppr.handle_packet_send(pkt);
         filtered_events<EventEnumType> fe = send_unit.send_events.filter(ge);
+        if(fe.on_close_event()) {
+            send_unit.ppr_close = true;
+            // check whether the recv_unit.ppr_close==true, then
+            // remove the flow key from the flow table.
+        }
 
         if(send_unit.loop_started) {
             if(send_unit.async_loop_pr && fe.no_event()) {
@@ -110,6 +117,7 @@ public:
                 assert(send_unit.loop_has_context == false);
                 send_unit.loop_has_context = true;
                 send_unit.async_loop_pr->set_value(af_ev_context<Ppr>{std::move(pkt), fe, is_client, true /*is_send*/});
+                send_unit.async_loop_pr = {};
             }
             else{
                 send_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, true /*is_send*/);
@@ -128,6 +136,11 @@ public:
         af_work_unit<Ppr>& recv_unit = is_client? _client : _server;
         generated_events<EventEnumType> ge = recv_unit.ppr.handle_packet_recv(pkt);
         filtered_events<EventEnumType> fe = recv_unit.recv_events.filter(ge);
+        if(fe.on_close_event()) {
+            recv_unit.ppr_close = true;
+            // check whether the recv_unit.ppr_close==true, then
+            // remove the flow key from the flow table.
+        }
 
         if(recv_unit.loop_started) {
             if(recv_unit.async_loop_pr && fe.no_event()) {
@@ -138,6 +151,7 @@ public:
                 assert(recv_unit.loop_has_context == false);
                 recv_unit.loop_has_context = true;
                 recv_unit.async_loop_pr->set_value(af_ev_context<Ppr>{std::move(pkt), fe, is_client, false /*is_send*/});
+                recv_unit.async_loop_pr = {};
             }
             else{
                 recv_unit.buffer_q.emplace_back(std::move(pkt), fe, is_client, false /*is_send*/);
@@ -184,15 +198,6 @@ public:
             working_unit.loop_started = true;
         }
 
-        /*if(working_unit.ppr.has_exited()) {
-            working_unit.buffer_q.emplace_back(
-                    { net::packet::make_null_packet(),
-                      filtered_events<EventEnumType>::make_close_event(),
-                      is_client,
-                      true
-                    });
-        }*/
-
         if(!working_unit.buffer_q.empty()) {
             while(!working_unit.buffer_q.empty()) {
                 auto& next_context = working_unit.buffer_q.front();
@@ -214,8 +219,18 @@ public:
             }
         }
 
-        working_unit.async_loop_pr = promise<af_ev_context<Ppr>>();
-        return working_unit.async_loop_pr->get_future();
+        if(working_unit.ppr_close == true){
+            return make_ready_future<af_ev_context<Ppr>>(
+                    { net::packet::make_null_packet(),
+                      filtered_events<EventEnumType>::make_close_event(),
+                      is_client,
+                      true
+                    });
+        }
+        else{
+            working_unit.async_loop_pr = promise<af_ev_context<Ppr>>();
+            return working_unit.async_loop_pr->get_future();
+        }
     }
 
     template<EventEnumType EvT> void event_registration (bool is_client, bool is_send) {
@@ -244,15 +259,23 @@ public:
         }
     }
 
-    /*void ppr_passive_close(bool is_client){
+    void ppr_passive_close(bool is_client){
         af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        working_unit.ppr_close = true;
+        // check whether all working_unit.ppr_close equals to true,
+        // if so, remove the flow key from the flow table.
+
         if(working_unit.loop_started && working_unit.async_loop_pr) {
-            working_unit.async_loop_pr
-
-
+            working_unit.async_loop_pr->set_value<af_ev_context<Ppr>>(
+                { net::packet::make_null_packet(),
+                  filtered_events<EventEnumType>::make_close_event(),
+                  is_client,
+                  true
+                }
+            );
+            working_unit.async_loop_pr = {};
         }
-
-    }*/
+    }
 
 private:
     uint8_t get_reverse_direction(const uint8_t direction) {
