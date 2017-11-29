@@ -440,6 +440,10 @@ public:
                                        lw_shared_ptr<internal::async_flow_impl<Ppr>> impl_lw_ptr){
         _flow_table.insert({flow_key, impl_lw_ptr});
     }
+
+    void remove_mapping_on_flow_table(FlowKeyType& flow_key) {
+        _flow_table.erase(flow_key);
+    }
 };
 
 } // namespace netstar
