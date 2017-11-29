@@ -297,7 +297,7 @@ public:
 
     void ppr_passive_close(bool is_client){
         auto& working_unit = get_work_unit(is_client);
-        close_ppr_and_remove_flow_key(work_unit);
+        close_ppr_and_remove_flow_key(working_unit);
 
         if(working_unit.loop_started && working_unit.async_loop_pr) {
             working_unit.async_loop_pr->set_value(
