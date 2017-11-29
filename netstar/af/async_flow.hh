@@ -86,9 +86,9 @@ private:
     // General helper utility function, useful for reducing the
     // boilerplates used in this class.
 
-    af_work_unit<Ppr>& get_work_unit(bool is_client){
-        return is_client ? _client : _server;
-    }
+    // af_work_unit<Ppr>& get_work_unit(bool is_client){
+    //     return is_client ? _client : _server;
+    // }
 
     // Internal interfaces, exposed to async_flow and
     // async_flow manager.
