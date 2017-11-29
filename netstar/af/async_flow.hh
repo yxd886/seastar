@@ -98,6 +98,47 @@ public:
         }
     }
 
+    void action_after_packet_handle(af_work_unit<Ppr>& work_unit,
+                                    filtered_events<EventEnumType> fe,
+                                    net::packet pkt,
+                                    bool is_client, bool is_send) {
+        if(work_unit.loop_started) {
+            if(work_unit.async_loop_pr && fe.no_event()) {
+                // unconditionally forward the packet to receive side.
+                if(is_send) {
+                    handle_packet_recv(std::move(pkt), ~is_client);
+                }
+                else{
+                    send_packet_out(std::move(pkt), is_client);
+                }
+                return;
+            }
+            if(work_unit.async_loop_pr) {
+                assert(work_unit.loop_has_context == false);
+                work_unit.loop_has_context = true;
+                work_unit.async_loop_pr->set_value(af_ev_context<Ppr>{
+                    std::move(pkt), fe,
+                    is_client, is_send
+                });
+                work_unit.async_loop_pr = {};
+            }
+            else{
+                work_unit.buffer_q.emplace_back(
+                    std::move(pkt), fe,
+                    is_client, is_send
+                );
+            }
+        }
+        else {
+            if(is_send) {
+                handle_packet_recv(std::move(pkt), ~is_client);
+            }
+            else{
+                send_packet_out(std::move(pkt), is_client);
+            }
+        }
+    }
+
     // Internal interfaces, exposed to async_flow and
     // async_flow manager.
     async_flow_impl(async_flow_manager<Ppr>& manager,
@@ -126,31 +167,7 @@ public:
             close_ppr_and_remove_flow_key(send_unit);
         }
 
-        if(send_unit.loop_started) {
-            if(send_unit.async_loop_pr && fe.no_event()) {
-                // unconditionally forward the packet to receive side.
-                handle_packet_recv(std::move(pkt), ~is_client);
-                return;
-            }
-            if(send_unit.async_loop_pr) {
-                assert(send_unit.loop_has_context == false);
-                send_unit.loop_has_context = true;
-                send_unit.async_loop_pr->set_value(af_ev_context<Ppr>{
-                    std::move(pkt), fe,
-                    is_client, true /*is_send*/
-                });
-                send_unit.async_loop_pr = {};
-            }
-            else{
-                send_unit.buffer_q.emplace_back(
-                    std::move(pkt), fe,
-                    is_client, true /*is_send*/
-                );
-            }
-        }
-        else {
-            handle_packet_recv(std::move(pkt), ~is_client);
-        }
+        action_after_packet_handle(send_unit, fe, is_client, true);
     }
 
     void handle_packet_recv(net::packet pkt, bool is_client){
@@ -169,31 +186,7 @@ public:
             close_ppr_and_remove_flow_key(recv_unit);
         }
 
-        if(recv_unit.loop_started) {
-            if(recv_unit.async_loop_pr && fe.no_event()) {
-                send_packet_out(std::move(pkt), is_client);
-                return;
-            }
-            if(recv_unit.async_loop_pr) {
-                assert(recv_unit.loop_has_context == false);
-                recv_unit.loop_has_context = true;
-                recv_unit.async_loop_pr->set_value(af_ev_context<Ppr>{
-                    std::move(pkt),
-                    fe,
-                    is_client, false /*is_send*/
-                });
-                recv_unit.async_loop_pr = {};
-            }
-            else{
-                recv_unit.buffer_q.emplace_back(
-                    std::move(pkt), fe,
-                    is_client, false /*is_send*/
-                );
-            }
-        }
-        else{
-            send_packet_out(std::move(pkt), is_client);
-        }
+        action_after_packet_handle(recv_unit, fe, is_client, false);
     }
 
     void send_packet_out(net::packet pkt, bool is_client){
