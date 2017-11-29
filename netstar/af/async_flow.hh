@@ -180,19 +180,23 @@ public:
         assert((working_unit.loop_has_context == false) &&
                (!working_unit.async_loop_pr));
 
-        if(!working_unit.buffer_q.empty()){
+        if(working_unit.loop_started == false) {
+            working_unit.loop_started = true;
+        }
+
+        if(!working_unit.buffer_q.empty()) {
             while(!working_unit.buffer_q.empty()) {
                 auto& next_context = working_unit.buffer_q.front();
-                if(next_context.events().no_event()){
-                    if(next_context.is_send()){
+                if(next_context.events().no_event()) {
+                    if(next_context.is_send()) {
                         handle_packet_recv(next_context.extract_packet(), ~next_context.is_client());
                     }
-                    else{
+                    else {
                         send_packet_out(next_context.extract_packet(), next_context.is_client());
                     }
                     working_unit.buffer_q.pop_front();
                 }
-                else{
+                else {
                     auto future = make_ready_future<af_ev_context<Ppr>>(std::move(working_unit.buffer_q.front()));
                     working_unit.buffer_q.pop_front();
                     working_unit.loop_has_context = true;
@@ -213,14 +217,25 @@ public:
 
     void close_async_loop (bool is_client) {
         af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+
+        assert(working_unit.loop_has_context == false &&
+               !working_unit.async_loop_pr);
+
         working_unit.loop_started = false;
-        while(!working_unit.buffer_q.empty()){
+        while(!working_unit.buffer_q.empty()) {
+            auto& next_context = working_unit.buffer_q.front();
+            if(next_context.is_send()){
+                handle_packet_recv(next_context.extract_packet(), ~next_context.is_client());
+            }
+            else {
+                send_packet_out(next_context.extract_packet(), next_context.is_client());
+            }
             working_unit.buffer_q.pop_front();
         }
     }
 
 private:
-    uint8_t get_reverse_direction(const uint8_t direction){
+    uint8_t get_reverse_direction(const uint8_t direction) {
         return direction;
     }
 };
@@ -249,13 +264,13 @@ public:
         , _is_send(is_send) {
     }
 
-    const filtered_events<EventEnumType>& events(){
+    const filtered_events<EventEnumType>& events() {
         return _fe;
     }
-    bool is_client(){
+    bool is_client() {
         return _is_client;
     }
-    bool is_send(){
+    bool is_send() {
         return _is_send;
     }
 private:
@@ -304,7 +319,7 @@ public:
 };
 
 template<typename Ppr>
-class async_flow_manager{
+class async_flow_manager {
     using FlowKeyType = typename Ppr::FlowKeyType;
     static constexpr unsigned max_flow_table_size = 100000;
     static constexpr unsigned new_flow_queue_size = 10;
@@ -322,22 +337,22 @@ public:
     subscription<net::packet> direction_registration(uint8_t direction, uint8_t reverse_direction,
                                                      stream<net::packet, FlowKeyType&>& istream,
                                                      std::function<future<>(net::packet)> fn) {
-        if(direction < _directions.size()){
+        if(direction < _directions.size()) {
             assert(!_directions[direction].input_sub);
         }
-        else{
+        else {
             _directions.resize(direction+1);
         }
-        _directions[direction].input_sub.emplace(istream.listen([this, direction](net::packet pkt, FlowKeyType& key){
+        _directions[direction].input_sub.emplace(istream.listen([this, direction](net::packet pkt, FlowKeyType& key) {
             auto afi = _flow_table.find(key);
-            if(afi == _flow_table.end()){
+            if(afi == _flow_table.end()) {
                 if(!_new_flow_q.full() && _flow_table.size() < max_flow_table_size) {
                     auto impl_lw_ptr = make_lw_shared<internal::async_flow_impl<Ppr>>>((*this), direction, key);
                     _flow_table.insert({key, impl_lw_ptr});
                     _new_flow_q.push(new_async_flow(std::move(impl_lw_ptr)));
                 }
             }
-            else{
+            else {
                 afi->second->handle_packet_send(std::move(pkt), direction);
             }
 
@@ -347,17 +362,17 @@ public:
         return sub;
     }
 
-    future<async_flow<Ppr>> on_new_flow(){
+    future<async_flow<Ppr>> on_new_flow() {
         return _new_flow_q.not_empty().then([this]{
            return make_ready_future<async_flow<Ppr>>(_new_flow_q.pop());
         });
     }
 
-    future<> send(net::packet pkt, uint8_t direction){
+    future<> send(net::packet pkt, uint8_t direction) {
         return _directions[direction].output_stream.produce(std::move(pkt));
     }
 
-    uint8_t get_reverse_direction(uint8_t direction){
+    uint8_t get_reverse_direction(uint8_t direction) {
         return _directions[direction].reverse_direction;
     }
 };
