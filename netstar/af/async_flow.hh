@@ -130,6 +130,15 @@ private:
         }
     }
 
+    void forward_context(af_ev_context<Ppr>& context) {
+        if(context.is_send()){
+            handle_packet_recv(context.extract_packet(), ~context.is_client());
+        }
+        else{
+            send_packet_out(context.extract_packet(), context.is_client());
+        }
+    }
+
 public:
     // Internal interfaces, exposed to async_flow and
     // async_flow manager.
