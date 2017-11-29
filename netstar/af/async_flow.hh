@@ -204,12 +204,7 @@ public:
         bool is_client = context.is_client();
         auto& working_unit = get_work_unit(is_client);
         working_unit.loop_has_conetxt = false;
-        if(context.is_send()){
-            handle_packet_recv(context.extract_packet(), ~is_client);
-        }
-        else{
-            send_packet_out(context.extract_packet(), is_client);
-        }
+        forward_context(context);
     }
 
     future<af_ev_context<Ppr>> on_new_events(bool is_client) {
@@ -225,22 +220,15 @@ public:
             while(!working_unit.buffer_q.empty()) {
                 auto& next_context = working_unit.buffer_q.front();
                 if(next_context.events().no_event()) {
-                    if(next_context.is_send()) {
-                        handle_packet_recv(next_context.extract_packet(),
-                                           ~next_context.is_client());
-                    }
-                    else {
-                        send_packet_out(next_context.extract_packet(),
-                                        next_context.is_client());
-                    }
+                    forward_context(next_context);
                     working_unit.buffer_q.pop_front();
                 }
                 else {
+                    working_unit.buffer_q.pop_front();
+                    working_unit.loop_has_context = true;
                     auto future = make_ready_future<af_ev_context<Ppr>>(
                         std::move(working_unit.buffer_q.front())
                     );
-                    working_unit.buffer_q.pop_front();
-                    working_unit.loop_has_context = true;
                     return future;
                 }
             }
@@ -277,14 +265,7 @@ public:
         working_unit.loop_started = false;
         while(!working_unit.buffer_q.empty()) {
             auto& next_context = working_unit.buffer_q.front();
-            if(next_context.is_send()){
-                handle_packet_recv(next_context.extract_packet(),
-                                   ~next_context.is_client());
-            }
-            else {
-                send_packet_out(next_context.extract_packet(),
-                                next_context.is_client());
-            }
+            forward_context(next_context);
             working_unit.buffer_q.pop_front();
         }
     }
