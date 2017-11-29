@@ -44,7 +44,10 @@ public:
     bool no_event() const {
         return _filtered_events == 0;
     }
-
+    static filtered_events make_close_event() {
+        est mask = 1<< (static_cast<est>(sizeof(est)*8-1));
+        return filtered_events(mask);
+    }
 };
 
 template<typename Enum>

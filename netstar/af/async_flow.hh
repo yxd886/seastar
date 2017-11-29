@@ -184,6 +184,15 @@ public:
             working_unit.loop_started = true;
         }
 
+        /*if(working_unit.ppr.has_exited()) {
+            working_unit.buffer_q.emplace_back(
+                    { net::packet::make_null_packet(),
+                      filtered_events<EventEnumType>::make_close_event(),
+                      is_client,
+                      true
+                    });
+        }*/
+
         if(!working_unit.buffer_q.empty()) {
             while(!working_unit.buffer_q.empty()) {
                 auto& next_context = working_unit.buffer_q.front();
