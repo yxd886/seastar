@@ -74,6 +74,7 @@ class async_flow_impl{
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
     static constexpr bool packet_recv = true;
+    friend class async_flow<Ppr>;
 
     async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
@@ -272,8 +273,14 @@ public:
         : _impl(std::move(impl)) {
     }
     ~async_flow(){
-        _impl->close_async_loop(true);
-        _impl->close_async_loop(false);
+        auto& client_ref = _impl->_client;
+        auto& server_ref = _impl->_server;
+        assert(!client_ref.async_loop_pr &&
+               !client_ref.loop_has_context &&
+               !client_ref.loop_started);
+        assert(!server_ref.async_loop_pr &&
+               !server_ref.loop_has_context &&
+               !server_ref.loop_started);
     }
     async_flow(const async_flow& other) = delete;
     async_flow(async_flow&& other)
@@ -294,8 +301,6 @@ public:
     future<af_ev_context<Ppr>> on_server_side_events() {
         return _impl->on_new_events(true);
     }
-
-
 };
 
 template<typename Ppr>
