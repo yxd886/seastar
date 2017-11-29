@@ -87,7 +87,7 @@ public:
                     FlowKeyType client_flow_key)
         : _manager(manager)
         , _client(true, client_direction)
-        , _server(false, get_reverse_direction(client_direction)) {
+        , _server(false, manager.get_reverse_direction(client_direction)) {
         _client.flow_key = client_flow_key;
     }
 
@@ -177,12 +177,8 @@ public:
     }
 
     void send_packet_out(net::packet pkt, bool is_client){
-        if(is_client){
-            // send the packet out from _client.direction
-        }
-        else{
-            // send the packet out from _server.direction
-        }
+        af_work_unit<Ppr>& working_unit = is_client ? _client : _server;
+        _manager.send(std::move(pkt), working_unit.direction);
     }
 
     void destroy_event_context(af_ev_context<Ppr> context) {
@@ -238,6 +234,7 @@ public:
         }
 
         if(working_unit.ppr_close == true) {
+            working_unit.loop_has_context = true;
             return make_ready_future<af_ev_context<Ppr>>({
                 net::packet::make_null_packet(),
                 filtered_events<EventEnumType>::make_close_event(),
@@ -296,11 +293,6 @@ public:
             );
             working_unit.async_loop_pr = {};
         }
-    }
-
-private:
-    uint8_t get_reverse_direction(const uint8_t direction) {
-        return direction;
     }
 };
 
@@ -442,6 +434,11 @@ public:
 
     uint8_t get_reverse_direction(uint8_t direction) {
         return _directions[direction].reverse_direction;
+    }
+
+    void add_new_mapping_to_flow_table(FlowKeyType& flow_key,
+                                       lw_shared_ptr<internal::async_flow_impl<Ppr>> impl_lw_ptr){
+        _flow_table.insert({flow_key, impl_lw_ptr});
     }
 };
 
