@@ -139,6 +139,15 @@ private:
         }
     }
 
+    future<af_ev_context<Ppr>> build_no_event_ready_future(bool is_client){
+        return make_ready_future<af_ev_context<Ppr>>({
+            net::packet::make_null_packet(),
+            filtered_events<EventEnumType>::make_close_event(),
+            is_client,
+            true
+        });
+    }
+
 public:
     // Internal interfaces, exposed to async_flow and
     // async_flow manager.
@@ -236,12 +245,7 @@ public:
 
         if(working_unit.ppr_close == true) {
             working_unit.loop_has_context = true;
-            return make_ready_future<af_ev_context<Ppr>>({
-                net::packet::make_null_packet(),
-                filtered_events<EventEnumType>::make_close_event(),
-                is_client,
-                true
-            });
+            return build_no_event_ready_future(is_client);
         }
         else{
             working_unit.async_loop_pr = promise<af_ev_context<Ppr>>();
@@ -275,6 +279,7 @@ public:
         close_ppr_and_remove_flow_key(working_unit);
 
         if(working_unit.loop_started && working_unit.async_loop_pr) {
+            working_unit.loop_has_context = true;
             working_unit.async_loop_pr->set_value(
                 af_ev_context<Ppr>({
                       net::packet::make_null_packet(),
