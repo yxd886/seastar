@@ -168,41 +168,41 @@ public:
 
     void handle_packet_send(net::packet pkt, uint8_t direction) {
         bool is_client = (direction == _client.direction);
-        auto& send_unit = get_work_unit(is_client);
+        auto& working_unit = get_work_unit(is_client);
 
-        if( (send_unit.buffer_q.size() >=
+        if( (working_unit.buffer_q.size() >=
              Ppr::async_flow_config::max_event_context_queue_size) ||
-             send_unit.ppr_close) {
+             working_unit.ppr_close) {
             // drop the packet due to buffer overflow.
             return;
         }
 
-        generated_events<EventEnumType> ge = send_unit.ppr.handle_packet_send(pkt);
-        filtered_events<EventEnumType> fe = send_unit.send_events.filter(ge);
+        generated_events<EventEnumType> ge = working_unit.ppr.handle_packet_send(pkt);
+        filtered_events<EventEnumType> fe = working_unit.send_events.filter(ge);
         if(fe.on_close_event()) {
-            close_ppr_and_remove_flow_key(send_unit);
+            close_ppr_and_remove_flow_key(working_unit);
         }
 
-        action_after_packet_handle(send_unit, fe, is_client, true);
+        action_after_packet_handle(working_unit, fe, is_client, true);
     }
 
     void handle_packet_recv(net::packet pkt, bool is_client){
-        auto& recv_unit = get_work_unit(is_client);
+        auto& working_unit = get_work_unit(is_client);
 
-        if( (recv_unit.buffer_q.size() >=
+        if( (working_unit.buffer_q.size() >=
              Ppr::async_flow_config::max_event_context_queue_size) ||
-             recv_unit.ppr_close) {
+             working_unit.ppr_close) {
             // drop the packet due to buffer overflow.
             return;
         }
 
-        generated_events<EventEnumType> ge = recv_unit.ppr.handle_packet_recv(pkt);
-        filtered_events<EventEnumType> fe = recv_unit.recv_events.filter(ge);
+        generated_events<EventEnumType> ge = working_unit.ppr.handle_packet_recv(pkt);
+        filtered_events<EventEnumType> fe = working_unit.recv_events.filter(ge);
         if(fe.on_close_event()) {
-            close_ppr_and_remove_flow_key(recv_unit);
+            close_ppr_and_remove_flow_key(working_unit);
         }
 
-        action_after_packet_handle(recv_unit, fe, is_client, false);
+        action_after_packet_handle(working_unit, fe, is_client, false);
     }
 
     void send_packet_out(net::packet pkt, bool is_client){
