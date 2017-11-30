@@ -166,6 +166,11 @@ public:
         _client.flow_key = client_flow_key;
     }
 
+    // Summary: Process packets send from the real client or server side.
+    // This is the external interface used by async_flow_manager to
+    // inject external received packets into the async_flow pipeline.
+    // Args: pkt: the packet waiting to be processed
+    // direction: the input direction of this packet.
     void handle_packet_send(net::packet pkt, uint8_t direction) {
         bool is_client = (direction == _client.direction);
         auto& working_unit = get_work_unit(is_client);
@@ -173,7 +178,7 @@ public:
         if( (working_unit.buffer_q.size() >=
              Ppr::async_flow_config::max_event_context_queue_size) ||
              working_unit.ppr_close) {
-            // drop the packet due to buffer overflow.
+            // Unconditionally drop the packet.
             return;
         }
 
