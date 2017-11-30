@@ -23,6 +23,7 @@
 #include "net/udp.hh"
 #include "net/ip_checksum.hh"
 #include "net/ip.hh"
+#include "net/tcp.hh"
 #include "net/net.hh"
 #include "net/packet.hh"
 #include "net/byteorder.hh"

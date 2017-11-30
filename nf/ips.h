@@ -222,7 +222,7 @@ public:
 	    _drop=false;
 	    iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
 
-	    if (iphdr->ip_proto!=net::ip_protocol_num::tcp){
+	    if (iphdr->ip_proto!=(uint8_t)net::ip_protocol_num::tcp){
 		    //drop
 	    	if(DEBUG==1) printf("not tcp pkt\n");
 	        _drop=true;
