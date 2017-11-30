@@ -17,7 +17,7 @@
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
 #include "netstar/port_env.hh"
-#include "nf/ips.h"
+//#include "nf/ips.h"
 
 
 using namespace seastar;
