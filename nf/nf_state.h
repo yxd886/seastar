@@ -162,7 +162,8 @@ struct session_state{
         _firewall_state.copy(&(dst._firewall_state));
         _load_balancer_state.copy(&(dst._load_balancer_state));
         _nat_state.copy(&(dst._nat_state));
-        _ips_state.copy(&(dst._ips_state));
+
+        memcpy(&_ips_state,&(dst._ips_state),sizeof(_ips_state));
     }
 
 };

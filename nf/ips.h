@@ -205,7 +205,11 @@ public:
     }
 
 
-
+    void init_ip_state(struct ips_state* state){
+        state->_alert=false;
+        state->_dfa_id=0;
+        state->_state=0;
+    }
 
 
 	future<> process_packet(net::packet* rte_pkt){
@@ -214,7 +218,7 @@ public:
 		if(DEBUG==1) printf("processing ips on core:%d\n",rte_lcore_id());
 
 		net::ip_hdr *iphdr;
-		tcp_hdr *tcp;
+		net::tcp_hdr *tcp;
 	    _drop=false;
 	    iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
 
@@ -225,8 +229,9 @@ public:
 	        return make_ready_future<>();
 	    }else{
 
-	    	tcp = (tcp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
-	    	struct ips_state state(0);
+	    	tcp = (net::tcp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
+	    	struct ips_state state;
+	    	init_ip_state(&state);
 	    	struct fivetuple tuple(iphdr->src_ip,iphdr->dst_ip,tcp->src_port,tcp->dst_port,iphdr->ip_proto);
 
 	       // printf("src_addr:%d ,iphdr->dst_addr:%d tcp->src_port:%d tcp->dst_port:%d\n ",iphdr->src_addr,iphdr->dst_addr,tcp->src_port,tcp->dst_port);
@@ -285,7 +290,8 @@ public:
 
 	                    memcpy(&state,&(response.get_value<struct ips_state>()),sizeof(state));
 	                    if(DEBUG==1)  printf("RECEIVE: alert: %d state: %d, dfa_id:%d\n",state._alert,state._state, state._dfa_id);
-	                    struct ips_state old(0);
+	                    struct ips_state old;
+	                    init_ip_state(&old);
 	                    memcpy(&old,&state,sizeof(state));
 	                    ips_detect(rte_pkt,&state);
 	                    if(state_updated(&old,&state)){
@@ -305,6 +311,7 @@ public:
 	                        _drop=true;
 	                        return make_ready_future<>();
 	                    }
+	                    return make_ready_future<>();
 	                }
 
 
