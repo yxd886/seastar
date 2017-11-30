@@ -240,10 +240,10 @@ public:
         auto& working_unit = get_work_unit(is_client);
         working_unit.loop_has_conetxt = false;
         if(context.is_send()){
-            handle_packet_recv(context.extract_packet(), ~context.is_client());
+            handle_packet_recv(std::move(context._pkt), ~context.is_client());
         }
         else{
-            send_packet_out(context.extract_packet(), context.is_client());
+            send_packet_out(std::move(context._pkt), context.is_client());
         }
     }
 
@@ -347,6 +347,8 @@ class af_ev_context{
     friend class internal::async_flow_impl<Ppr>;
 
 public:
+
+    // Internal constructor used by
     af_ev_context(net::packet pkt,
                   filtered_events<EventEnumType> fe,
                   bool is_client,
@@ -368,10 +370,6 @@ public:
     }
     bool is_null_pkt() {
         return _pkt;
-    }
-private:
-    net::packet extract_packet() {
-        return std::move(_pkt);
     }
 };
 
