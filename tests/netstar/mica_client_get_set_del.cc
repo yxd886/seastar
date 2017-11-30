@@ -13,11 +13,11 @@
 #include "core/app-template.hh"
 #include "core/print.hh"
 #include "core/distributed.hh"
-
 #include "netstar/per_core_objs.hh"
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
 #include "netstar/port_env.hh"
+#include "nf/ips.h"
 
 
 using namespace seastar;
