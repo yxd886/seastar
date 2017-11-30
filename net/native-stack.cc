@@ -53,7 +53,12 @@ void create_native_net_device(boost::program_options::variables_map opts) {
     if (opts.count("dpdk-pmd")) {
         // Hardcoded port index 0.
         // TODO: Inherit it from the opts
-        dev = create_dpdk_net_device(0, smp::count,
+        /*
+         * patch by djp
+         * pass opts["dpdk-port-idx"].as<unsigned>() as the port index
+         * to create_dpdk_net_device function.
+         */
+        dev = create_dpdk_net_device(opts["dpdk-port-idx"].as<unsigned>(), smp::count,
             !(opts.count("lro") && opts["lro"].as<std::string>() == "off"),
             !(opts.count("hw-fc") && opts["hw-fc"].as<std::string>() == "off"));
     } else
@@ -278,6 +283,15 @@ boost::program_options::options_description nns_options() {
                 "Weighing of a hardware network queue relative to a software queue (0=no work, 1=equal share)")
 #ifdef HAVE_DPDK
         ("dpdk-pmd", "Use DPDK PMD drivers")
+        /*
+         * patch by djp
+         * Add a new program option, "--dpdk-port-idx",
+         * so that we can specify which dpdk device is
+         * used by the native networking stack.
+         */
+        ("dpdk-port-idx",
+                boost::program_options::value<unsigned>()->default_value(0),
+                "the index of the dpdk NIC to use")
 #endif
         ("lro",
                 boost::program_options::value<std::string>()->default_value("on"),

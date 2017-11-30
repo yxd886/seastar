@@ -45,7 +45,7 @@ using namespace seastar::net;
 
 namespace netstar{
 
-namespace netstar_dpdk{
+namespace fdir{
 
 #if RTE_VERSION <= RTE_VERSION_NUM(2,0,0,16)
 
@@ -1313,6 +1313,9 @@ private:
         uint16_t sent = rte_eth_tx_burst(_dev->port_idx(), _qid,
                                          _tx_burst.data() + _tx_burst_idx,
                                          _tx_burst.size() - _tx_burst_idx);
+        /*if(sent>0){
+            printf("fdir_device sends out %d packets\n", sent);
+        }*/
 
         uint64_t nr_frags = 0, bytes = 0;
 
@@ -1458,6 +1461,84 @@ private:
     static constexpr phys_addr_t page_mask = ~(memory::page_size - 1);
 };
 
+// Due to some unknown reasons, fdir functionality can
+// not correctly work on our x710 NIC card. We have to
+// use RSS to replace fdir.
+/*int dpdk_device::init_port_start()
+{
+    assert(_port_idx < rte_eth_dev_count());
+
+    rte_eth_dev_info_get(_port_idx, &_dev_info);
+
+    //
+    // This is a workaround for a missing handling of a HW limitation in the
+    // DPDK i40e driver. This and all related to _is_i40e_device code should be
+    // removed once this handling is added.
+    //
+    if (sstring("rte_i40evf_pmd") == _dev_info.driver_name ||
+        sstring("rte_i40e_pmd") == _dev_info.driver_name) {
+        printf("Device is an Intel's 40G NIC. Enabling 8 fragments hack!\n");
+        _is_i40e_device = true;
+    }
+
+    if (std::string("rte_vmxnet3_pmd") == _dev_info.driver_name) {
+      printf("Device is a VMWare Virtual NIC. Enabling 16 fragments hack!\n");
+      _is_vmxnet3_device = true;
+    }
+
+    // hard code the hw_featuer here.
+    // don't touch _hw_features, leave _hw_features as default value
+
+    int ret = rte_eth_dev_filter_supported(_port_idx, RTE_ETH_FILTER_FDIR);
+    if (ret < 0) {
+        rte_exit(EXIT_FAILURE, "flow director is not supported on port %u.\n",
+                 _port_idx);
+    }
+
+    // follow how mica configure the device
+    rte_eth_conf eth_conf = { 0 };
+    eth_conf.rxmode.mq_mode = ETH_MQ_RX_NONE;
+    eth_conf.rxmode.max_rx_pkt_len = ETHER_MAX_LEN;
+    eth_conf.rxmode.hw_vlan_filter = 1;
+    eth_conf.rxmode.hw_vlan_strip = 1;
+    eth_conf.txmode.mq_mode = ETH_MQ_TX_NONE;
+    eth_conf.fdir_conf.mode = RTE_FDIR_MODE_PERFECT;
+    eth_conf.fdir_conf.pballoc = RTE_FDIR_PBALLOC_64K;
+    eth_conf.fdir_conf.status = RTE_FDIR_NO_REPORT_STATUS;
+    eth_conf.fdir_conf.mask.dst_port_mask = 0xffff;
+    eth_conf.fdir_conf.drop_queue = 0;
+
+    _dev_info.default_rxconf.rx_thresh.pthresh = 8;
+    _dev_info.default_rxconf.rx_thresh.hthresh = 0;
+    _dev_info.default_rxconf.rx_thresh.wthresh = 0;
+    _dev_info.default_rxconf.rx_free_thresh = 0;
+    _dev_info.default_rxconf.rx_drop_en = 0;
+
+    _dev_info.default_txconf.tx_thresh.pthresh = 32;
+    _dev_info.default_txconf.tx_thresh.hthresh = 0;
+    _dev_info.default_txconf.tx_thresh.wthresh = 0;
+    _dev_info.default_txconf.tx_free_thresh = 0;
+    _dev_info.default_txconf.tx_rs_thresh = 0;
+    _dev_info.default_txconf.txq_flags = (ETH_TXQ_FLAGS_NOMULTSEGS | ETH_TXQ_FLAGS_NOREFCOUNT |
+                                          ETH_TXQ_FLAGS_NOMULTMEMP | ETH_TXQ_FLAGS_NOOFFLOADS);
+
+    int retval;
+
+    printf("Port %u with %d queues init ... \n", _port_idx, _num_queues);
+
+    fflush(stdout);
+
+    if ((retval = rte_eth_dev_configure(_port_idx, _num_queues, _num_queues,
+                                        &eth_conf)) != 0) {
+        return retval;
+    }
+
+    //rte_eth_promiscuous_enable(port_num);
+    printf("done: \n");
+
+    return 0;
+}*/
+
 int dpdk_device::init_port_start()
 {
     assert(_port_idx < rte_eth_dev_count());
@@ -1500,8 +1581,9 @@ int dpdk_device::init_port_start()
     // Clear txq_flags - we want to support all available offload features
     // except for multi-mempool and refcnt'ing which we don't need
     _dev_info.default_txconf.txq_flags =
-        ETH_TXQ_FLAGS_NOMULTMEMP | ETH_TXQ_FLAGS_NOREFCOUNT;
-
+            (ETH_TXQ_FLAGS_NOMULTSEGS | ETH_TXQ_FLAGS_NOREFCOUNT |
+             ETH_TXQ_FLAGS_NOMULTMEMP | ETH_TXQ_FLAGS_NOOFFLOADS);
+#if 0
     //
     // Disable features that are not supported by port's HW
     //
@@ -1529,6 +1611,7 @@ int dpdk_device::init_port_start()
         !(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TSO)) {
         _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
     }
+#endif
 
     /* for port configuration all features are off by default */
     rte_eth_conf port_conf = { 0 };
@@ -1546,8 +1629,10 @@ int dpdk_device::init_port_start()
     // available in order to make HW calculate RSS hash for us.
     if (smp::count > 1) {
         if (_dev_info.hash_key_size == 40) {
+            printf("Size of the hash_key is 40 bytes\n");
             _rss_key = default_rsskey_40bytes;
         } else if (_dev_info.hash_key_size == 52) {
+            printf("Size of the hash_key is 52 bytes\n");
             _rss_key = default_rsskey_52bytes;
         } else if (_dev_info.hash_key_size != 0) {
             // WTF?!!
@@ -1593,7 +1678,7 @@ int dpdk_device::init_port_start()
 
     // Enable HW CRC stripping
     port_conf.rxmode.hw_strip_crc = 1;
-
+#if 0
 #ifdef RTE_ETHDEV_HAS_LRO_SUPPORT
     // Enable LRO
     if (_use_lro && (_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_LRO)) {
@@ -1634,7 +1719,7 @@ int dpdk_device::init_port_start()
         printf("TSO is supported\n");
         _hw_features.tx_tso = 1;
     }
-
+#endif
     // There is no UFO support in the PMDs yet.
 #if 0
     if (_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TSO) {
@@ -1642,7 +1727,7 @@ int dpdk_device::init_port_start()
         _hw_features.tx_ufo = 1;
     }
 #endif
-
+#if 0
     // Check that Tx TCP and UDP CSUM features are either all set all together
     // or not set all together. If this assumption breaks we need to rework the
     // below logic by splitting the csum offload feature bit into separate bits
@@ -1657,7 +1742,7 @@ int dpdk_device::init_port_start()
         printf("TX TCP&UDP checksum offload supported\n");
         _hw_features.tx_csum_l4_offload = 1;
     }
-
+#endif
     int retval;
 
     printf("Port %u init ... ", _port_idx);
@@ -1714,6 +1799,45 @@ void dpdk_device::set_hw_flow_control()
 not_supported:
     printf("Port %u: Changing HW FC settings is not supported\n", _port_idx);
 }
+
+// Due to some unknown reasons, fdir functionality can
+// not correctly work on our x710 NIC card. We have to
+// use RSS to replace fdir.
+/*void dpdk_device::init_port_fini()
+{
+    // Changing FC requires HW reset, so set it before the port is initialized.
+    set_hw_flow_control();
+
+    if (rte_eth_dev_start(_port_idx) < 0) {
+        rte_exit(EXIT_FAILURE, "Cannot start port %d\n", _port_idx);
+    }
+
+    for(unsigned i = 0; i<_num_queues; i++){
+         printf("Configuring filter for queue %d\n", i);
+         rte_eth_fdir_filter filter = { 0 };
+         filter.soft_id = i;
+         filter.input.flow_type = RTE_ETH_FLOW_NONFRAG_IPV4_UDP;
+         filter.input.flow.udp4_flow.dst_port = rte_cpu_to_be_16(i);
+         filter.action.rx_queue = i;
+         filter.action.behavior = RTE_ETH_FDIR_ACCEPT;
+         filter.action.report_status = RTE_ETH_FDIR_NO_REPORT_STATUS;
+
+         int ret;
+         ret = rte_eth_dev_filter_ctrl(static_cast<uint8_t>(_port_idx),
+                                       RTE_ETH_FILTER_FDIR, RTE_ETH_FILTER_ADD,
+                                       &filter);
+         if (ret < 0) {
+             rte_exit(EXIT_FAILURE,
+                     "Error: Failed to add perfect filter entry on port %d\n",
+                     _port_idx);
+         }
+     }
+
+    // Wait for a link
+    check_port_link_status();
+
+    printf("Created DPDK device\n");
+}*/
 
 void dpdk_device::init_port_fini()
 {
@@ -2242,9 +2366,9 @@ std::unique_ptr<qp> dpdk_device::init_local_queue(boost::program_options::variab
     return qp;
 }
 
-} // namespace netstar_dpdk
+} // namespace fdir
 
-std::unique_ptr<net::device> create_netstar_dpdk_net_device(
+std::unique_ptr<net::device> create_fdir_device(
                                     uint8_t port_idx,
                                     uint8_t num_queues,
                                     bool use_lro,
@@ -2259,7 +2383,7 @@ std::unique_ptr<net::device> create_netstar_dpdk_net_device(
         printf("ports number: %d\n", rte_eth_dev_count());
     }
 
-    return std::make_unique<netstar_dpdk::dpdk_device>(port_idx, num_queues, use_lro,
+    return std::make_unique<fdir::dpdk_device>(port_idx, num_queues, use_lro,
                                                enable_fc);
 }
 
