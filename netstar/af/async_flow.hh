@@ -202,6 +202,11 @@ public:
             return;
         }
 
+        if(!working_unit.flow_key) {
+            async_flow_assert(!is_client);
+
+        }
+
         action_after_packet_handle(working_unit, std::move(pkt),
                                    is_client, false);
     }
@@ -492,9 +497,9 @@ public:
         return _directions[direction].reverse_direction;
     }
 
-    void add_new_mapping_to_flow_table(FlowKeyType& flow_key,
+    bool add_new_mapping_to_flow_table(FlowKeyType& flow_key,
                                        lw_shared_ptr<internal::async_flow_impl<Ppr>> impl_lw_ptr){
-        _flow_table.insert({flow_key, impl_lw_ptr});
+        return _flow_table.insert({flow_key, impl_lw_ptr}).second;
     }
 
     void remove_mapping_on_flow_table(FlowKeyType& flow_key) {
