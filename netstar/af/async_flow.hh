@@ -50,6 +50,11 @@ namespace internal {
 template<typename Ppr>
 class async_flow_impl;
 
+struct buffered_packet {
+    net::packet pkt;
+    bool is_send;
+};
+
 template<typename Ppr>
 struct af_work_unit {
     using EventEnumType = typename Ppr::EventEnumType;
@@ -59,7 +64,7 @@ struct af_work_unit {
     std::experimental::optional<promise<af_ev_context<Ppr>>> async_loop_pr;
     registered_events<EventEnumType> send_events;
     registered_events<EventEnumType> recv_events;
-    circular_buffer<af_ev_context<Ppr>> buffer_q;
+    circular_buffer<buffered_packet> buffer_q;
     std::experimental::optional<FlowKeyType> flow_key;
     uint8_t direction;
     bool loop_started;
@@ -104,44 +109,60 @@ private:
         }
     }
 
-    void action_after_packet_handle(af_work_unit<Ppr>& work_unit,
-                                    filtered_events<EventEnumType> fe,
-                                    net::packet pkt,
-                                    bool is_client, bool is_send) {
-        if((work_unit.loop_started) &&
-           (!work_unit.async_loop_pr || !fe.no_event())) {
-            if(work_unit.async_loop_pr) {
-                async_flow_assert(work_unit.loop_has_context == false);
-                work_unit.loop_has_context = true;
-                work_unit.async_loop_pr->set_value(af_ev_context<Ppr>{
-                    std::move(pkt), fe,
-                    is_client, is_send
-                });
-                work_unit.async_loop_pr = {};
-            }
-            else{
-                work_unit.buffer_q.emplace_back(
-                    std::move(pkt), fe,
-                    is_client, is_send
-                );
-            }
+    filtered_events<EventEnumType> preprocess_packet(
+            af_work_unit<Ppr>& working_unit, net::packet& pkt, bool is_send) {
+        generated_events<EventEnumType> ge =
+                is_send ?
+                working_unit.ppr.handle_packet_send(pkt) :
+                working_unit.ppr.handle_packet_recv(pkt);
+        filtered_events<EventEnumType> fe =
+                is_send ?
+                working_unit.send_events.filter(ge) :
+                working_unit.recv_events.filter(ge);
+        return fe;
+    }
+
+    void internal_packet_forward(net::packet pkt, bool is_client, bool is_send) {
+        if(is_send) {
+            handle_packet_recv(std::move(pkt), ~is_client);
         }
-        else {
-            if(is_send) {
-                handle_packet_recv(std::move(pkt), ~is_client);
-            }
-            else{
-                send_packet_out(std::move(pkt), is_client);
-            }
+        else{
+            send_packet_out(std::move(pkt), is_client);
         }
     }
 
-    void forward_context(af_ev_context<Ppr>& context) {
-        if(context.is_send()){
-            handle_packet_recv(context.extract_packet(), ~context.is_client());
+    void action_after_packet_handle(af_work_unit<Ppr>& working_unit,
+                                    net::packet pkt,
+                                    bool is_client, bool is_send) {
+        if(working_unit.loop_started) {
+            if(working_unit.async_loop_pr) {
+                async_flow_assert(working_unit.buffer_q.empty());
+                auto fe = preprocess_packet(working_unit, pkt, is_send);
+                if(fe.no_event()) {
+                    internal_packet_forward(std::move(pkt), is_client, is_send);
+                }
+                else{
+                    working_unit.loop_has_context = true;
+                    working_unit.async_loop_pr->set_value(af_ev_context<Ppr>{
+                        std::move(pkt), fe,
+                        is_client, is_send
+                    });
+                    working_unit.async_loop_pr = {};
+                }
+            }
+            else{
+                working_unit.buffer_q.emplace_back({std::move(pkt), is_send});
+            }
         }
         else{
-            send_packet_out(context.extract_packet(), context.is_client());
+            if(is_send) {
+                working_unit.ppr.handle_packet_send(pkt);
+                handle_packet_recv(std::move(pkt), ~is_client);
+            }
+            else{
+                working_unit.ppr.handle_packet_recv(pkt);
+                send_packet_out(std::move(pkt), is_client);
+            }
         }
     }
 
@@ -182,13 +203,8 @@ public:
             return;
         }
 
-        generated_events<EventEnumType> ge = working_unit.ppr.handle_packet_send(pkt);
-        filtered_events<EventEnumType> fe = working_unit.send_events.filter(ge);
-        if(fe.on_close_event()) {
-            close_ppr_and_remove_flow_key(working_unit);
-        }
-
-        action_after_packet_handle(working_unit, fe, is_client, true);
+        action_after_packet_handle(working_unit, std::move(pkt),
+                                   is_client, true);
     }
 
     // Summary: Internally process packets that should be received
@@ -205,13 +221,8 @@ public:
             return;
         }
 
-        generated_events<EventEnumType> ge = working_unit.ppr.handle_packet_recv(pkt);
-        filtered_events<EventEnumType> fe = working_unit.recv_events.filter(ge);
-        if(fe.on_close_event()) {
-            close_ppr_and_remove_flow_key(working_unit);
-        }
-
-        action_after_packet_handle(working_unit, fe, is_client, false);
+        action_after_packet_handle(working_unit, std::move(pkt),
+                                   is_client, false);
     }
 
     void send_packet_out(net::packet pkt, bool is_client){
@@ -228,7 +239,12 @@ public:
         bool is_client = context.is_client();
         auto& working_unit = get_work_unit(is_client);
         working_unit.loop_has_conetxt = false;
-        forward_context(context);
+        if(context.is_send()){
+            handle_packet_recv(context.extract_packet(), ~context.is_client());
+        }
+        else{
+            send_packet_out(context.extract_packet(), context.is_client());
+        }
     }
 
     future<af_ev_context<Ppr>> on_new_events(bool is_client) {
@@ -240,21 +256,23 @@ public:
             working_unit.loop_started = true;
         }
 
-        if(!working_unit.buffer_q.empty()) {
-            while(!working_unit.buffer_q.empty()) {
-                auto& next_context = working_unit.buffer_q.front();
-                if(next_context.events().no_event()) {
-                    forward_context(next_context);
-                    working_unit.buffer_q.pop_front();
-                }
-                else {
-                    working_unit.buffer_q.pop_front();
-                    working_unit.loop_has_context = true;
-                    auto future = make_ready_future<af_ev_context<Ppr>>(
-                        std::move(working_unit.buffer_q.front())
-                    );
-                    return future;
-                }
+        while(!working_unit.buffer_q.empty()) {
+            auto& next_pkt = working_unit.buffer_q.front();
+            auto fe = preprocess_packet(working_unit,
+                    next_pkt.pkt, next_pkt.is_send);
+            if(fe.no_event()) {
+                internal_packet_forward(std::move(next_pkt),
+                        is_client, next_pkt.is_send);
+                working_unit.buffer_q.pop_front();
+            }
+            else{
+                working_unit.loop_has_context = true;
+                auto future = make_ready_future<af_ev_context<Ppr>>(
+                    std::move(next_pkt.pkt), fe,
+                    is_client, next_pkt.is_send
+                );
+                working_unit.buffer_q.pop_front();
+                return future;
             }
         }
 
@@ -283,8 +301,15 @@ public:
 
         working_unit.loop_started = false;
         while(!working_unit.buffer_q.empty()) {
-            auto& next_context = working_unit.buffer_q.front();
-            forward_context(next_context);
+            auto& next_pkt = working_unit.buffer_q.front();
+            if(next_pkt.is_send) {
+                working_unit.ppr.handle_packet_send(next_pkt.pkt);
+                handle_packet_recv(std::move(next_pkt.pkt), ~is_client);
+            }
+            else{
+                working_unit.ppr.handle_packet_recv(next_pkt.pkt);
+                send_packet_out(std::move(next_pkt.pkt), is_client);
+            }
             working_unit.buffer_q.pop_front();
         }
     }
