@@ -4,7 +4,7 @@
 
 #define READ 0
 #define WRITE 1
-
+#include "net/tcp.hh"
 #include "netstar/port.hh"
 #include "core/reactor.hh"
 #include "core/app-template.hh"
@@ -24,7 +24,7 @@
 #include "net/ip_checksum.hh"
 #include "net/ip.hh"
 #include "net/virtio.hh"
-#include "net/tcp.hh"
+
 #include "net/net.hh"
 #include "net/packet.hh"
 #include "net/byteorder.hh"

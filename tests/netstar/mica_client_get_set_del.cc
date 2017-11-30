@@ -7,7 +7,8 @@
  * appended to the first request packet.
  *
  */
-#include "net/tcp.hh"
+//#include "net/tcp.hh"
+#include "nf/ips.h"
 #include "netstar/port.hh"
 #include "core/reactor.hh"
 #include "core/app-template.hh"
@@ -17,7 +18,7 @@
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
 #include "netstar/port_env.hh"
-//#include "nf/ips.h"
+
 
 
 
