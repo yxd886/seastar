@@ -102,7 +102,7 @@ struct ips_state{
     bool _alert;
 
 
-    ips_state():_state(0),_dfa_id(0),_alert(false){
+ /*   ips_state():_state(0),_dfa_id(0),_alert(false){
 
     }
     ips_state(uint32_t state):_state(state),_dfa_id(0),_alert(false){
@@ -128,7 +128,7 @@ struct ips_state{
 
 
     }
-
+*/
 
 };
 

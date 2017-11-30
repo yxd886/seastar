@@ -80,7 +80,7 @@ void ids_func(struct aho_ctrl_blk *cb,struct ips_state* state)
 	int i, j;
 
 
-	int id = cb->tid;
+
 	struct aho_dfa *dfa_arr = cb->dfa_arr;
 	struct aho_pkt *pkts = cb->pkts;
 	int num_pkts = cb->num_pkts;
@@ -93,7 +93,7 @@ void ids_func(struct aho_ctrl_blk *cb,struct ips_state* state)
 
 	/* Being paranoid about GCC optimization: ensure that the memcpys in
 	  *  process_batch functions don't get optimized out */
-	int matched_pat_sum = 0;
+
 
 	//int tot_proc = 0;		/* How many packets did we actually match ? */
 	//int tot_success = 0;	/* Packets that matched a DFA state */
@@ -118,7 +118,7 @@ void ids_func(struct aho_ctrl_blk *cb,struct ips_state* state)
 void parse_pkt(net::packet *rte_pkt, struct ips_state* state,struct aho_pkt*  aho_pkt){
 
 	aho_pkt->content=(uint8_t*)malloc(rte_pkt->len());
-	memcpy(aho_pkt->content,rte_pkt->get_header(0,sizeof(char)),rte_pkt->buf_len);
+	memcpy(aho_pkt->content,rte_pkt->get_header(0,sizeof(char)),rte_pkt->len());
 	aho_pkt->dfa_id=state->_dfa_id;
 	aho_pkt->len=rte_pkt->len();
 }
@@ -131,7 +131,7 @@ public:
 
 
 
-    		int num_patterns, num_pkts, i;
+    		int num_patterns, i;
 
         	int num_threads = 1;
         	assert(num_threads >= 1 && num_threads <= AHO_MAX_THREADS);
@@ -214,19 +214,18 @@ public:
 		if(DEBUG==1) printf("processing ips on core:%d\n",rte_lcore_id());
 
 		net::ip_hdr *iphdr;
-		net::tcp_hdr *tcp;
-	    unsigned lcore_id;
+		tcp_hdr *tcp;
 	    _drop=false;
-	    iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::ether_header));
+	    iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
 
-	    if (iphdr->ip_proto!=ip_protocol_num::tcp){
+	    if (iphdr->ip_proto!=net::ip_protocol_num::tcp){
 		    //drop
 	    	if(DEBUG==1) printf("not tcp pkt\n");
 	        _drop=true;
 	        return make_ready_future<>();
 	    }else{
 
-	    	tcp = (net::tcp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
+	    	tcp = (tcp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
 	    	struct ips_state state(0);
 	    	struct fivetuple tuple(iphdr->src_ip,iphdr->dst_ip,tcp->src_port,tcp->dst_port,iphdr->ip_proto);
 
@@ -283,17 +282,18 @@ public:
 	                    });
 
 	                }else{
-	                    state.copy(&(response.get_value<struct ips_state>()));
+
+	                    memcpy(&state,&(response.get_value<struct ips_state>()),sizeof(state));
 	                    if(DEBUG==1)  printf("RECEIVE: alert: %d state: %d, dfa_id:%d\n",state._alert,state._state, state._dfa_id);
 	                    struct ips_state old(0);
-	                    old.copy(&state);
+	                    memcpy(&old,&state,sizeof(state));
 	                    ips_detect(rte_pkt,&state);
 	                    if(state_updated(&old,&state)){
 	                        extendable_buffer set_val_buf;
 	                        set_val_buf.fill_data(state);
 	                        all_objs.local_obj().query(Operation::kSet,
 	                                                                sizeof(key), key_buf.get_temp_buffer(),
-	                                                                sizeof(state), set_val_buf.get_temp_buffer()).then([](response){
+	                                                                sizeof(state), set_val_buf.get_temp_buffer()).then([]( mica_response response){
                                 assert(response.get_key_len() == 0);
                                 assert(response.get_val_len() == 0);
                                 assert(response.get_result() == Result::kSuccess);
