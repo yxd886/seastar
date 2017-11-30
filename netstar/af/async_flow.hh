@@ -191,13 +191,17 @@ public:
         action_after_packet_handle(working_unit, fe, is_client, true);
     }
 
+    // Summary: Internally process packets that should be received
+    // by the preprocessor.
+    // Args: pkt: the packet waiting to be processed.
+    // is_client: which preprocessor should receive this packet
     void handle_packet_recv(net::packet pkt, bool is_client){
         auto& working_unit = get_work_unit(is_client);
 
         if( (working_unit.buffer_q.size() >=
              Ppr::async_flow_config::max_event_context_queue_size) ||
              working_unit.ppr_close) {
-            // drop the packet due to buffer overflow.
+            // Unconditionally drop the packet.
             return;
         }
 
