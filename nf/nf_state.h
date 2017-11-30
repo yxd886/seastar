@@ -5,6 +5,33 @@
 #define READ 0
 #define WRITE 1
 
+#include "netstar/port.hh"
+#include "core/reactor.hh"
+#include "core/app-template.hh"
+#include "core/print.hh"
+#include "core/distributed.hh"
+
+#include "netstar/per_core_objs.hh"
+#include "netstar/mica_client.hh"
+#include "netstar/extendable_buffer.hh"
+#include "netstar/port_env.hh"
+#include "core/reactor.hh"
+#include "core/app-template.hh"
+#include "core/print.hh"
+#include "core/distributed.hh"
+#include "netstar/netstar_dpdk_device.hh"
+#include "net/udp.hh"
+#include "net/ip_checksum.hh"
+#include "net/ip.hh"
+#include "net/net.hh"
+#include "net/packet.hh"
+#include "net/byteorder.hh"
+#include "core/semaphore.hh"
+#include "const.hh"
+
+using namespace seastar;
+using namespace netstar;
+
 struct firewall_state{
     uint8_t _tcp_flags;
     uint32_t _sent_seq;
@@ -86,6 +113,12 @@ struct ips_state{
     }
     ips_state(uint32_t state,uint32_t dfa_id,bool alert):_state(state),_dfa_id(dfa_id),_alert(alert){
 
+    }
+    ips_state& operator=(ips_state&& other) {
+        _state = std::move(other._state);
+        _alert = std::move(other._alert);
+        _dfa_id = std::move(other._dfa_id);
+        return *this;
     }
 
     void copy(struct ips_state* c){

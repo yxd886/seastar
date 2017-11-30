@@ -11,7 +11,7 @@
 #include <vector>
 #include <iostream>
 #define DEBUG 1
-
+/*
 struct rte_ring_item{
     uint64_t _key_hash;
     size_t _key_length;
@@ -31,9 +31,9 @@ struct rte_ring_item{
         _key(key),
         _state(dst)
         {}
-};
+};*/
 
-
+/*
 typedef ::mica::alloc::HugeTLBFS_SHM Alloc;
 
 struct DPDKConfig : public ::mica::network::BasicDPDKConfig {
@@ -130,7 +130,7 @@ class ResponseHandler
   std::map<uint64_t,uint64_t> *_lcore_map;
 
 
-};
+};*/
 
 struct rule{
 public:
@@ -153,7 +153,7 @@ public:
 
 
 
-
+/**
 
 
 void* poll_interface2worker_ring(struct rte_ring* interface2worker_ring){
@@ -188,7 +188,7 @@ void* get_value(struct rte_ring* interface2worker_ring){
 
     return poll_interface2worker_ring(interface2worker_ring);
 }
-
+*/
 struct fivetuple{
 public:
     uint32_t _src_addr;

@@ -8,11 +8,12 @@
 #include "nf/nf_common.h"
 #include <vector>
 #include <iostream>
-#include "nf/aho-corasick/aho.h"
-#include "nf/aho-corasick/util.h"
 #include "nf/aho-corasick/fpp.h"
+#include "nf/aho-corasick/aho.h"
+
 #include <stdlib.h>
 #include <time.h>
+using namespace seastar;
 
 
 #define MAX_MATCH 8192
@@ -114,19 +115,19 @@ void ids_func(struct aho_ctrl_blk *cb,struct ips_state* state)
 
 }
 
-void parse_pkt(struct rte_mbuf* rte_pkt, struct ips_state* state,struct aho_pkt*  aho_pkt){
+void parse_pkt(net::packet *rte_pkt, struct ips_state* state,struct aho_pkt*  aho_pkt){
 
-	aho_pkt->content=(uint8_t*)malloc(rte_pkt->buf_len);
-	memcpy(aho_pkt->content,rte_pkt->buf_addr,rte_pkt->buf_len);
+	aho_pkt->content=(uint8_t*)malloc(rte_pkt->len());
+	memcpy(aho_pkt->content,rte_pkt->get_header(0,sizeof(char)),rte_pkt->buf_len);
 	aho_pkt->dfa_id=state->_dfa_id;
-	aho_pkt->len=rte_pkt->buf_len;
+	aho_pkt->len=rte_pkt->len();
 }
 
 
 class IPS{
 public:
-    IPS(struct rte_ring** worker2interface,struct rte_ring** interface2worker):
-		_worker2interface(worker2interface),_interface2worker(interface2worker),_drop(false){
+    IPS():
+		_drop(false){
 
 
 
@@ -176,13 +177,14 @@ public:
 
 
 
-    void init_automataState(struct ips_state* state){
+   future<> init_automataState(struct ips_state* state){
     	srand((unsigned)time(NULL));
     	state->_state=0;
     	state->_alert=false;
     	state->_dfa_id=rand()%AHO_MAX_DFA;
+    	return make_ready_future<>();
     }
-    void ips_detect(struct rte_mbuf* rte_pkt, struct ips_state* state){
+    void ips_detect(net::packet *rte_pkt, struct ips_state* state){
 
     	struct aho_pkt* pkts=(struct aho_pkt* )malloc(sizeof(struct aho_pkt));
     	parse_pkt(rte_pkt, state,pkts);
@@ -202,112 +204,113 @@ public:
 
     }
 
-	void process_packet(struct rte_mbuf* rte_pkt){
+
+
+
+
+	future<> process_packet(net::packet* rte_pkt){
 
 
 		if(DEBUG==1) printf("processing ips on core:%d\n",rte_lcore_id());
 
-	    struct ipv4_hdr *iphdr;
-	    struct tcp_hdr *tcp;
+		net::ip_hdr *iphdr;
+		net::tcp_hdr *tcp;
 	    unsigned lcore_id;
 	    _drop=false;
+	    iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::ether_header));
 
-	    lcore_id = rte_lcore_id();
-	    iphdr = rte_pktmbuf_mtod_offset(rte_pkt,
-	            struct ipv4_hdr *,
-	            sizeof(struct ether_hdr));
-
-	    if (iphdr->next_proto_id!=IPPROTO_TCP){
+	    if (iphdr->ip_proto!=ip_protocol_num::tcp){
 		    //drop
 	    	if(DEBUG==1) printf("not tcp pkt\n");
 	        _drop=true;
-	        return;
+	        return make_ready_future<>();
 	    }else{
 
-	    	tcp = (struct tcp_hdr *)((unsigned char *)iphdr +sizeof(struct ipv4_hdr));
+	    	tcp = (net::tcp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
 	    	struct ips_state state(0);
-	    	struct fivetuple tuple(iphdr->src_addr,iphdr->dst_addr,tcp->src_port,tcp->dst_port,iphdr->next_proto_id);
+	    	struct fivetuple tuple(iphdr->src_ip,iphdr->dst_ip,tcp->src_port,tcp->dst_port,iphdr->ip_proto);
 
 	       // printf("src_addr:%d ,iphdr->dst_addr:%d tcp->src_port:%d tcp->dst_port:%d\n ",iphdr->src_addr,iphdr->dst_addr,tcp->src_port,tcp->dst_port);
 
 
             //generate key based on five-tuples
 	        char* key = reinterpret_cast<char*>(&tuple);
-	        size_t key_length;
-	        key_length= sizeof(tuple);
-	        uint64_t key_hash;
-	        key_hash= hash(key, key_length);
-	        void* rev_item;
-	        struct rte_ring_item item(key_hash,key_length,key);
+            extendable_buffer key_buf;
+            key_buf.fill_data(key);
 
-	    	  if((tcp->tcp_flags&0x2)>>1==1){ //is A tcp syn
+            extendable_buffer val_buf;
+            val_buf.fill_data(state);
 
-	    		    init_automataState(&state);
+	    	  if(tcp->f_syn==1){ //is A tcp syn
+
+	    		    return init_automataState(&state).then([&]{
 
 
-		            item._state._action=WRITE;
-		            item._state._ips_state.copy(&state);
-		            if(DEBUG==1)  printf("try to enqueue to _worker2interface[%d] \n",lcore_id);
-		            rte_ring_enqueue(_worker2interface[lcore_id],static_cast<void*>(&item));
-		            if(DEBUG==1)  printf("enqueue to _worker2interface[%d] completed\n",lcore_id);
 
-			        if(DEBUG==1)  printf("try to dequeue from _interface2worker[%d]\n",lcore_id);
-			        rev_item=get_value(_interface2worker[lcore_id]);
-			        if(DEBUG==1)  printf("dequeue from _interface2worker[%d] completed\n",lcore_id);
+                        return all_objs.local_obj().query(Operation::kSet,
+                                sizeof(key), key_buf.get_temp_buffer(),
+                                sizeof(state), val_buf.get_temp_buffer()).then([](mica_response response){
+                            assert(response.get_key_len() == 0);
+                            assert(response.get_val_len() == 0);
+                            assert(response.get_result() == Result::kSuccess);
+                            return make_ready_future<>();
+                        });
 
+	    		    });
 
 	    	  }else{
 
-	  	        if(DEBUG==1)  printf("try to enqueue to _worker2interface[%d] \n",lcore_id);
-	  	        rte_ring_enqueue(_worker2interface[lcore_id],static_cast<void*>(&item));
-	  	        if(DEBUG==1)  printf("enqueue to _worker2interface[%d] completed\n",lcore_id);
 
-	  	        if(DEBUG==1)  printf("try to dequeue from _interface2worker[%d]\n",lcore_id);
-	  	        rev_item=get_value(_interface2worker[lcore_id]);
-	  	        if(DEBUG==1)  printf("dequeue from _interface2worker[%d] completed\n",lcore_id);
-	  	        if(rev_item==nullptr){
+	  	        return all_objs.local_obj().query(Operation::kGet,
+                        sizeof(key), key_buf.get_temp_buffer(),
+                        0, temporary_buffer<char>()).then([&](mica_response response){
+
+	                if(response.get_result() == Result::kNotFound){
 
 
-	  	        	init_automataState(&state);
-		            item._state._action=WRITE;
-		            item._state._ips_state.copy(&state);
-	  	        	if(DEBUG) printf("not find the key\n");
-	  	        	if(DEBUG) printf("init: dfa id:%d \n",state._dfa_id);
-	  	        	getchar();
-		            if(DEBUG==1)  printf("try to enqueue to _worker2interface[%d] \n",lcore_id);
-		            rte_ring_enqueue(_worker2interface[lcore_id],static_cast<void*>(&item));
-		            if(DEBUG==1)  printf("enqueue to _worker2interface[%d] completed\n",lcore_id);
-
-			        if(DEBUG==1)  printf("try to dequeue from _interface2worker[%d]\n",lcore_id);
-			        rev_item=get_value(_interface2worker[lcore_id]);
-			        if(DEBUG==1)  printf("dequeue from _interface2worker[%d] completed\n",lcore_id);
-			        return;
-	  	        }
-	  	        state._state=((struct rte_ring_item*)rev_item)->_state._ips_state._state;
-	  	        state._alert=((struct rte_ring_item*)rev_item)->_state._ips_state._alert;
-	  	        state._dfa_id=((struct rte_ring_item*)rev_item)->_state._ips_state._dfa_id;
-	  	      if(DEBUG==1)  printf("RECEIVE: alert: %d state: %d, dfa_id:%d\n",state._alert,state._state, state._dfa_id);
-				struct ips_state old(0);
-				old.copy(&state);
-	  	        ips_detect(rte_pkt,&state);
-	  	        if(state_updated(&old,&state)){
-		            item._state._action=WRITE;
-		            item._state._ips_state.copy(&state);
-		    	    if(DEBUG==1)  printf("WRITE:alert: %d state: %d, dfa_id:%d\n",item._state._ips_state._alert,item._state._ips_state._state, item._state._ips_state._dfa_id);
-		            if(DEBUG==1)  printf("try to enqueue to _worker2interface[%d] \n",lcore_id);
-		            rte_ring_enqueue(_worker2interface[lcore_id],static_cast<void*>(&item));
-		            if(DEBUG==1)  printf("enqueue to _worker2interface[%d] completed\n",lcore_id);
-
-			        if(DEBUG==1)  printf("try to dequeue from _interface2worker[%d]\n",lcore_id);
-			        rev_item=get_value(_interface2worker[lcore_id]);
-			        if(DEBUG==1)  printf("dequeue from _interface2worker[%d] completed\n",lcore_id);
-	  	        }
+	                    return init_automataState(&state).then([&]{
 
 
-	  	        if(state._alert){
-	  	        	_drop=true;
-	  	        	return;
-	  	        }
+	                            return all_objs.local_obj().query(Operation::kSet,
+	                                    sizeof(key), key_buf.get_temp_buffer(),
+	                                    sizeof(state), val_buf.get_temp_buffer()).then([&](mica_response response){
+	                                assert(response.get_key_len() == 0);
+	                                assert(response.get_val_len() == 0);
+	                                assert(response.get_result() == Result::kSuccess);
+	                                return make_ready_future<>();
+	                            });
+
+	                    });
+
+	                }else{
+	                    state.copy(&(response.get_value<struct ips_state>()));
+	                    if(DEBUG==1)  printf("RECEIVE: alert: %d state: %d, dfa_id:%d\n",state._alert,state._state, state._dfa_id);
+	                    struct ips_state old(0);
+	                    old.copy(&state);
+	                    ips_detect(rte_pkt,&state);
+	                    if(state_updated(&old,&state)){
+	                        extendable_buffer set_val_buf;
+	                        set_val_buf.fill_data(state);
+	                        all_objs.local_obj().query(Operation::kSet,
+	                                                                sizeof(key), key_buf.get_temp_buffer(),
+	                                                                sizeof(state), set_val_buf.get_temp_buffer()).then([](response){
+                                assert(response.get_key_len() == 0);
+                                assert(response.get_val_len() == 0);
+                                assert(response.get_result() == Result::kSuccess);
+	                        });
+	                    }
+
+
+	                    if(state._alert){
+	                        _drop=true;
+	                        return make_ready_future<>();
+	                    }
+	                }
+
+
+
+	  	        });
+
 
 
 	    	  }
@@ -317,11 +320,10 @@ public:
 
     }
 
-	struct rte_ring** _worker2interface;
-	struct rte_ring** _interface2worker;
 	bool _drop;
 	struct aho_dfa dfa_arr[AHO_MAX_DFA];
 	struct stat_t *stats;
+	per_core_objs<mica_client> all_objs;
 
 };
 
