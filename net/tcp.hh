@@ -1413,7 +1413,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
         // FIN_WAIT_2 STATE
         if (in_state(FIN_WAIT_2)) {
             // In addition to the processing for the ESTABLISHED state, if
-            // the retransmission queue is empty, the userâ€™s CLOSE can be
+            // the retransmission queue is empty, the user’s CLOSE can be
             // acknowledged ("ok") but do not delete the TCB.
             // TODO
         }
