@@ -232,7 +232,7 @@ public:
 	    	tcp = (net::tcp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
 	    	struct ips_state state;
 	    	init_ip_state(&state);
-	    	struct fivetuple tuple(iphdr->src_ip,iphdr->dst_ip,tcp->src_port,tcp->dst_port,iphdr->ip_proto);
+	    	struct fivetuple tuple(iphdr->src_ip.ip,iphdr->dst_ip.ip,tcp->src_port,tcp->dst_port,iphdr->ip_proto);
 
 	       // printf("src_addr:%d ,iphdr->dst_addr:%d tcp->src_port:%d tcp->dst_port:%d\n ",iphdr->src_addr,iphdr->dst_addr,tcp->src_port,tcp->dst_port);
 
