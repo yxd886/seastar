@@ -204,7 +204,7 @@ public:
 
         if(!working_unit.flow_key) {
             async_flow_assert(!is_client);
-
+            FlowKeyType flow_key = working_unit.ppr.get_reverse_flow_key(pkt);
         }
 
         action_after_packet_handle(working_unit, std::move(pkt),
