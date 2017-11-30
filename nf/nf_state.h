@@ -27,7 +27,7 @@
 #include "net/packet.hh"
 #include "net/byteorder.hh"
 #include "core/semaphore.hh"
-#include "const.hh"
+
 
 using namespace seastar;
 using namespace netstar;
