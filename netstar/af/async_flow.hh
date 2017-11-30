@@ -360,16 +360,16 @@ public:
     }
 
     af_ev_context(const af_ev_context& other) = delete;
-    af_ev_context(af_ev_context&& other)
+    af_ev_context(af_ev_context&& other) noexcept
         : _pkt(std::move(other._pkt))
         , _fe(other._fe)
         , _is_client(other._is_client)
         , _is_send(other._is_send)
-        , _is_valid(other._is_valid){
+        , _is_valid(other._is_valid) {
         other._is_valid = false;
     }
     af_ev_context& operator=(const af_ev_context& other) = delete;
-    af_ev_context& operator=(af_ev_context&& other) {
+    af_ev_context& operator=(af_ev_context&& other) noexcept {
         if(&other != this){
             this->~af_ev_context();
             new (this) af_ev_context(std::move(other));
