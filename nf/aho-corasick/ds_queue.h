@@ -1,3 +1,8 @@
+#pragma once
+#ifndef AHO_CORASICK_DS_QUEUE_H
+#define AHO_CORASICK_DS_QUEUE_H
+
+
 #define DS_QUEUE_DBG 0
 
 #define ds_queue_printf(...) \
@@ -107,3 +112,7 @@ void ds_queue_print(struct ds_queue *q)
     }
     printf("\n");
 }
+
+
+
+#endif

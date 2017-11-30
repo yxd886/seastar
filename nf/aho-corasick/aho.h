@@ -1,3 +1,7 @@
+#pragma once
+#ifndef AHO_CORASICK_AHO_H
+#define AHO_CORASICK_AHO_H
+
 #include<stdint.h>
 #include "ds_queue.h"
 #include "util.h"
@@ -427,3 +431,7 @@ void aho_preprocess_dfa(struct aho_dfa *dfa)
         }
     }
 }
+
+
+
+#endif
