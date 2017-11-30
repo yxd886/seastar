@@ -37,6 +37,14 @@ enum class af_trigger : bool {
     recv = false
 };
 
+#define ENABLE_ASSERTION
+
+void async_flow_assert(bool boolean_expr) {
+#ifdef ENABLE_ASSERTION
+    assert(boolean_expr);
+#endif
+}
+
 namespace internal {
 
 template<typename Ppr>
@@ -54,7 +62,6 @@ struct af_work_unit {
     circular_buffer<af_ev_context<Ppr>> buffer_q;
     std::experimental::optional<FlowKeyType> flow_key;
     uint8_t direction;
-    bool is_client;
     bool loop_started;
     bool loop_has_context;
     bool ppr_close;
@@ -63,7 +70,6 @@ struct af_work_unit {
                  uint8_t direction_arg)
         : ppr(is_client_arg)
         , direction(direction_arg)
-        , is_client(is_client_arg)
         , loop_started(false)
         , loop_has_context(false)
         , ppr_close(false) {
@@ -105,7 +111,7 @@ private:
         if((work_unit.loop_started) &&
            (!work_unit.async_loop_pr || !fe.no_event())) {
             if(work_unit.async_loop_pr) {
-                assert(work_unit.loop_has_context == false);
+                async_flow_assert(work_unit.loop_has_context == false);
                 work_unit.loop_has_context = true;
                 work_unit.async_loop_pr->set_value(af_ev_context<Ppr>{
                     std::move(pkt), fe,
@@ -218,8 +224,8 @@ public:
 
     future<af_ev_context<Ppr>> on_new_events(bool is_client) {
         auto& working_unit = get_work_unit(is_client);
-        assert((working_unit.loop_has_context == false) &&
-               (!working_unit.async_loop_pr));
+        async_flow_assert((working_unit.loop_has_context == false) &&
+                          (!working_unit.async_loop_pr));
 
         if(working_unit.loop_started == false) {
             working_unit.loop_started = true;
@@ -262,9 +268,9 @@ public:
     void close_async_loop (bool is_client) {
         auto& working_unit = get_work_unit(is_client);
 
-        assert(working_unit.loop_has_context == false &&
-               !working_unit.async_loop_pr &&
-               working_unit.loop_started == true);
+        async_flow_assert(working_unit.loop_has_context == false &&
+                          !working_unit.async_loop_pr &&
+                          working_unit.loop_started == true);
 
         working_unit.loop_started = false;
         while(!working_unit.buffer_q.empty()) {
@@ -326,6 +332,9 @@ public:
     bool is_send() {
         return _is_send;
     }
+    bool is_null_pkt() {
+        return _pkt;
+    }
 private:
     net::packet extract_packet() {
         return std::move(_pkt);
@@ -343,12 +352,12 @@ public:
     ~async_flow(){
         auto& client_ref = _impl->_client;
         auto& server_ref = _impl->_server;
-        assert(!client_ref.async_loop_pr &&
-               !client_ref.loop_has_context &&
-               !client_ref.loop_started);
-        assert(!server_ref.async_loop_pr &&
-               !server_ref.loop_has_context &&
-               !server_ref.loop_started);
+        async_flow_assert(!client_ref.async_loop_pr &&
+                          !client_ref.loop_has_context &&
+                          !client_ref.loop_started);
+        async_flow_assert(!server_ref.async_loop_pr &&
+                          !server_ref.loop_has_context &&
+                          !server_ref.loop_started);
     }
     async_flow(const async_flow& other) = delete;
     async_flow(async_flow&& other)
@@ -389,7 +398,7 @@ public:
                                                      stream<net::packet, FlowKeyType&>& istream,
                                                      std::function<future<>(net::packet)> fn) {
         if(direction < _directions.size()) {
-            assert(!_directions[direction].input_sub);
+            async_flow_assert(!_directions[direction].input_sub);
         }
         else {
             _directions.resize(direction+1);
