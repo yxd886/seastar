@@ -348,7 +348,7 @@ class af_ev_context{
 
 public:
 
-    // Internal constructor used by
+    // Internal constructor used by async_flow_impl
     af_ev_context(net::packet pkt,
                   filtered_events<EventEnumType> fe,
                   bool is_client,
@@ -357,6 +357,16 @@ public:
         , _fe(fe)
         , _is_client(is_client)
         , _is_send(is_send) {
+    }
+
+    // Public construct, uesful for temporarily storing
+    // af_ev_context object.
+    af_ev_context()
+        : _pkt(net::packet::make_null_packet())
+        , _fe(0)
+        , _is_client(false)
+        , _is_send(false) {
+
     }
 
     const filtered_events<EventEnumType>& events() {
