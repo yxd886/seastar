@@ -18,6 +18,7 @@
 #include "netstar/extendable_buffer.hh"
 #include "netstar/port_env.hh"
 //#include "nf/ips.h"
+#include "net/tcp.hh"
 
 
 using namespace seastar;
