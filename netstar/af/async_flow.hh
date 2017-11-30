@@ -372,7 +372,7 @@ public:
     af_ev_context& operator=(af_ev_context&& other) {
         if(&other != this){
             this->~af_ev_context();
-            new (this) async_flow(std::move(other));
+            new (this) af_ev_context(std::move(other));
         }
         return *this;
     }
