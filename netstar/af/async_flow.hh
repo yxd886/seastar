@@ -156,15 +156,6 @@ private:
         }
     }
 
-    future<af_ev_context<Ppr>> build_no_event_ready_future(bool is_client){
-        return make_ready_future<af_ev_context<Ppr>>({
-            net::packet::make_null_packet(),
-            filtered_events<EventEnumType>::make_close_event(),
-            is_client,
-            true
-        });
-    }
-
 public:
     // Internal interfaces, exposed to async_flow and
     // async_flow manager.
@@ -221,11 +212,13 @@ public:
     }
 
     void destroy_event_context(af_ev_context<Ppr> context) {
+        async_flow_assert(context._is_valid);
         auto& working_unit = get_work_unit(context.is_client());
         working_unit.loop_has_context = false;
     }
 
     void forward_event_context(af_ev_context<Ppr> context) {
+        async_flow_assert(context._is_valid && context._pkt);
         bool is_client = context.is_client();
         auto& working_unit = get_work_unit(is_client);
         working_unit.loop_has_conetxt = false;
@@ -268,7 +261,12 @@ public:
 
         if(working_unit.ppr_close == true) {
             working_unit.loop_has_context = true;
-            return build_no_event_ready_future(is_client);
+            return make_ready_future<af_ev_context<Ppr>>({
+                net::packet::make_null_packet(),
+                filtered_events<EventEnumType>::make_close_event(),
+                is_client,
+                true
+            });
         }
         else{
             working_unit.async_loop_pr = promise<af_ev_context<Ppr>>();
@@ -351,7 +349,7 @@ public:
         , _is_valid(true){
     }
 
-    // Public construct, uesful for temporarily storing
+    // Public constructor, uesful for temporarily storing
     // af_ev_context object.
     af_ev_context()
         : _pkt(net::packet::make_null_packet())
@@ -359,6 +357,24 @@ public:
         , _is_client(false)
         , _is_send(false)
         , _is_valid(false) {
+    }
+
+    af_ev_context(const af_ev_context& other) = delete;
+    af_ev_context(af_ev_context&& other)
+        : _pkt(std::move(other._pkt))
+        , _fe(other._fe)
+        , _is_client(other._is_client)
+        , _is_send(other._is_send)
+        , _is_valid(other._is_valid){
+        other._is_valid = false;
+    }
+    af_ev_context& operator=(const af_ev_context& other) = delete;
+    af_ev_context& operator=(af_ev_context&& other) {
+        if(&other != this){
+            this->~af_ev_context();
+            new (this) async_flow(std::move(other));
+        }
+        return *this;
     }
 
     const filtered_events<EventEnumType>& events() {
