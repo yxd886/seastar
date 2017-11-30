@@ -27,16 +27,6 @@ class async_flow;
 template<typename Ppr>
 class async_flow_manager;
 
-enum class af_side : bool {
-    client=true,
-    server=false
-};
-
-enum class af_trigger : bool {
-    send = true,
-    recv = false
-};
-
 #define ENABLE_ASSERTION
 
 void async_flow_assert(bool boolean_expr) {
@@ -343,6 +333,7 @@ class af_ev_context{
     filtered_events<EventEnumType> _fe;
     bool _is_client;
     bool _is_send;
+    bool _is_valid;
 
     friend class internal::async_flow_impl<Ppr>;
 
@@ -356,7 +347,8 @@ public:
         : _pkt(std::move(pkt))
         , _fe(fe)
         , _is_client(is_client)
-        , _is_send(is_send) {
+        , _is_send(is_send)
+        , _is_valid(true){
     }
 
     // Public construct, uesful for temporarily storing
@@ -365,8 +357,8 @@ public:
         : _pkt(net::packet::make_null_packet())
         , _fe(0)
         , _is_client(false)
-        , _is_send(false) {
-
+        , _is_send(false)
+        , _is_valid(false) {
     }
 
     const filtered_events<EventEnumType>& events() {
