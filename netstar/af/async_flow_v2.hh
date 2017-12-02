@@ -202,13 +202,13 @@ public:
             return;
         }
 
-        if(!working_unit.flow_key) {
+        /*if(!working_unit.flow_key) {
             async_flow_assert(!is_client);
             FlowKeyType flow_key = working_unit.ppr.get_reverse_flow_key(pkt);
             if(_manager.add_new_mapping_to_flow_table(flow_key, )) {
 
             }
-        }
+        }*/
 
         action_after_packet_handle(working_unit, std::move(pkt),
                                    is_client, false);
