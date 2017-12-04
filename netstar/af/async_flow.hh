@@ -458,7 +458,8 @@ class async_flow_manager {
     seastar::queue<async_flow<Ppr>> _new_flow_q{Ppr::async_flow_config::new_flow_queue_size};
     friend class internal::async_flow_impl<Ppr>;
 public:
-    subscription<net::packet> direction_registration(uint8_t direction, uint8_t reverse_direction,
+    subscription<net::packet> direction_registration(uint8_t direction,
+                                                     uint8_t reverse_direction,
                                                      stream<net::packet, FlowKeyType&>& istream,
                                                      std::function<future<>(net::packet)> fn) {
         if(direction < _directions.size()) {
