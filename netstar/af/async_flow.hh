@@ -82,7 +82,7 @@ class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>{
     async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
-    unsigned _pkts_in_pipeline;
+    unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
 
 private:
     // General helper utility function, useful for reducing the
@@ -119,6 +119,7 @@ private:
         }
         else{
             send_packet_out(std::move(pkt), is_client);
+            _pkts_in_pipeline -= 1;
         }
     }
 
@@ -153,6 +154,7 @@ private:
             else{
                 working_unit.ppr.handle_packet_recv(pkt);
                 send_packet_out(std::move(pkt), is_client);
+                _pkts_in_pipeline -= 1;
             }
         }
     }
@@ -173,6 +175,7 @@ public:
     ~async_flow_impl() {
         async_flow_assert(_client.loop_has_context == false);
         async_flow_assert(_server.loop_has_context == false);
+        asyyc_flow_assert(_pkts_in_pipeline == 0);
     }
 
     // Summary: Process packets send from the real client or server side.
@@ -312,6 +315,7 @@ public:
             else{
                 working_unit.ppr.handle_packet_recv(next_pkt.pkt);
                 send_packet_out(std::move(next_pkt.pkt), is_client);
+                _pkts_in_pipeline -= 1;
             }
             working_unit.buffer_q.pop_front();
         }
@@ -323,6 +327,7 @@ public:
 
         if(working_unit.loop_started && working_unit.async_loop_pr) {
             working_unit.loop_has_context = true;
+            _pkts_in_pipeline += 1;
             working_unit.async_loop_pr->set_value(
                 af_ev_context<Ppr>({
                       net::packet::make_null_packet(),

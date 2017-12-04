@@ -32,37 +32,50 @@
 #include "netstar/port_env.hh"
 #include "netstar/af/async_flow.hh"
 
+#include "net/ip.hh"
+#include "net/byteorder.hh"
+
 using namespace seastar;
 using namespace netstar;
 using namespace std::chrono_literals;
 
-enum class fk_events : uint8_t{
-    fk_me=0,
-    fk_you=1,
-    fk_everybody=2
+enum class dummy_udp_events : uint8_t{
+    pkt_in=0
 };
 
-class dummy_ppr{
+class dummy_udp_ppr{
 private:
     bool _is_client;
 public:
-    using EventEnumType = fk_events;
-    using FlowKeyType = int;
+    using EventEnumType = dummy_udp_events;
+    using FlowKeyType = net::l4connid<net::ipv4_traits>;
 
-    dummy_ppr(bool is_client)
+    dummy_udp_ppr(bool is_client)
         : _is_client(is_client) {
     }
+
 public:
     filtered_events<EventEnumType> handle_packet_send(net::packet& pkt){
-        return filtered_events<EventEnumType>(1);
+        generated_events<EventEnumType> ge;
+        ge.event_happen<dummy_udp_events::pkt_in>();
+        return ge;
     }
 
     filtered_events<EventEnumType> handle_packet_recv(net::packet& pkt){
-        return filtered_events<EventEnumType>(1);
+        generated_events<EventEnumType> ge;
+        ge.event_happen<dummy_udp_events::pkt_in>();
+        return ge;
     }
-    int get_reverse_flow_key(net::packet& pkt){
-        return 2;
+
+    FlowKeyType get_reverse_flow_key(net::packet& pkt){
+        auto ip_hd_ptr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+        auto udp_hd_ptr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
+        return FlowKeyType{net::ntoh(ip_hd_ptr->src_ip),
+                           net::ntoh(ip_hd_ptr->dst_ip),
+                           net::ntoh(udp_hd_ptr->src_port),
+                           net::ntoh(udp_hd_ptr->dst_port)};
     }
+
 public:
     struct async_flow_config {
         static constexpr int max_event_context_queue_size = 5;
@@ -108,16 +121,9 @@ do_with(flow_processor(std::move(af)), [](auto& obj){
 int main(int ac, char** av) {
     app_template app;
     timer<steady_clock_type> to;
-    circular_buffer<af_ev_context<dummy_ppr>> q;
     async_flow_manager<dummy_ppr> manager;
 
-    return app.run_deprecated(ac, av, [&app, &to, &q, &manager]{
-        netstar::internal::async_flow_impl<dummy_ppr> af(manager, 1, 1);
-        q.emplace_back(af_ev_context<dummy_ppr>{net::packet(), filtered_events<fk_events>(1), false, false, &af});
-        // af_ev_context<dummy_ppr> context = std::move(q.front());
-        auto context(std::move(q.front()));
-        q.pop_front();
-        assert(context.events().on_event<fk_events::fk_me>());
+    return app.run_deprecated(ac, av, [&app, &to, &manager]{
     });
 
 
