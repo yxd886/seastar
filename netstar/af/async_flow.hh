@@ -514,7 +514,7 @@ public:
                    (_flow_table.size() <
                     Ppr::async_flow_config::max_flow_table_size) ){
                     auto impl_lw_ptr =
-                            make_lw_shared<internal::async_flow_impl<Ppr>>>(
+                            make_lw_shared<internal::async_flow_impl<Ppr>>(
                                 (*this), direction, key
                             );
                     _flow_table.insert({key, impl_lw_ptr});
