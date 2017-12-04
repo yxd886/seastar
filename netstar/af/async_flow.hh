@@ -458,20 +458,26 @@ class async_flow_manager {
     seastar::queue<async_flow<Ppr>> _new_flow_q{Ppr::async_flow_config::new_flow_queue_size};
     friend class internal::async_flow_impl<Ppr>;
 public:
-    struct external_io_direction {
-        std::experimental::optional<subscription<net::packet>> receive_sub;
-        stream<net::packet, FlowKeyType&> send_stream;
-        uint8_t direction;
-
-        external_io_direction(uint8_t direction_arg)
-            : direction(direction_arg) {
+    class external_io_direction {
+        std::experimental::optional<subscription<net::packet>> _receive_sub;
+        stream<net::packet, FlowKeyType&> _send_stream;
+        uint8_t _direction;
+        bool _is_registered;
+    public:
+        external_io_direction(uint8_t direction)
+            : _direction(direction)
+            , _is_registered(false) {
         }
-
         void register_to_manager(async_flow_manager<Ppr>& manager,
                                  std::function<future<>(net::packet)> receive_fn,
                                  external_io_direction reverse_io) {
-            manager.direction_registration(direction, reverse_io.direction,
-                                           send_stream, std::move(receive_fn));
+            assert(!_is_registered);
+            _is_registered = true;
+            manager.direction_registration(_direction, reverse_io.get_direction(),
+                                           _send_stream, std::move(receive_fn));
+        }
+        uint8_t get_direction() {
+            return _direction;
         }
     };
 

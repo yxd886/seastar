@@ -127,7 +127,9 @@ int main(int ac, char** av) {
     async_flow_manager<dummy_udp_ppr>::external_io_direction ingress(0);
     async_flow_manager<dummy_udp_ppr>::external_io_direction egress(1);
 
-    return app.run_deprecated(ac, av, [&app, &to, &manager]{
+    return app.run_deprecated(ac, av, [&app, &to, &manager, &ingress, &egress]{
+        ingress.register_to_manager(manager, [](net::packet pkt){return make_ready_future();}, egress);
+        egress.register_to_manager(manager, [](net::packet pkt){return make_ready_future();}, ingress);
     });
 
 
