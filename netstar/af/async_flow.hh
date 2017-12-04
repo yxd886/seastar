@@ -136,7 +136,7 @@ private:
                     working_unit.loop_has_context = true;
                     working_unit.async_loop_pr->set_value(af_ev_context<Ppr>{
                         std::move(pkt), fe,
-                        is_client, is_send
+                        is_client, is_send, this
                     });
                     working_unit.async_loop_pr = {};
                 }
@@ -267,7 +267,7 @@ public:
                 working_unit.loop_has_context = true;
                 auto future = make_ready_future<af_ev_context<Ppr>>(
                     std::move(next_pkt.pkt), fe,
-                    is_client, next_pkt.is_send
+                    is_client, next_pkt.is_send, this
                 );
                 working_unit.buffer_q.pop_front();
                 return future;
@@ -280,7 +280,7 @@ public:
                 net::packet::make_null_packet(),
                 filtered_events<EventEnumType>::make_close_event(),
                 is_client,
-                true
+                true, this
             });
         }
         else{
@@ -328,7 +328,7 @@ public:
                       net::packet::make_null_packet(),
                       filtered_events<EventEnumType>::make_close_event(),
                       is_client,
-                      true
+                      true, this
                 })
             );
             working_unit.async_loop_pr = {};
