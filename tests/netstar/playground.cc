@@ -124,6 +124,8 @@ int main(int ac, char** av) {
     app_template app;
     timer<steady_clock_type> to;
     async_flow_manager<dummy_udp_ppr> manager;
+    async_flow_manager<dummy_udp_ppr>::external_io_direction ingress(0);
+    async_flow_manager<dummy_udp_ppr>::external_io_direction egress(1);
 
     return app.run_deprecated(ac, av, [&app, &to, &manager]{
     });
