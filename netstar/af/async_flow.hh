@@ -143,7 +143,7 @@ private:
                 }
             }
             else{
-                working_unit.buffer_q.emplace_back({std::move(pkt), is_send});
+                working_unit.buffer_q.emplace_back(std::move(pkt), is_send);
             }
         }
         else{
