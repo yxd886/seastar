@@ -43,6 +43,11 @@ class async_flow_impl;
 struct buffered_packet {
     net::packet pkt;
     bool is_send;
+
+    buffered_packet(net::packet pkt_arg, bool is_send_arg)
+        : pkt(std::move(pkt_arg))
+        , is_send(is_send_arg){
+    }
 };
 
 template<typename Ppr>
