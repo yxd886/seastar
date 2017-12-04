@@ -468,9 +468,24 @@ public:
             : _direction(direction)
             , _is_registered(false) {
         }
+        external_io_direction(const external_io_direction& other) = delete;
+        external_io_direction(external_io_direction&& other) noexcept
+            : _receive_sub(std::move(other._receive_sub))
+            , _send_stream(other._send_stream)
+            , _direction(other._direction)
+            , _is_registered(other._is_registered) {
+        }
+        external_io_direction& operator=(const external_io_direction& other) = delete;
+        external_io_direction& operator=(external_io_direction&& other) noexcept {
+            if(&other != this){
+                this->~external_io_direction();
+                new (this) external_io_direction(std::move(other));
+            }
+            return *this;
+        }
         void register_to_manager(async_flow_manager<Ppr>& manager,
                                  std::function<future<>(net::packet)> receive_fn,
-                                 external_io_direction reverse_io) {
+                                 external_io_direction& reverse_io) {
             assert(!_is_registered);
             _is_registered = true;
             manager.direction_registration(_direction, reverse_io.get_direction(),
