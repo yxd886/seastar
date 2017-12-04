@@ -456,6 +456,9 @@ class async_flow_manager {
         std::experimental::optional<subscription<net::packet, FlowKeyType&>> input_sub;
         stream<net::packet> output_stream;
         uint8_t reverse_direction;
+        internal_io_direction()
+            : reverse_direction(0) {
+        }
     };
 
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>, HashFunc> _flow_table;
