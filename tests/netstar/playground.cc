@@ -30,7 +30,7 @@
 #include "netstar/extendable_buffer.hh"
 #include "netstar/stack_port.hh"
 #include "netstar/port_env.hh"
-#include "netstar/af/async_flow_v2.hh"
+#include "netstar/af/async_flow.hh"
 
 using namespace seastar;
 using namespace netstar;

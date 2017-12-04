@@ -73,7 +73,7 @@ struct af_work_unit {
 };
 
 template<typename Ppr>
-class async_flow_impl{
+class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>{
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
     static constexpr bool packet_recv = true;
@@ -205,9 +205,7 @@ public:
         if(!working_unit.flow_key) {
             async_flow_assert(!is_client);
             FlowKeyType flow_key = working_unit.ppr.get_reverse_flow_key(pkt);
-            if(_manager.add_new_mapping_to_flow_table(flow_key, )) {
-
-            }
+            _manager.add_new_mapping_to_flow_table(flow_key, this->shared_from_this());
         }
 
         action_after_packet_handle(working_unit, std::move(pkt),
@@ -500,9 +498,9 @@ public:
         return _directions[direction].reverse_direction;
     }
 
-    bool add_new_mapping_to_flow_table(FlowKeyType& flow_key,
+    void add_new_mapping_to_flow_table(FlowKeyType& flow_key,
                                        lw_shared_ptr<internal::async_flow_impl<Ppr>> impl_lw_ptr){
-        return _flow_table.insert({flow_key, impl_lw_ptr}).second;
+        assert(_flow_table.insert({flow_key, impl_lw_ptr}).second);
     }
 
     void remove_mapping_on_flow_table(FlowKeyType& flow_key) {
