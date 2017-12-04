@@ -225,14 +225,14 @@ public:
     }
 
     void destroy_event_context(af_ev_context<Ppr> context) {
-        async_flow_assert(context._is_valid);
+        async_flow_assert(context._impl == this);
         auto& working_unit = get_work_unit(context.is_client());
         working_unit.loop_has_context = false;
         _pkts_in_pipeline -= 1;
     }
 
     void forward_event_context(af_ev_context<Ppr> context) {
-        async_flow_assert(context._is_valid && context._pkt);
+        async_flow_assert(context._impl == this && context._pkt);
         bool is_client = context.is_client();
         auto& working_unit = get_work_unit(is_client);
         working_unit.loop_has_conetxt = false;
@@ -346,7 +346,7 @@ class af_ev_context{
     filtered_events<EventEnumType> _fe;
     bool _is_client;
     bool _is_send;
-    bool _is_valid;
+    internal::async_flow_impl<Ppr>* _impl;
 
     friend class internal::async_flow_impl<Ppr>;
 
@@ -356,12 +356,13 @@ public:
     af_ev_context(net::packet pkt,
                   filtered_events<EventEnumType> fe,
                   bool is_client,
-                  bool is_send)
+                  bool is_send,
+                  internal::async_flow_impl<Ppr>* impl)
         : _pkt(std::move(pkt))
         , _fe(fe)
         , _is_client(is_client)
         , _is_send(is_send)
-        , _is_valid(true){
+        , _impl(impl){
     }
 
     // Public constructor, uesful for temporarily storing
@@ -371,7 +372,7 @@ public:
         , _fe(0)
         , _is_client(false)
         , _is_send(false)
-        , _is_valid(false) {
+        , _impl(nullptr) {
     }
 
     af_ev_context(const af_ev_context& other) = delete;
@@ -380,8 +381,8 @@ public:
         , _fe(other._fe)
         , _is_client(other._is_client)
         , _is_send(other._is_send)
-        , _is_valid(other._is_valid) {
-        other._is_valid = false;
+        , _impl(other._impl) {
+        other._impl = nullptr;
     }
     af_ev_context& operator=(const af_ev_context& other) = delete;
     af_ev_context& operator=(af_ev_context&& other) noexcept {
