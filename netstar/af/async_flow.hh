@@ -82,6 +82,7 @@ class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>{
     async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
+    unsigned _pkts_in_pipeline;
 
 private:
     // General helper utility function, useful for reducing the
@@ -164,8 +165,14 @@ public:
                     FlowKeyType client_flow_key)
         : _manager(manager)
         , _client(true, client_direction)
-        , _server(false, manager.get_reverse_direction(client_direction)) {
+        , _server(false, manager.get_reverse_direction(client_direction))
+        , _pkts_in_pipeline(0){
         _client.flow_key = client_flow_key;
+    }
+
+    ~async_flow_impl() {
+        async_flow_assert(_client.loop_has_context == false);
+        async_flow_assert(_server.loop_has_context == false);
     }
 
     // Summary: Process packets send from the real client or server side.
@@ -177,12 +184,14 @@ public:
         bool is_client = (direction == _client.direction);
         auto& working_unit = get_work_unit(is_client);
 
-        if( (working_unit.buffer_q.size() >=
+        if( (_pkts_in_pipeline >=
              Ppr::async_flow_config::max_event_context_queue_size) ||
              working_unit.ppr_close) {
             // Unconditionally drop the packet.
             return;
         }
+
+        _pkts_in_pipeline += 1;
 
         action_after_packet_handle(working_unit, std::move(pkt),
                                    is_client, true);
@@ -195,9 +204,7 @@ public:
     void handle_packet_recv(net::packet pkt, bool is_client){
         auto& working_unit = get_work_unit(is_client);
 
-        if( (working_unit.buffer_q.size() >=
-             Ppr::async_flow_config::max_event_context_queue_size) ||
-             working_unit.ppr_close) {
+        if(working_unit.ppr_close) {
             // Unconditionally drop the packet.
             return;
         }
@@ -221,6 +228,7 @@ public:
         async_flow_assert(context._is_valid);
         auto& working_unit = get_work_unit(context.is_client());
         working_unit.loop_has_context = false;
+        _packet_in_pipeline -= 1;
     }
 
     void forward_event_context(af_ev_context<Ppr> context) {
@@ -233,6 +241,7 @@ public:
         }
         else{
             send_packet_out(std::move(context._pkt), context.is_client());
+            _packet_in_pipeline -= 1;
         }
     }
 
@@ -406,14 +415,6 @@ public:
         : _impl(std::move(impl)) {
     }
     ~async_flow(){
-        auto& client_ref = _impl->_client;
-        auto& server_ref = _impl->_server;
-        async_flow_assert(!client_ref.async_loop_pr &&
-                          !client_ref.loop_has_context &&
-                          !client_ref.loop_started);
-        async_flow_assert(!server_ref.async_loop_pr &&
-                          !server_ref.loop_has_context &&
-                          !server_ref.loop_started);
     }
     async_flow(const async_flow& other) = delete;
     async_flow(async_flow&& other)
