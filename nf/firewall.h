@@ -6,6 +6,7 @@
 #include "nf/nf_common.h"
 #include <vector>
 #include <iostream>
+using namespace seastar;
 
 
 
@@ -62,44 +63,49 @@ public:
 		}
 		return false;
 	}
-	void process_packet(struct rte_mbuf* rte_pkt){
+	void init_state(firewall_state& fs){
+	    fs._pass=false;
+	    fs._recv_ack=0;
+	    fs._sent_seq=0;
+	    fs._tcp_flags=0;
+	}
+	future<> process_packet(struct rte_mbuf* rte_pkt){
 
 
 		if(DEBUG==1) printf("processing firewall on core:%d\n",rte_lcore_id());
 
-	    struct ipv4_hdr *iphdr;
-	    struct tcp_hdr *tcp;
-	    unsigned lcore_id;
+		net::ip_hdr *iphdr;
+		net::tcp_hdr *tcp;
 	    _drop=false;
 
-	    lcore_id = rte_lcore_id();
-	    iphdr = rte_pktmbuf_mtod_offset(rte_pkt,
-	            struct ipv4_hdr *,
-	            sizeof(struct ether_hdr));
 
-	    if (iphdr->next_proto_id!=IPPROTO_TCP){
+        iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+
+
+	    if (iphdr->ip_proto!=(uint8_t)net::ip_protocol_num::tcp){
 		    //drop
 	    	if(DEBUG==1) printf("not tcp pkt\n");
 	        _drop=true;
-	        return;
+	        return make_ready_future<>;
 	    }else{
 
-	        tcp = (struct tcp_hdr *)((unsigned char *)iphdr +sizeof(struct ipv4_hdr));
-	        struct fivetuple tuple(iphdr->src_addr,iphdr->dst_addr,tcp->src_port,tcp->dst_port,iphdr->next_proto_id);
+            tcp = (net::tcp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
+	        struct fivetuple tuple(iphdr->src_ip.ip,iphdr->dst_ip.ip,tcp->src_port,tcp->dst_port,iphdr->next_proto_id);
 
-	        printf("src_addr:%d ,iphdr->dst_addr:%d tcp->src_port:%d tcp->dst_port:%d\n ",iphdr->src_addr,iphdr->dst_addr,tcp->src_port,tcp->dst_port);
+	        //printf("src_addr:%d ,iphdr->dst_addr:%d tcp->src_port:%d tcp->dst_port:%d\n ",iphdr->src_addr,iphdr->dst_addr,tcp->src_port,tcp->dst_port);
 
 
             //generate key based on five-tuples
-	        char* key = reinterpret_cast<char*>(&tuple);
-	        size_t key_length;
-	        key_length= sizeof(tuple);
-	        uint64_t key_hash;
-	        key_hash= hash(key, key_length);
+            struct firewall_state state;
 
+	        char* key = reinterpret_cast<char*>(&tuple);
+            extendable_buffer key_buf;
+            key_buf.fill_data(key);
+
+            extendable_buffer val_buf;
+            val_buf.fill_data(state);
 
             //generate rte_ring_item
-	        struct rte_ring_item item(key_hash,key_length,key);
 
 	        if(DEBUG==1)	printf("key_hash:%d, key_length:%d, key: ox%x\n",key_hash,key_length,key);
 
@@ -160,8 +166,6 @@ public:
     }
 
 	std::vector<rule> rules;
-	struct rte_ring** _worker2interface;
-	struct rte_ring** _interface2worker;
 	bool _drop;
 
 };
