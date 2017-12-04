@@ -55,13 +55,13 @@ public:
     }
 
 public:
-    filtered_events<EventEnumType> handle_packet_send(net::packet& pkt){
+    generated_events<EventEnumType> handle_packet_send(net::packet& pkt){
         generated_events<EventEnumType> ge;
         ge.event_happen<dummy_udp_events::pkt_in>();
         return ge;
     }
 
-    filtered_events<EventEnumType> handle_packet_recv(net::packet& pkt){
+    generated_events<EventEnumType> handle_packet_recv(net::packet& pkt){
         generated_events<EventEnumType> ge;
         ge.event_happen<dummy_udp_events::pkt_in>();
         return ge;
@@ -121,7 +121,7 @@ do_with(flow_processor(std::move(af)), [](auto& obj){
 int main(int ac, char** av) {
     app_template app;
     timer<steady_clock_type> to;
-    async_flow_manager<dummy_ppr> manager;
+    async_flow_manager<dummy_udp_ppr> manager;
 
     return app.run_deprecated(ac, av, [&app, &to, &manager]{
     });

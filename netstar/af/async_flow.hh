@@ -175,7 +175,7 @@ public:
     ~async_flow_impl() {
         async_flow_assert(_client.loop_has_context == false);
         async_flow_assert(_server.loop_has_context == false);
-        asyyc_flow_assert(_pkts_in_pipeline == 0);
+        async_flow_assert(_pkts_in_pipeline == 0);
     }
 
     // Summary: Process packets send from the real client or server side.
