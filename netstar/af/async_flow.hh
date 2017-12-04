@@ -466,6 +466,13 @@ public:
         external_io_direction(uint8_t direction_arg)
             : direction(direction_arg) {
         }
+
+        void register_to_manager(async_flow_manager<Ppr>& manager,
+                                 std::function<future<>(net::packet)> receive_fn,
+                                 external_io_direction reverse_io) {
+            manager.direction_registration(direction, reverse_io.direction,
+                                           send_stream, std::move(receive_fn));
+        }
     };
 
     subscription<net::packet> direction_registration(uint8_t direction,
