@@ -49,6 +49,7 @@ private:
 public:
     using EventEnumType = dummy_udp_events;
     using FlowKeyType = net::l4connid<net::ipv4_traits>;
+    using HashFunc = net::l4connid<net::ipv4_traits>::connid_hash;
 
     dummy_udp_ppr(bool is_client)
         : _is_client(is_client) {
