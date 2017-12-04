@@ -447,14 +447,14 @@ template<typename Ppr>
 class async_flow_manager {
     using FlowKeyType = typename Ppr::FlowKeyType;
     using HashFunc = typename Ppr::HashFunc;
-    struct io_direction {
+    struct internal_io_direction {
         std::experimental::optional<subscription<net::packet, FlowKeyType&>> input_sub;
         stream<net::packet> output_stream;
         uint8_t reverse_direction;
     };
 
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>, HashFunc> _flow_table;
-    std::vector<io_direction> _directions;
+    std::vector<internal_io_direction> _directions;
     seastar::queue<async_flow<Ppr>> _new_flow_q{Ppr::async_flow_config::new_flow_queue_size};
     friend class internal::async_flow_impl<Ppr>;
 public:
