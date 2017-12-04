@@ -228,7 +228,7 @@ public:
         async_flow_assert(context._is_valid);
         auto& working_unit = get_work_unit(context.is_client());
         working_unit.loop_has_context = false;
-        _packet_in_pipeline -= 1;
+        _pkts_in_pipeline -= 1;
     }
 
     void forward_event_context(af_ev_context<Ppr> context) {
@@ -241,7 +241,7 @@ public:
         }
         else{
             send_packet_out(std::move(context._pkt), context.is_client());
-            _packet_in_pipeline -= 1;
+            _pkts_in_pipeline -= 1;
         }
     }
 
