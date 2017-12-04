@@ -113,7 +113,7 @@ int main(int ac, char** av) {
 
     return app.run_deprecated(ac, av, [&app, &to, &q, &manager]{
         netstar::internal::async_flow_impl<dummy_ppr> af(manager, 1, 1);
-        q.emplace_back(af_ev_context<dummy_ppr>{net::packet(), filtered_events<fk_events>(1), false, false});
+        q.emplace_back(af_ev_context<dummy_ppr>{net::packet(), filtered_events<fk_events>(1), false, false, &af});
         // af_ev_context<dummy_ppr> context = std::move(q.front());
         auto context(std::move(q.front()));
         q.pop_front();
