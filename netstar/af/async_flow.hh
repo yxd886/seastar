@@ -538,9 +538,10 @@ public:
         return sub;
     }
 
-    future<async_flow<Ppr>> on_new_flow() {
+    future<async_flow<Ppr>, af_initial_context> on_new_flow() {
         return _new_flow_q.not_empty().then([this]{
-           return make_ready_future<async_flow<Ppr>>(_new_flow_q.pop());
+           auto qitem = _new_flow_q.pop();
+           return make_ready_future<async_flow<Ppr>, af_initial_context>(std::move(qitem.af), std::move(qitem.ic));
         });
     }
 
