@@ -585,7 +585,7 @@ public:
            auto qitem = _new_flow_q.pop();
            return make_ready_future<async_flow<Ppr>, af_initial_context>(
                    std::move(qitem.af),
-                   af_initial_context(std::move(qitem.pkt), qitem.direction)
+                   std::move(qitem.pkt), qitem.direction
            );
         });
     }
