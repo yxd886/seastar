@@ -429,7 +429,7 @@ public:
     ~async_flow(){
     }
     async_flow(const async_flow& other) = delete;
-    async_flow(async_flow&& other)
+    async_flow(async_flow&& other) noexcept
         : _impl(std::move(other._impl)) {
     }
     async_flow& operator=(const async_flow& other) = delete;
