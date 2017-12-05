@@ -529,6 +529,7 @@ public:
     }
     void check_impl(){
         assert(_impl_ptr);
+        async_flow_debug("check_impl succeeds\n");
     }
 };
 
