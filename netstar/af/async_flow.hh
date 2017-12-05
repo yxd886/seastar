@@ -604,8 +604,11 @@ public:
         return _new_flow_q.not_empty().then([this]{
            auto qitem = _new_flow_q.pop();
            return make_ready_future<af_initial_context<Ppr>>(
-                   std::move(qitem.pkt), qitem.direction,
-                   std::move(qitem.impl_ptr)
+               af_initial_context<Ppr>(
+                       std::move(qitem.pkt),
+                       qitem.direction,
+                       std::move(qitem.impl_ptr)
+               )
            );
         });
     }
