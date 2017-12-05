@@ -26,6 +26,8 @@ class af_ev_context;
 template<typename Ppr>
 class async_flow;
 template<typename Ppr>
+class af_initial_context;
+template<typename Ppr>
 class async_flow_manager;
 
 #define ENABLE_ASSERTION
@@ -457,6 +459,7 @@ public:
     }
 };
 
+template<typename Ppr>
 class af_initial_context {
     net::packet _pkt;
     uint8_t _direction;
@@ -589,12 +592,12 @@ public:
         return sub;
     }
 
-    future<async_flow<Ppr>, af_initial_context> on_new_flow() {
+    future<async_flow<Ppr>, af_initial_context<Ppr>> on_new_flow() {
         return _new_flow_q.not_empty().then([this]{
            auto qitem = _new_flow_q.pop();
-           return make_ready_future<async_flow<Ppr>, af_initial_context>(
+           return make_ready_future<async_flow<Ppr>, af_initial_context<Ppr>>(
                    std::move(qitem.af),
-                   af_initial_context(std::move(qitem.pkt), qitem.direction)
+                   af_initial_context<Ppr>(std::move(qitem.pkt), qitem.direction)
            );
         });
     }

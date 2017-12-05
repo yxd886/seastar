@@ -165,7 +165,7 @@ int main(int ac, char** av) {
         dummy_udp_ppr::FlowKeyType fk = dummy_udp_ppr::async_flow_config::get_flow_key(pkt);
         ingress.get_send_stream().produce(std::move(pkt), &fk);
 
-        return manager.on_new_flow().then([](async_flow<dummy_udp_ppr> af, af_initial_context ic){
+        return manager.on_new_flow().then([](async_flow<dummy_udp_ppr> af, af_initial_context<dummy_udp_ppr> ic){
             printf("Get the first async_flow \n");
         }).then([](){
             engine().exit(0);
