@@ -462,7 +462,7 @@ class async_flow_manager {
     using FlowKeyType = typename Ppr::FlowKeyType;
     using HashFunc = typename Ppr::HashFunc;
     struct internal_io_direction {
-        std::experimental::optional<subscription<net::packet, FlowKeyType&>> input_sub;
+        std::experimental::optional<subscription<net::packet, FlowKeyType*>> input_sub;
         stream<net::packet> output_stream;
         uint8_t reverse_direction;
         internal_io_direction()
@@ -482,7 +482,7 @@ class async_flow_manager {
 public:
     class external_io_direction {
         std::experimental::optional<subscription<net::packet>> _receive_sub;
-        stream<net::packet, FlowKeyType&> _send_stream;
+        stream<net::packet, FlowKeyType*> _send_stream;
         uint8_t _direction;
         bool _is_registered;
     public:
@@ -501,20 +501,20 @@ public:
         uint8_t get_direction() {
             return _direction;
         }
-        stream<net::packet, FlowKeyType&>& get_send_stream(){
+        stream<net::packet, FlowKeyType*>& get_send_stream(){
             return _send_stream;
         }
     };
 
     subscription<net::packet> direction_registration(uint8_t direction,
                                                      uint8_t reverse_direction,
-                                                     stream<net::packet, FlowKeyType&>& istream,
+                                                     stream<net::packet, FlowKeyType*>& istream,
                                                      std::function<future<>(net::packet)> fn) {
         async_flow_assert(direction < _directions.size() &&
                           !_directions[direction].input_sub);
 
         _directions[direction].input_sub.emplace(
-                istream.listen([this, direction](net::packet pkt, FlowKeyType& key) {
+                istream.listen([this, direction](net::packet pkt, FlowKeyType* key) {
             auto afi = _flow_table.find(key);
             if(afi == _flow_table.end()) {
                 if(!_new_flow_q.full() &&
