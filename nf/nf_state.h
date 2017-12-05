@@ -141,16 +141,17 @@ struct session_state{
 
 
     session_state():_action(READ){
-        lcore_id=rte_lcore_id();
+
     }
     session_state( struct session_state& dst){
         _action=dst._action;
         lcore_id=dst.lcore_id;
-        _firewall_state.copy(&(dst._firewall_state));
+
         _load_balancer_state.copy(&(dst._load_balancer_state));
         _nat_state.copy(&(dst._nat_state));
 
         memcpy(&_ips_state,&(dst._ips_state),sizeof(_ips_state));
+        memcpy(&_firewall_state,&(dst._firewall_state),sizeof(_firewall_state));
     }
 
 };
