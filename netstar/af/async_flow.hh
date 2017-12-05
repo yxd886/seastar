@@ -449,6 +449,14 @@ public:
     }
 };
 
+class af_initial_context {
+    net::packet _pkt;
+    uint8_t _direction;
+public:
+    explicit af_initial_context(net::packet pkt, uint8_t direction)
+        : _pkt(std::move(pkt)), _direction(direction) {}
+};
+
 template<typename Ppr>
 class async_flow_manager {
     using FlowKeyType = typename Ppr::FlowKeyType;
@@ -461,10 +469,15 @@ class async_flow_manager {
             : reverse_direction(0) {
         }
     };
+    struct queue_item {
+        async_flow<Ppr> af;
+        af_initial_context ic;
+    };
+
 
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>, HashFunc> _flow_table;
     std::array<internal_io_direction, Ppr::async_flow_config::max_directions> _directions;
-    seastar::queue<async_flow<Ppr>> _new_flow_q{Ppr::async_flow_config::new_flow_queue_size};
+    seastar::queue<queue_item> _new_flow_q{Ppr::async_flow_config::new_flow_queue_size};
     friend class internal::async_flow_impl<Ppr>;
 public:
     class external_io_direction {
@@ -512,7 +525,7 @@ public:
                                 (*this), direction, key
                             );
                     _flow_table.insert({key, impl_lw_ptr});
-                    _new_flow_q.push(async_flow<Ppr>(std::move(impl_lw_ptr)));
+                    _new_flow_q.push({async_flow<Ppr>(std::move(impl_lw_ptr)), af_initial_context(std::move(pkt), direction)});
                 }
             }
             else {
