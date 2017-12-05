@@ -511,7 +511,8 @@ class async_flow_manager {
     };
     struct queue_item {
         async_flow<Ppr> af;
-        af_initial_context ic;
+        net::packet pkt;
+        uint8_t direction;
     };
 
 
@@ -566,7 +567,7 @@ public:
                                 (*this), direction, *key
                             );
                     _flow_table.insert({*key, impl_lw_ptr});
-                    _new_flow_q.push({async_flow<Ppr>(std::move(impl_lw_ptr)), af_initial_context(std::move(pkt), direction)});
+                    _new_flow_q.push({async_flow<Ppr>(std::move(impl_lw_ptr)), std::move(pkt), direction});
                 }
             }
             else {
@@ -582,7 +583,10 @@ public:
     future<async_flow<Ppr>, af_initial_context> on_new_flow() {
         return _new_flow_q.not_empty().then([this]{
            auto qitem = _new_flow_q.pop();
-           return make_ready_future<async_flow<Ppr>, af_initial_context>(std::move(qitem.af), std::move(qitem.ic));
+           return make_ready_future<async_flow<Ppr>, af_initial_context>(
+                   std::move(qitem.af),
+                   af_initial_context(std::move(qitem.pkt), qitem.direction)
+           );
         });
     }
 
