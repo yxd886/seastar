@@ -156,9 +156,11 @@ int main(int ac, char** av) {
     async_flow_manager<dummy_udp_ppr> manager;
     async_flow_manager<dummy_udp_ppr>::external_io_direction ingress(0);
     async_flow_manager<dummy_udp_ppr>::external_io_direction egress(1);
+    net::packet the_pkt = dummy_udp_ppr::async_flow_config::build_pkt("abcdefg");
 
-    return app.run_deprecated(ac, av, [&app, &to, &manager, &ingress, &egress]{
+    return app.run_deprecated(ac, av, [&app, &to, &manager, &ingress, &egress, &the_pkt]{
         ingress.register_to_manager(manager, [](net::packet pkt){return make_ready_future();}, egress);
         egress.register_to_manager(manager, [](net::packet pkt){return make_ready_future();}, ingress);
+        net::packet pkt(the_pkt.frag(0));
     });
 }
