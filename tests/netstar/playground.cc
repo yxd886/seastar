@@ -104,7 +104,7 @@ int main(int ac, char** av) {
 struct wtf {
     stream<int> s;
     int i;
-    wtf(int i_arg) : i(i_arg) {}
+    wtf() : i(0) {}
 };
 
 int main(int ac, char** av) {
