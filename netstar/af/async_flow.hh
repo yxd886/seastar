@@ -488,6 +488,9 @@ public:
         uint8_t get_direction() {
             return _direction;
         }
+        stream<net::packet, FlowKeyType&>& get_send_stream(){
+            return _send_stream;
+        }
     };
 
     subscription<net::packet> direction_registration(uint8_t direction,
