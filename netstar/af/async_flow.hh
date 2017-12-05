@@ -32,7 +32,7 @@ class async_flow_manager;
 
 #define ENABLE_ASSERTION
 #define ASYNC_FLOW_DEBUG
-#define MEASURE_INITIAL_CONTEXT_MOVE
+// #define MEASURE_INITIAL_CONTEXT_MOVE
 
 void async_flow_assert(bool boolean_expr) {
 #ifdef ENABLE_ASSERTION
@@ -478,7 +478,7 @@ public:
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
         , _move_construct_count(0)
 #else
-        , _move_construct_count(4)
+        , _move_construct_count(6)
 #endif
         , _impl_ptr(std::move(impl_ptr)) {
     }
