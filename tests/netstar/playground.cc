@@ -168,7 +168,9 @@ int main(int ac, char** av) {
         return manager.on_new_flow().then([](af_initial_context<dummy_udp_ppr> ic){
             printf("Get the first async_flow \n");
             ic.check_move_count();
-        }).then([](){
+
+            return make_ready_future<af_initial_context<dummy_udp_ppr>>(std::move(ic));
+        }).then([](af_initial_context<dummy_udp_ppr> ic){
             engine().exit(0);
         });
     });
