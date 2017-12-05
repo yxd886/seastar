@@ -100,9 +100,9 @@ int main(int ac, char** av) {
 }*/
 
 struct wtf {
-    stream<int> s;
+    std::unique_ptr<stream<int>> s;
     int i;
-    wtf(int i_arg) : i(i_arg){}
+    wtf(int i_arg) : i(i_arg), s(std::make_unique<stream<int>>()) {}
 };
 
 int main(int ac, char** av) {
