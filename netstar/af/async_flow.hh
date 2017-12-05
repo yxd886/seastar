@@ -464,15 +464,17 @@ template<typename Ppr>
 class af_initial_context {
     using impl_type = lw_shared_ptr<internal::async_flow_impl<Ppr>>;
 
+    impl_type _impl_ptr;
     net::packet _pkt;
     uint8_t _direction;
     bool _is_valid;
     int _move_construct_count;
-    impl_type _impl_ptr;
+
 public:
     explicit af_initial_context(net::packet pkt, uint8_t direction,
                                 impl_type impl_ptr)
-        : _pkt(std::move(pkt))
+        : _impl_ptr(std::move(impl_ptr))
+        , _pkt(std::move(pkt))
         , _direction(direction)
         , _is_valid(true)
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
@@ -480,10 +482,11 @@ public:
 #else
         , _move_construct_count(4)
 #endif
-        , _impl_ptr(std::move(impl_ptr)) {
+        {
     }
     af_initial_context(af_initial_context&& other) noexcept
-        : _pkt(std::move(other._pkt))
+        : _impl_ptr(std::move(_impl_ptr))
+        , _pkt(std::move(other._pkt))
         , _direction(other._direction)
         , _is_valid(other._is_valid)
         , _move_construct_count(other._move_construct_count) {
