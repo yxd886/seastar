@@ -100,6 +100,7 @@ class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>{
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
     unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
+    bool _initial_context_destroyed;
 
 private:
     // General helper utility function, useful for reducing the
@@ -145,7 +146,7 @@ private:
                                     bool is_client, bool is_send) {
         if(working_unit.loop_started) {
             if(working_unit.async_loop_pr) {
-                async_flow_assert(working_unit.buffer_q.empty());
+                assert(working_unit.buffer_q.empty());
                 auto fe = preprocess_packet(working_unit, pkt, is_send);
                 if(fe.no_event()) {
                     internal_packet_forward(std::move(pkt), is_client, is_send);
@@ -185,28 +186,30 @@ public:
         : _manager(manager)
         , _client(true, client_direction)
         , _server(false, manager.get_reverse_direction(client_direction))
-        , _pkts_in_pipeline(0){
+        , _pkts_in_pipeline(0)
+        , _initial_context_destroyed(false){
         _client.flow_key = client_flow_key;
     }
 
     ~async_flow_impl() {
-        async_flow_assert(_client.loop_has_context == false);
-        async_flow_assert(_server.loop_has_context == false);
-        async_flow_assert(_pkts_in_pipeline == 0);
+        assert(_client.loop_has_context == false);
+        assert(_server.loop_has_context == false);
+        assert(_pkts_in_pipeline == 0);
+        assert(_initial_context_destroyed);
     }
 
-    // Summary: Process packets send from the real client or server side.
-    // This is the external interface used by async_flow_manager to
-    // inject external received packets into the async_flow pipeline.
-    // Args: pkt: the packet waiting to be processed
-    // direction: the input direction of this packet.
+    void destroy_initial_context() {
+        _initial_context_destroyed = true;
+    }
+
     void handle_packet_send(net::packet pkt, uint8_t direction) {
         bool is_client = (direction == _client.direction);
         auto& working_unit = get_work_unit(is_client);
 
         if( (_pkts_in_pipeline >=
              Ppr::async_flow_config::max_event_context_queue_size) ||
-             working_unit.ppr_close) {
+             working_unit.ppr_close ||
+             !_initial_context_destroyed) {
             // Unconditionally drop the packet.
             return;
         }
@@ -217,10 +220,6 @@ public:
                                    is_client, true);
     }
 
-    // Summary: Internally process packets that should be received
-    // by the preprocessor.
-    // Args: pkt: the packet waiting to be processed.
-    // is_client: which preprocessor should receive this packet
     void handle_packet_recv(net::packet pkt, bool is_client){
         auto& working_unit = get_work_unit(is_client);
 
@@ -230,7 +229,7 @@ public:
         }
 
         if(!working_unit.flow_key) {
-            async_flow_assert(!is_client);
+            assert(!is_client);
             FlowKeyType flow_key = working_unit.ppr.get_reverse_flow_key(pkt);
             _manager.add_new_mapping_to_flow_table(flow_key, this->shared_from_this());
         }
@@ -245,14 +244,14 @@ public:
     }
 
     void destroy_event_context(af_ev_context<Ppr> context) {
-        async_flow_assert(context._impl == this);
+        assert(context._impl == this);
         auto& working_unit = get_work_unit(context.is_client());
         working_unit.loop_has_context = false;
         _pkts_in_pipeline -= 1;
     }
 
     void forward_event_context(af_ev_context<Ppr> context) {
-        async_flow_assert(context._impl == this && context._pkt);
+        assert(context._impl == this && context._pkt);
         bool is_client = context.is_client();
         auto& working_unit = get_work_unit(is_client);
         working_unit.loop_has_conetxt = false;
@@ -267,8 +266,8 @@ public:
 
     future<af_ev_context<Ppr>> on_new_events(bool is_client) {
         auto& working_unit = get_work_unit(is_client);
-        async_flow_assert((working_unit.loop_has_context == false) &&
-                          (!working_unit.async_loop_pr));
+        assert(working_unit.loop_has_context == false);
+        assert(!working_unit.async_loop_pr);
 
         if(working_unit.loop_started == false) {
             working_unit.loop_started = true;
@@ -318,9 +317,9 @@ public:
     void close_async_loop (bool is_client) {
         auto& working_unit = get_work_unit(is_client);
 
-        async_flow_assert(working_unit.loop_has_context == false &&
-                          !working_unit.async_loop_pr &&
-                          working_unit.loop_started == true);
+        assert(working_unit.loop_has_context == false);
+        assert(!working_unit.async_loop_pr);
+        assert(working_unit.loop_started == true);
 
         working_unit.loop_started = false;
         while(!working_unit.buffer_q.empty()) {
@@ -497,7 +496,7 @@ public:
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
         _move_construct_count += 1;
 #else
-        async_flow_assert(_move_construct_count > 0);
+        assert(_move_construct_count > 0);
         _move_construct_count -= 1;
 #endif
     }
@@ -515,17 +514,16 @@ public:
                              "times.\n",
                              _move_construct_count);
 #else
-            async_flow_assert(_move_construct_count == 0);
+            assert(_move_construct_count == 0);
 #endif
+            _impl_ptr->destroy_initial_context();
+            _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
         }
     }
     async_flow<Ppr> get_async_flow() {
-        async_flow_assert(!_extract_async_flow);
+        assert(!_extract_async_flow);
         _extract_async_flow = true;
         return async_flow<Ppr>(_impl_ptr);
-    }
-    void check_move_count() {
-        printf("Move count is %d\n", this->_move_construct_count);
     }
 };
 
@@ -585,8 +583,8 @@ public:
                                                      uint8_t reverse_direction,
                                                      stream<net::packet, FlowKeyType*>& istream,
                                                      std::function<future<>(net::packet)> fn) {
-        async_flow_assert(direction < _directions.size() &&
-                          !_directions[direction].input_sub);
+        assert(direction < _directions.size());
+        assert(!_directions[direction].input_sub);
 
         _directions[direction].input_sub.emplace(
                 istream.listen([this, direction](net::packet pkt, FlowKeyType* key) {
