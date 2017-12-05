@@ -527,6 +527,9 @@ public:
         _extract_async_flow = true;
         return async_flow<Ppr>(_impl_ptr);
     }
+    void check_impl(){
+        assert(_impl_ptr);
+    }
 };
 
 template<typename Ppr>
