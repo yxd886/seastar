@@ -12,8 +12,7 @@ using namespace seastar;
 
 class Firewall{
 public:
-    Firewall(struct rte_ring** worker2interface,struct rte_ring** interface2worker):
-		_worker2interface(worker2interface),_interface2worker(interface2worker),_drop(false){
+    Firewall():all_objs(per_core_objs<mica_client> all_objs),_drop(false){
 
     	if(DEBUG==1) printf("Initializing a firewall\n");
     	auto rules_config = ::mica::util::Config::load_file("firewall.json").get("rules");
@@ -69,22 +68,20 @@ public:
 	    fs._sent_seq=0;
 	    fs._tcp_flags=0;
 	}
-	future<> process_packet(struct rte_mbuf* rte_pkt){
+    future<> process_packet(struct rte_mbuf* rte_pkt){
 
 
-		if(DEBUG==1) printf("processing firewall on core:%d\n",rte_lcore_id());
-
+	    if(DEBUG==1) printf("processing firewall on core:%d\n",rte_lcore_id());
 		net::ip_hdr *iphdr;
 		net::tcp_hdr *tcp;
 	    _drop=false;
 
-
-        iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+	    iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
 
 
 	    if (iphdr->ip_proto!=(uint8_t)net::ip_protocol_num::tcp){
 		    //drop
-	    	if(DEBUG==1) printf("not tcp pkt\n");
+            if(DEBUG==1) printf("not tcp pkt\n");
 	        _drop=true;
 	        return make_ready_future<>;
 	    }else{
@@ -97,6 +94,7 @@ public:
 
             //generate key based on five-tuples
             struct firewall_state state;
+            init_state(state);
 
 	        char* key = reinterpret_cast<char*>(&tuple);
             extendable_buffer key_buf;
@@ -107,57 +105,44 @@ public:
 
             //generate rte_ring_item
 
-	        if(DEBUG==1)	printf("key_hash:%d, key_length:%d, key: ox%x\n",key_hash,key_length,key);
+            return all_objs.local_obj().query(Operation::kGet,
+                    sizeof(key), key_buf.get_temp_buffer(),
+                    0, temporary_buffer<char>()).then([&](mica_response response){
 
-	        if(DEBUG==1)  printf("try to enqueue to _worker2interface[%d] \n",lcore_id);
-	        rte_ring_enqueue(_worker2interface[lcore_id],static_cast<void*>(&item));
-	        if(DEBUG==1)  printf("enqueue to _worker2interface[%d] completed\n",lcore_id);
-	        void* rev_item;
-	        if(DEBUG==1)  printf("try to dequeue from _interface2worker[%d]\n",lcore_id);
-	        rev_item=get_value(_interface2worker[lcore_id]);
-	        if(DEBUG==1)  printf("dequeue from _interface2worker[%d] completed\n",lcore_id);
-	        struct session_state* ses_state=nullptr;
+                if(response.get_result() == Result::kNotFound){
 
-	        if(rev_item==nullptr){ //new session
-                //create new state and check whether this session can pass the firewall.
-	        	if(DEBUG==1)	printf("create new state \n");
-	            ses_state= new session_state();
-	            ses_state->_action=WRITE;
-	            check_session(&tuple,&(ses_state->_firewall_state));
+                    check_session(&tuple,&state);
+                }else{
 
-	        }else{
+                    memcpy(&state,&(response.get_value<struct firewall_state>()),sizeof(state));
+                }
+                struct firewall_state* fw_state=update_state(&state,tcp);
+                if(state_changed(&(state),fw_state)){
+                    //write updated state into mica hash table.
+                    extendable_buffer val_set_buf;
+                    val_buf.fill_data(*fw_state);
 
-	            ses_state=&(((struct rte_ring_item*)rev_item)->_state);
-	        }
+                    all_objs.local_obj().query(Operation::kSet,
+                              sizeof(key), key_buf.get_temp_buffer(),
+                              sizeof(state), val_buf.get_temp_buffer()).then([&](mica_response response){
+                          assert(response.get_key_len() == 0);
+                          assert(response.get_val_len() == 0);
+                          assert(response.get_result() == Result::kSuccess);
 
-            //update_state
-	        struct firewall_state* fw_state=update_state(&(ses_state->_firewall_state),tcp);
+                      });
+                }
 
+                if(ses_state->_firewall_state._pass==true){
+                    //pass
+                    _drop=false;
+                    return make_ready_future<>();
+                }else{
+                    //drop
+                    _drop=true;
+                    return make_ready_future<>();
+                }
 
-	        if(state_changed(&(ses_state->_firewall_state),fw_state)){
-                //write updated state into mica hash table.
-
-	            item._state._action=WRITE;
-	            item._state._firewall_state.copy(fw_state);
-	            if(DEBUG==1)  printf("try to enqueue to _worker2interface[%d] \n",lcore_id);
-	            rte_ring_enqueue(_worker2interface[lcore_id],static_cast<void*>(&item));
-	            if(DEBUG==1)  printf("enqueue to _worker2interface[%d] completed\n",lcore_id);
-
-		        if(DEBUG==1)  printf("try to dequeue from _interface2worker[%d]\n",lcore_id);
-		        rev_item=get_value(_interface2worker[lcore_id]);
-		        if(DEBUG==1)  printf("dequeue from _interface2worker[%d] completed\n",lcore_id);
-	        }
-
-	        if(ses_state->_firewall_state._pass==true){
-                //pass
-	            _drop=false;
-	            return;
-	        }else{
-                //drop
-	            _drop=true;
-	            return;
-	        }
-
+            });
 
 
 	    }
@@ -167,6 +152,7 @@ public:
 
 	std::vector<rule> rules;
 	bool _drop;
+	per_core_objs<mica_client> all_objs;
 
 };
 
