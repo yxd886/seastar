@@ -102,7 +102,7 @@ int main(int ac, char** av) {
 struct wtf {
     std::unique_ptr<stream<int>> s;
     int i;
-    wtf(int i_arg) : i(i_arg), s(std::make_unique<stream<int>>()) {}
+    wtf(int i_arg) : s(std::make_unique<stream<int>>()),i(i_arg) {}
 };
 
 int main(int ac, char** av) {
