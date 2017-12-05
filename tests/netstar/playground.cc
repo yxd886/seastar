@@ -35,6 +35,8 @@
 #include "net/ip.hh"
 #include "net/byteorder.hh"
 
+#include <array>
+
 /*using namespace seastar;
 using namespace netstar;
 using namespace std::chrono_literals;
@@ -100,15 +102,15 @@ int main(int ac, char** av) {
 }*/
 
 struct wtf {
-    std::unique_ptr<stream<int>> s;
+    stream<int> s;
     int i;
-    wtf(int i_arg) : s(std::make_unique<stream<int>>()),i(i_arg) {}
+    wtf(int i_arg) : i(i_arg) {}
 };
 
 int main(int ac, char** av) {
     app_template app;
-    vector<wtf> v;
+    std::array<wtf, 3> v;
     return app.run_deprecated(ac, av, [&app, &v]{
-        v.emplace_back(1);
+        auto sub = v[1].s.listen([](int i){return make_ready_future<>();});
     });
 }
