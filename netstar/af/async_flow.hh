@@ -515,16 +515,16 @@ public:
 
         _directions[direction].input_sub.emplace(
                 istream.listen([this, direction](net::packet pkt, FlowKeyType* key) {
-            auto afi = _flow_table.find(key);
+            auto afi = _flow_table.find(*key);
             if(afi == _flow_table.end()) {
                 if(!_new_flow_q.full() &&
                    (_flow_table.size() <
                     Ppr::async_flow_config::max_flow_table_size) ){
                     auto impl_lw_ptr =
                             make_lw_shared<internal::async_flow_impl<Ppr>>(
-                                (*this), direction, key
+                                (*this), direction, *key
                             );
-                    _flow_table.insert({key, impl_lw_ptr});
+                    _flow_table.insert({*key, impl_lw_ptr});
                     _new_flow_q.push({async_flow<Ppr>(std::move(impl_lw_ptr)), af_initial_context(std::move(pkt), direction)});
                 }
             }
