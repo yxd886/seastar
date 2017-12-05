@@ -32,7 +32,7 @@ class async_flow_manager;
 
 #define ENABLE_ASSERTION
 #define ASYNC_FLOW_DEBUG
-// #define MEASURE_INITIAL_CONTEXT_MOVE
+#define MEASURE_INITIAL_CONTEXT_MOVE
 
 void async_flow_assert(bool boolean_expr) {
 #ifdef ENABLE_ASSERTION
