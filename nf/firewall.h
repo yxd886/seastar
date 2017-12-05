@@ -12,15 +12,15 @@ using namespace seastar;
 
 class Firewall{
 public:
-    Firewall():all_objs(per_core_objs<mica_client> all_objs),_drop(false){
+    Firewall():_drop(false){
 
     	if(DEBUG==1) printf("Initializing a firewall\n");
-    	auto rules_config = ::mica::util::Config::load_file("firewall.json").get("rules");
+    	/*auto rules_config = ::mica::util::Config::load_file("firewall.json").get("rules");
         for (size_t i = 0; i < rules_config.size(); i++) {
             auto rule_conf = rules_config.get(i);
-            uint16_t src_port = ::mica::util::safe_cast<uint16_t>(
+            uint16_t src_port = (uint16_t)(
 	    		    rule_conf.get("src_port").get_uint64());
-            uint16_t dst_port = ::mica::util::safe_cast<uint16_t>(
+            uint16_t dst_port = (uint16_t)(
                 rule_conf.get("dst_port").get_uint64());
 
             uint32_t src_addr = ::mica::network::NetworkAddress::parse_ipv4_addr(
@@ -31,16 +31,19 @@ public:
             rules.push_back(r);
 
 
-        }
+        }*/
 
     }
 
-    struct firewall_state* update_state(struct firewall_state* firewall_state_ptr,struct tcp_hdr *tcp){
+    void update_state(struct firewall_state* return_state,struct firewall_state* firewall_state_ptr,net::tcp_hdr *tcp){
 
 
-        struct firewall_state* return_state=new firewall_state(tcp->tcp_flags,tcp->sent_seq,tcp->recv_ack);
+
         return_state->_pass=firewall_state_ptr->_pass;
-        return return_state;
+        return_state->_recv_ack=tcp->ack.raw;
+        return_state->_sent_seq=tcp->seq.raw;
+        return_state->_tcp_flags=tcp->f_fin;
+
 
 	}
 
@@ -68,7 +71,7 @@ public:
 	    fs._sent_seq=0;
 	    fs._tcp_flags=0;
 	}
-    future<> process_packet(struct rte_mbuf* rte_pkt){
+    future<> process_packet(net::packet* rte_pkt, per_core_objs<mica_client> all_objs){
 
 
 	    if(DEBUG==1) printf("processing firewall on core:%d\n",rte_lcore_id());
@@ -83,11 +86,11 @@ public:
 		    //drop
             if(DEBUG==1) printf("not tcp pkt\n");
 	        _drop=true;
-	        return make_ready_future<>;
+	        return make_ready_future<>();
 	    }else{
 
             tcp = (net::tcp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
-	        struct fivetuple tuple(iphdr->src_ip.ip,iphdr->dst_ip.ip,tcp->src_port,tcp->dst_port,iphdr->next_proto_id);
+	        struct fivetuple tuple(iphdr->src_ip.ip,iphdr->dst_ip.ip,tcp->src_port,tcp->dst_port,iphdr->ip_proto);
 
 	        //printf("src_addr:%d ,iphdr->dst_addr:%d tcp->src_port:%d tcp->dst_port:%d\n ",iphdr->src_addr,iphdr->dst_addr,tcp->src_port,tcp->dst_port);
 
@@ -116,7 +119,9 @@ public:
 
                     memcpy(&state,&(response.get_value<struct firewall_state>()),sizeof(state));
                 }
-                struct firewall_state* fw_state=update_state(&state,tcp);
+                struct firewall_state f_state;
+                struct firewall_state* fw_state=&f_state;
+                update_state(fw_state,&state,tcp);
                 if(state_changed(&(state),fw_state)){
                     //write updated state into mica hash table.
                     extendable_buffer val_set_buf;
@@ -132,7 +137,7 @@ public:
                       });
                 }
 
-                if(ses_state->_firewall_state._pass==true){
+                if(state._pass==true){
                     //pass
                     _drop=false;
                     return make_ready_future<>();
@@ -151,8 +156,9 @@ public:
     }
 
 	std::vector<rule> rules;
+
 	bool _drop;
-	per_core_objs<mica_client> all_objs;
+
 
 };
 

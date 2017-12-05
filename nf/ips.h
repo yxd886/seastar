@@ -212,7 +212,7 @@ public:
     }
 
 
-	future<> process_packet(net::packet* rte_pkt){
+	future<> process_packet(net::packet* rte_pkt,per_core_objs<mica_client> all_objs){
 
 
 		if(DEBUG==1) printf("processing ips on core:%d\n",rte_lcore_id());
@@ -330,7 +330,7 @@ public:
 	bool _drop;
 	struct aho_dfa dfa_arr[AHO_MAX_DFA];
 	struct stat_t *stats;
-	per_core_objs<mica_client> all_objs;
+
 
 };
 
