@@ -32,7 +32,7 @@ class async_flow_manager;
 
 #define ENABLE_ASSERTION
 #define ASYNC_FLOW_DEBUG
-#define MEASURE_INITIAL_CONTEXT_MOVE
+// #define MEASURE_INITIAL_CONTEXT_MOVE
 
 void async_flow_assert(bool boolean_expr) {
 #ifdef ENABLE_ASSERTION
@@ -466,6 +466,7 @@ class af_initial_context {
     impl_type _impl_ptr;
     net::packet _pkt;
     uint8_t _direction;
+    bool _is_valid;
     bool _extract_async_flow;
     int _move_construct_count;
 
@@ -475,6 +476,7 @@ public:
         : _impl_ptr(std::move(impl_ptr))
         , _pkt(std::move(pkt))
         , _direction(direction)
+        , _is_valid(true)
         , _extract_async_flow(false)
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
         , _move_construct_count(0)
@@ -487,8 +489,10 @@ public:
         : _impl_ptr(std::move(_impl_ptr))
         , _pkt(std::move(other._pkt))
         , _direction(other._direction)
+        , _is_valid(other._is_valid)
         , _extract_async_flow(other._extract_async_flow)
         , _move_construct_count(other._move_construct_count) {
+        other._is_valid = false;
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
         _move_construct_count += 1;
 #else
@@ -504,7 +508,7 @@ public:
         return *this;
     }
     ~af_initial_context(){
-        if(_impl_ptr) {
+        if(_is_valid) {
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
             async_flow_debug("af_initial_context is move-constructed %d "
                              "times.\n",
