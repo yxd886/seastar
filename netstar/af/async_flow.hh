@@ -461,12 +461,16 @@ public:
 
 template<typename Ppr>
 class af_initial_context {
+    using impl_type = lw_shared_ptr<internal::async_flow_impl<Ppr>>;
+
     net::packet _pkt;
     uint8_t _direction;
     bool _is_valid;
     int _move_construct_count;
+    impl_type _impl_ptr;
 public:
-    explicit af_initial_context(net::packet pkt, uint8_t direction)
+    explicit af_initial_context(net::packet pkt, uint8_t direction,
+                                impl_type impl_ptr)
         : _pkt(std::move(pkt))
         , _direction(direction)
         , _is_valid(true)
@@ -475,7 +479,8 @@ public:
 #else
         , _move_construct_count(4)
 #endif
-    {}
+        , _impl_ptr(std::move(impl_ptr)) {
+    }
     af_initial_context(af_initial_context&& other) noexcept
         : _pkt(std::move(other._pkt))
         , _direction(other._direction)
@@ -513,6 +518,8 @@ template<typename Ppr>
 class async_flow_manager {
     using FlowKeyType = typename Ppr::FlowKeyType;
     using HashFunc = typename Ppr::HashFunc;
+    using impl_type = lw_shared_ptr<internal::async_flow_impl<Ppr>>;
+
     struct internal_io_direction {
         std::experimental::optional<subscription<net::packet, FlowKeyType*>> input_sub;
         stream<net::packet> output_stream;
@@ -522,7 +529,7 @@ class async_flow_manager {
         }
     };
     struct queue_item {
-        async_flow<Ppr> af;
+        impl_type impl_ptr;
         net::packet pkt;
         uint8_t direction;
     };
@@ -579,7 +586,7 @@ public:
                                 (*this), direction, *key
                             );
                     _flow_table.insert({*key, impl_lw_ptr});
-                    _new_flow_q.push({async_flow<Ppr>(std::move(impl_lw_ptr)), std::move(pkt), direction});
+                    _new_flow_q.push({std::move(impl_lw_ptr), std::move(pkt), direction});
                 }
             }
             else {
@@ -592,13 +599,9 @@ public:
         return sub;
     }
 
-    future<async_flow<Ppr>, af_initial_context<Ppr>> on_new_flow() {
+    future<af_initial_context<Ppr>> on_new_flow() {
         return _new_flow_q.not_empty().then([this]{
-           auto qitem = _new_flow_q.pop();
-           return make_ready_future<async_flow<Ppr>, af_initial_context<Ppr>>(
-                   std::move(qitem.af),
-                   af_initial_context<Ppr>(std::move(qitem.pkt), qitem.direction)
-           );
+           return make_ready_future<af_initial_context<Ppr>>(_new_flow_q.pop());
         });
     }
 
