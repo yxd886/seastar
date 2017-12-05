@@ -481,7 +481,7 @@ public:
         other._is_valid = false;
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
         _move_construct_count += 1;
-#endif
+#else
         _move_construct_count -= 1;
 #endif
     }
