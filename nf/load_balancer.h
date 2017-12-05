@@ -39,7 +39,7 @@ public:
         return _backend_list[index];
     }
 
-    future<> process_packet(net::packet *rte_pkt){
+    future<> process_packet(net::packet *rte_pkt,per_core_objs<mica_client> all_objs){
 
         net::ip_hdr *iphdr;
         net::tcp_hdr *tcp;
@@ -54,7 +54,7 @@ public:
             return make_ready_future<>();
         }else{
 
-            tcp = (struct tcp_hdr *)((unsigned char *)iphdr +sizeof(struct ipv4_hdr));
+            tcp = ( net::tcp_hdr *)((unsigned char *)iphdr +sizeof(struct ipv4_hdr));
             uint32_t server=0;
 
             struct fivetuple tuple(iphdr->src_ip.ip,iphdr->dst_ip.ip,tcp->src_port,tcp->dst_port,iphdr->ip_proto);
