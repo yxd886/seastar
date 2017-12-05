@@ -163,6 +163,6 @@ int main(int ac, char** av) {
         egress.register_to_manager(manager, [](net::packet pkt){return make_ready_future();}, ingress);
         net::packet pkt(the_pkt.frag(0));
         dummy_udp_ppr::FlowKeyType fk = dummy_udp_ppr::async_flow_config::get_flow_key(pkt);
-        ingress.get_send_stream().produce(std::move(pkt), fk);
+        ingress.get_send_stream().produce(std::move(pkt), std::ref(fk));
     });
 }
