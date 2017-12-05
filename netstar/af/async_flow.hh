@@ -29,10 +29,18 @@ template<typename Ppr>
 class async_flow_manager;
 
 #define ENABLE_ASSERTION
+#define ASYNC_FLOW_DEBUG
 
 void async_flow_assert(bool boolean_expr) {
 #ifdef ENABLE_ASSERTION
     assert(boolean_expr);
+#endif
+}
+
+template <typename... Args>
+void async_flow_debug(const char* fmt, Args&&... args) {
+#ifdef ASYNC_FLOW_DEBUG
+    print(fmt, std::forward<Args>(args)...);
 #endif
 }
 
@@ -515,6 +523,7 @@ public:
 
         _directions[direction].input_sub.emplace(
                 istream.listen([this, direction](net::packet pkt, FlowKeyType* key) {
+            async_flow_debug("Receive a new packet from direction %d\n", direction);
             auto afi = _flow_table.find(*key);
             if(afi == _flow_table.end()) {
                 if(!_new_flow_q.full() &&
