@@ -101,13 +101,14 @@ int main(int ac, char** av) {
 
 struct wtf {
     stream<int> s;
-    wtf(){}
+    int i;
+    wtf(int i_arg) : i(i_arg){}
 };
 
 int main(int ac, char** av) {
     app_template app;
     vector<wtf> v;
     return app.run_deprecated(ac, av, [&app, &v]{
-        v.emplace_back();
+        v.emplace_back(1);
     });
 }
