@@ -512,7 +512,10 @@ public:
             async_flow_assert(!_directions[direction].input_sub);
         }
         else {
-            _directions.resize(direction+1);
+            unsigned count = _directions.size() - direction + 1;
+            for(unsigned i=0; i<count; i++){
+                _directions.emplace_back();
+            }
         }
         _directions[direction].input_sub.emplace(
                 istream.listen([this, direction](net::packet pkt, FlowKeyType& key) {
