@@ -509,7 +509,7 @@ public:
                                 (*this), direction, key
                             );
                     _flow_table.insert({key, impl_lw_ptr});
-                    _new_flow_q.push(async_flow<Ppr>(impl_lw_ptr));
+                    _new_flow_q.push(async_flow<Ppr>(std::move(impl_lw_ptr)));
                 }
             }
             else {
