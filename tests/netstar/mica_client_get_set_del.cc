@@ -10,6 +10,7 @@
 //#include "net/tcp.hh"
 #include "nf/ips.h"
 #include "nf/firewall.h"
+#include "nf/load_balancer.h"
 #include "netstar/port.hh"
 #include "core/reactor.hh"
 #include "core/app-template.hh"

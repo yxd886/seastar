@@ -51,16 +51,6 @@ struct load_balancer_state{
     uint32_t _dst_ip_addr;
     uint64_t _backend_list;
 
-    load_balancer_state():_dst_ip_addr(0),_backend_list(0){
-
-    }
-
-    void copy(struct load_balancer_state* c){
-        _dst_ip_addr=c->_dst_ip_addr;
-        _backend_list=c->_backend_list;
-
-    }
-
 
 };
 
@@ -147,11 +137,11 @@ struct session_state{
         _action=dst._action;
         lcore_id=dst.lcore_id;
 
-        _load_balancer_state.copy(&(dst._load_balancer_state));
         _nat_state.copy(&(dst._nat_state));
 
         memcpy(&_ips_state,&(dst._ips_state),sizeof(_ips_state));
         memcpy(&_firewall_state,&(dst._firewall_state),sizeof(_firewall_state));
+        memcpy(&_load_balancer_state,&(dst._load_balancer_state),sizeof(_load_balancer_state));
     }
 
 };
