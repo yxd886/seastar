@@ -529,16 +529,10 @@ class async_flow_manager {
             : reverse_direction(0) {
         }
     };
-    struct queue_item {
-        impl_type impl_ptr;
-        net::packet pkt;
-        uint8_t direction;
-    };
-
 
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>, HashFunc> _flow_table;
     std::array<internal_io_direction, Ppr::async_flow_config::max_directions> _directions;
-    seastar::queue<queue_item> _new_flow_q{Ppr::async_flow_config::new_flow_queue_size};
+    seastar::queue<af_initial_context<Ppr>> _new_flow_q{Ppr::async_flow_config::new_flow_queue_size};
     friend class internal::async_flow_impl<Ppr>;
 public:
     class external_io_direction {
@@ -587,7 +581,7 @@ public:
                                 (*this), direction, *key
                             );
                     _flow_table.insert({*key, impl_lw_ptr});
-                    _new_flow_q.push({std::move(impl_lw_ptr), std::move(pkt), direction});
+                    _new_flow_q.push({std::move(pkt), direction, std::move(impl_lw_ptr)});
                 }
             }
             else {
@@ -602,14 +596,7 @@ public:
 
     future<af_initial_context<Ppr>> on_new_flow() {
         return _new_flow_q.not_empty().then([this]{
-           auto qitem = _new_flow_q.pop();
-           return make_ready_future<af_initial_context<Ppr>>(
-               af_initial_context<Ppr>(
-                       std::move(qitem.pkt),
-                       qitem.direction,
-                       std::move(qitem.impl_ptr)
-               )
-           );
+           return make_ready_future<af_initial_context<Ppr>>(_new_flow_q.pop());
         });
     }
 
