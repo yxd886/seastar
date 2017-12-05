@@ -182,13 +182,13 @@ public:
     // async_flow manager.
     async_flow_impl(async_flow_manager<Ppr>& manager,
                     uint8_t client_direction,
-                    FlowKeyType client_flow_key)
+                    FlowKeyType* client_flow_key)
         : _manager(manager)
         , _client(true, client_direction)
         , _server(false, manager.get_reverse_direction(client_direction))
         , _pkts_in_pipeline(0)
         , _initial_context_destroyed(false){
-        _client.flow_key = client_flow_key;
+        _client.flow_key = *client_flow_key;
     }
 
     ~async_flow_impl() {
@@ -596,7 +596,7 @@ public:
                     Ppr::async_flow_config::max_flow_table_size) ){
                     auto impl_lw_ptr =
                             make_lw_shared<internal::async_flow_impl<Ppr>>(
-                                (*this), direction, *key
+                                (*this), direction, key
                             );
                     _flow_table.insert({*key, impl_lw_ptr});
                     _new_flow_q.push({std::move(impl_lw_ptr), std::move(pkt), direction});
