@@ -545,6 +545,31 @@ class async_flow_manager {
         impl_type impl_ptr;
         net::packet pkt;
         uint8_t direction;
+
+        queue_item(impl_type impl_ptr_arg,
+                   net::packet pkt_arg,
+                   uint8_t direction_arg)
+            : impl_ptr(std::move(impl_ptr_arg))
+            , pkt(std::move(pkt_arg))
+            , direction(direction_arg) {
+        }
+
+        queue_item(queue_item&& other)
+            : impl_ptr(std::move(other.impl_ptr))
+            , pkt(std::move(other.pkt))
+            , direction(other.direction) {
+        }
+
+        queue_item& operator=(queue_item&& other) {
+            if(this != &other) {
+                this->~queue_item();
+                new (this) queue_item(std::move(other));
+            }
+            return *this;
+        }
+
+        queue_item(const queue_item& other) = delete;
+        queue_item& operator=(const queue_item& other) = delete;
     };
 
 
@@ -599,7 +624,9 @@ public:
                                 (*this), direction, key
                             );
                     _flow_table.insert({*key, impl_lw_ptr});
-                    _new_flow_q.push({std::move(impl_lw_ptr), std::move(pkt), direction});
+                    assert(impl_lw_ptr);
+                    _new_flow_q.push(queue_item(std::move(impl_lw_ptr), std::move(pkt), direction));
+                    assert(!impl_lw_ptr);
                 }
             }
             else {
