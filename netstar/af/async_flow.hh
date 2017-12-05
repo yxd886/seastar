@@ -482,6 +482,7 @@ public:
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
         _move_construct_count += 1;
 #else
+        async_flow_assert(_move_construct_count > 0);
         _move_construct_count -= 1;
 #endif
     }
