@@ -461,38 +461,46 @@ class af_initial_context {
     net::packet _pkt;
     uint8_t _direction;
     bool _is_valid;
-    unsigned _move_construct_count;
-    unsigned _move_assigment_count;
+    int _move_construct_count;
 public:
     explicit af_initial_context(net::packet pkt, uint8_t direction)
         : _pkt(std::move(pkt))
         , _direction(direction)
         , _is_valid(true)
+#ifdef MEASURE_INITIAL_CONTEXT_MOVE
         , _move_construct_count(0)
-        , _move_assigment_count(0){}
+#else
+        , _move_construct_count(4)
+#endif
+    {}
     af_initial_context(af_initial_context&& other) noexcept
         : _pkt(std::move(other._pkt))
         , _direction(other._direction)
         , _is_valid(other._is_valid)
-        , _move_construct_count(other._move_construct_count)
-        , _move_assigment_count(other._move_assigment_count){
+        , _move_construct_count(other._move_construct_count) {
         other._is_valid = false;
+#ifdef MEASURE_INITIAL_CONTEXT_MOVE
         _move_construct_count += 1;
+#endif
+        _move_construct_count -= 1;
+#endif
     }
     af_initial_context& operator=(af_initial_context&& other) noexcept {
         if(&other != this) {
             this->~af_initial_context();
             new (this) af_initial_context(std::move(other));
         }
-        this->_move_assigment_count += 1;
         return *this;
     }
     ~af_initial_context(){
         if(_is_valid) {
+#ifdef MEASURE_INITIAL_CONTEXT_MOVE
             async_flow_debug("af_initial_context is move-constructed %d "
-                             "times and move-assigned %d times.\n",
-                             _move_construct_count,
-                             _move_assigment_count);
+                             "times.\n",
+                             _move_construct_count);
+#else
+            async_flow_assert(_move_construct_count == 0);
+#endif
         }
     }
 };
@@ -585,7 +593,7 @@ public:
            auto qitem = _new_flow_q.pop();
            return make_ready_future<async_flow<Ppr>, af_initial_context>(
                    std::move(qitem.af),
-                   std::move(qitem.pkt), qitem.direction
+                   af_initial_context(std::move(qitem.pkt), qitem.direction)
            );
         });
     }
