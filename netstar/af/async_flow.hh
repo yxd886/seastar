@@ -524,6 +524,9 @@ public:
         _extract_async_flow = true;
         return async_flow<Ppr>(_impl_ptr);
     }
+    void check_move_count() {
+        printf("Move count is %d\n", this->_move_construct_count);
+    }
 };
 
 template<typename Ppr>
