@@ -468,6 +468,7 @@ class af_initial_context {
     net::packet _pkt;
     uint8_t _direction;
     bool _is_valid;
+    bool _extract_async_flow;
     int _move_construct_count;
 
 public:
@@ -477,6 +478,7 @@ public:
         , _pkt(std::move(pkt))
         , _direction(direction)
         , _is_valid(true)
+        , _extract_async_flow(false)
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
         , _move_construct_count(0)
 #else
@@ -489,6 +491,7 @@ public:
         , _pkt(std::move(other._pkt))
         , _direction(other._direction)
         , _is_valid(other._is_valid)
+        , _extract_async_flow(other._extract_async_flow)
         , _move_construct_count(other._move_construct_count) {
         other._is_valid = false;
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
@@ -515,6 +518,11 @@ public:
             async_flow_assert(_move_construct_count == 0);
 #endif
         }
+    }
+    async_flow<Ppr> get_async_flow() {
+        async_flow_assert(!_extract_async_flow);
+        _extract_async_flow = true;
+        return async_flow<Ppr>(_impl_ptr);
     }
 };
 
