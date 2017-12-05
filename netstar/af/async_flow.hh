@@ -554,13 +554,13 @@ class async_flow_manager {
             , direction(direction_arg) {
         }
 
-        queue_item(queue_item&& other)
+        queue_item(queue_item&& other) noexcept
             : impl_ptr(std::move(other.impl_ptr))
             , pkt(std::move(other.pkt))
             , direction(other.direction) {
         }
 
-        queue_item& operator=(queue_item&& other) {
+        queue_item& operator=(queue_item&& other) noexcept {
             if(this != &other) {
                 this->~queue_item();
                 new (this) queue_item(std::move(other));
@@ -642,6 +642,7 @@ public:
     future<af_initial_context<Ppr>> on_new_flow() {
         return _new_flow_q.not_empty().then([this]{
            auto qitem = _new_flow_q.pop();
+           assert(qitem.impl_ptr);
            return make_ready_future<af_initial_context<Ppr>>(
                af_initial_context<Ppr>(
                        std::move(qitem.pkt),
