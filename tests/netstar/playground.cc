@@ -85,6 +85,67 @@ public:
         static constexpr int new_flow_queue_size = 100;
         static constexpr int max_flow_table_size = 10000;
         static constexpr int max_directions = 2;
+
+        static FlowKeyType get_flow_key(net::packet& pkt){
+            auto ip_hd_ptr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+            auto udp_hd_ptr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
+            return FlowKeyType{net::ntoh(ip_hd_ptr->dst_ip),
+                               net::ntoh(ip_hd_ptr->src_ip),
+                               net::ntoh(udp_hd_ptr->dst_port),
+                               net::ntoh(udp_hd_ptr->src_port)};
+        }
+
+        static net::packet build_pkt(const char* buf){
+            ipv4_addr ipv4_src_addr("10.1.2.4:666");
+            ipv4_addr ipv4_dst_addr("10.1.2.5:666");
+            auto pkt = net::packet::from_static_data(buf, strlen(buf));
+
+            auto hdr = pkt.prepend_header<net::udp_hdr>();
+            hdr->src_port = ipv4_src_addr.port;
+            hdr->dst_port = ipv4_dst_addr.port;
+            hdr->len = pkt.len();
+            *hdr = net::hton(*hdr);
+
+            net::checksummer csum;
+            net::ipv4_traits::udp_pseudo_header_checksum(csum, ipv4_src_addr, ipv4_dst_addr, pkt.len());
+            csum.sum(pkt);
+            hdr->cksum = csum.get();
+
+            net::offload_info oi;
+            oi.needs_csum = false;
+            oi.protocol = net::ip_protocol_num::udp;
+            pkt.set_offload_info(oi);
+
+            auto iph = pkt.prepend_header<net::ip_hdr>();
+            iph->ihl = sizeof(*iph) / 4;
+            iph->ver = 4;
+            iph->dscp = 0;
+            iph->ecn = 0;
+            iph->len = pkt.len();
+            iph->id = 0;
+            iph->frag = 0;
+            iph->ttl = 64;
+            iph->ip_proto = (uint8_t)net::ip_protocol_num::udp;
+            iph->csum = 0;
+            iph->src_ip = net::ipv4_address(ipv4_src_addr.ip);
+            iph->dst_ip = net::ipv4_address(ipv4_dst_addr.ip);
+            *iph = net::hton(*iph);
+            net::checksummer ip_csum;
+            ip_csum.sum(reinterpret_cast<char*>(iph), sizeof(*iph));
+            iph->csum = csum.get();
+
+            auto eh = pkt.prepend_header<net::eth_hdr>();
+            net::ethernet_address eth_src{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
+            net::ethernet_address eth_dst{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62};
+            eh->dst_mac = eth_dst;
+            eh->src_mac = eth_src;
+            eh->eth_proto = uint16_t(net::eth_protocol_num::ipv4);
+            *eh = net::hton(*eh);
+
+            pkt.linearize();
+            assert(pkt.nr_frags() == 1);
+            return pkt;
+        }
     };
 };
 
