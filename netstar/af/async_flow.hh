@@ -195,7 +195,7 @@ public:
         assert(_client.loop_has_context == false);
         assert(_server.loop_has_context == false);
         assert(_pkts_in_pipeline == 0);
-        assert(_initial_context_destroyed);
+        // assert(_initial_context_destroyed);
     }
 
     void destroy_initial_context() {
