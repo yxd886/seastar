@@ -30,14 +30,14 @@
 #include "netstar/extendable_buffer.hh"
 #include "netstar/stack_port.hh"
 #include "netstar/port_env.hh"
-// #include "netstar/af/async_flow.hh"
+#include "netstar/af/async_flow.hh"
 
 #include "net/ip.hh"
 #include "net/byteorder.hh"
 
 #include <array>
 
-/*using namespace seastar;
+using namespace seastar;
 using namespace netstar;
 using namespace std::chrono_literals;
 
@@ -84,6 +84,7 @@ public:
         static constexpr int max_event_context_queue_size = 5;
         static constexpr int new_flow_queue_size = 100;
         static constexpr int max_flow_table_size = 10000;
+        static constexpr int max_directions = 2;
     };
 };
 
@@ -98,19 +99,5 @@ int main(int ac, char** av) {
     return app.run_deprecated(ac, av, [&app, &to, &manager, &ingress, &egress]{
         ingress.register_to_manager(manager, [](net::packet pkt){return make_ready_future();}, egress);
         egress.register_to_manager(manager, [](net::packet pkt){return make_ready_future();}, ingress);
-    });
-}*/
-
-struct wtf {
-    stream<int> s;
-    int i;
-    wtf() : i(0) {}
-};
-
-int main(int ac, char** av) {
-    app_template app;
-    std::array<wtf, 3> v;
-    return app.run_deprecated(ac, av, [&app, &v]{
-        auto sub = v[1].s.listen([](int i){return make_ready_future<>();});
     });
 }

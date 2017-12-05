@@ -15,6 +15,7 @@
 #include <experimental/optional>
 #include <unordered_map>
 #include <chrono>
+#include <array>
 
 using namespace seastar;
 
@@ -462,7 +463,7 @@ class async_flow_manager {
     };
 
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>, HashFunc> _flow_table;
-    std::vector<internal_io_direction> _directions;
+    std::array<internal_io_direction, Ppr::async_flow_config::max_directions> _directions;
     seastar::queue<async_flow<Ppr>> _new_flow_q{Ppr::async_flow_config::new_flow_queue_size};
     friend class internal::async_flow_impl<Ppr>;
 public:
@@ -475,21 +476,6 @@ public:
         external_io_direction(uint8_t direction)
             : _direction(direction)
             , _is_registered(false) {
-        }
-        external_io_direction(const external_io_direction& other) = delete;
-        external_io_direction(external_io_direction&& other) noexcept
-            : _receive_sub(std::move(other._receive_sub))
-            , _send_stream(other._send_stream)
-            , _direction(other._direction)
-            , _is_registered(other._is_registered) {
-        }
-        external_io_direction& operator=(const external_io_direction& other) = delete;
-        external_io_direction& operator=(external_io_direction&& other) noexcept {
-            if(&other != this){
-                this->~external_io_direction();
-                new (this) external_io_direction(std::move(other));
-            }
-            return *this;
         }
         void register_to_manager(async_flow_manager<Ppr>& manager,
                                  std::function<future<>(net::packet)> receive_fn,
@@ -508,15 +494,9 @@ public:
                                                      uint8_t reverse_direction,
                                                      stream<net::packet, FlowKeyType&>& istream,
                                                      std::function<future<>(net::packet)> fn) {
-        if(direction < _directions.size()) {
-            async_flow_assert(!_directions[direction].input_sub);
-        }
-        else {
-            unsigned count = _directions.size() - direction + 1;
-            for(unsigned i=0; i<count; i++){
-                _directions.emplace_back();
-            }
-        }
+        async_flow_assert(direction < _directions.size() &&
+                          !_directions[direction].input_sub);
+
         _directions[direction].input_sub.emplace(
                 istream.listen([this, direction](net::packet pkt, FlowKeyType& key) {
             auto afi = _flow_table.find(key);
