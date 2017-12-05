@@ -581,7 +581,9 @@ public:
                                 (*this), direction, *key
                             );
                     _flow_table.insert({*key, impl_lw_ptr});
-                    _new_flow_q.push({std::move(pkt), direction, std::move(impl_lw_ptr)});
+                    _new_flow_q.push(af_initial_context<Ppr>(
+                        std::move(pkt), direction, std::move(impl_lw_ptr))
+                    );
                 }
             }
             else {
