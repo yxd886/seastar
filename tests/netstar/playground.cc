@@ -108,6 +108,6 @@ int main(int ac, char** av) {
     app_template app;
     vector<wtf> v;
     return app.run_deprecated(ac, av, [&app, &v]{
-
+        v.emplace_back();
     });
 }
