@@ -159,6 +159,10 @@ public:
     void configure() {
         _af.register_client_events(af_send_recv::send, dummy_udp_events::pkt_in);
     }
+
+    /*future<> run() {
+        _af.on_client_side_events().then()
+    }*/
 };
 
 int main(int ac, char** av) {

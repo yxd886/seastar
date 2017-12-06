@@ -380,7 +380,7 @@ public:
         , _fe(fe)
         , _is_client(is_client)
         , _is_send(is_send)
-        , _impl(impl){
+        , _impl(impl) {
     }
 
     // Public constructor, uesful for temporarily storing
