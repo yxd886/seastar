@@ -547,6 +547,7 @@ class async_flow_manager {
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>, HashFunc> _flow_table;
     std::array<internal_io_direction, Ppr::async_flow_config::max_directions> _directions;
     seastar::queue<queue_item> _new_ic_q{Ppr::async_flow_config::new_flow_queue_size};
+
 public:
     class external_io_direction {
         std::experimental::optional<subscription<net::packet>> _receive_sub;
@@ -583,6 +584,7 @@ public:
         auto qitem = _new_ic_q.pop();
         return af_initial_context<Ppr>(std::move(qitem.pkt), qitem.direction, std::move(qitem.impl_ptr));
     }
+
 private:
     subscription<net::packet> direction_registration(uint8_t direction,
                                                      uint8_t reverse_direction,

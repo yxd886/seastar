@@ -149,6 +149,16 @@ public:
     };
 };
 
+class async_flow_loop {
+    async_flow<dummy_udp_ppr> _af;
+public:
+    async_flow_loop(async_flow<dummy_udp_ppr> af)
+        : _af(std::move(af)){
+    }
+
+    void configure() {
+    }
+};
 
 int main(int ac, char** av) {
     app_template app;
@@ -167,6 +177,8 @@ int main(int ac, char** av) {
 
         return manager.on_new_initial_context().then([&manager]() mutable {
             auto ic = manager.get_initial_context();
+            async_flow_loop l(ic.get_async_flow());
+            l.configure();
         }).then([](){
             engine().exit(0);
         });
