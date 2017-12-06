@@ -485,7 +485,7 @@ public:
 #endif
         {
     }
-    af_initial_context(af_initial_context&& other) noexcept
+    /*af_initial_context(af_initial_context&& other) noexcept
         : _impl_ptr(std::move(other._impl_ptr))
         , _pkt(std::move(other._pkt))
         , _direction(other._direction)
@@ -506,7 +506,9 @@ public:
             new (this) af_initial_context(std::move(other));
         }
         return *this;
-    }
+    }*/
+    af_initial_context(af_initial_context&& other) = delete;
+    af_initial_context& operator=(af_initial_context&& other) = delete;
     ~af_initial_context(){
         if(_is_valid) {
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
