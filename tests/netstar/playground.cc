@@ -167,7 +167,6 @@ int main(int ac, char** av) {
 
         return manager.on_new_flow().then([&manager]() mutable {
             auto ic = manager.get_initial_context();
-            ic.check_impl();
         }).then([](){
             engine().exit(0);
         });

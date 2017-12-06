@@ -195,7 +195,7 @@ public:
         assert(_client.loop_has_context == false);
         assert(_server.loop_has_context == false);
         assert(_pkts_in_pipeline == 0);
-        // assert(_initial_context_destroyed);
+        assert(_initial_context_destroyed);
     }
 
     void destroy_initial_context() {
@@ -203,6 +203,8 @@ public:
     }
 
     void handle_packet_send(net::packet pkt, uint8_t direction) {
+        async_flow_debug("async_flow_impl: handle_packet_send is called\n");
+
         bool is_client = (direction == _client.direction);
         auto& working_unit = get_work_unit(is_client);
 
@@ -221,6 +223,8 @@ public:
     }
 
     void handle_packet_recv(net::packet pkt, bool is_client){
+        async_flow_debug("async_flow_impl: handle_packet_recv is called\n");
+
         auto& working_unit = get_work_unit(is_client);
 
         if(working_unit.ppr_close) {
@@ -498,18 +502,13 @@ public:
         if(_impl_ptr) {
             assert(_move_construct_count == 0);
             _impl_ptr->destroy_initial_context();
-            // _impl_ptr->destroy_initial_context();
-            // _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
+            _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
         }
     }
     async_flow<Ppr> get_async_flow() {
         assert(!_extract_async_flow);
         _extract_async_flow = true;
         return async_flow<Ppr>(_impl_ptr);
-    }
-    void check_impl(){
-        assert(_impl_ptr);
-        async_flow_debug("check_impl succeeds\n");
     }
 };
 
