@@ -102,8 +102,7 @@ public:
     }
 
     filtered_events<Enum> filter(generated_events<Enum> ge){
-        return filtered_events<Enum>{
-            _registered_events&ge._generated_events};
+        return filtered_events<Enum>(_registered_events & ge._generated_events);
     }
 };
 
