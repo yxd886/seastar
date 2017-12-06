@@ -157,6 +157,7 @@ public:
     }
 
     void configure() {
+        _af.register_events<dummy_udp_events::pkt_in>(af_side::client, af_send_recv::send);
     }
 };
 
