@@ -496,6 +496,7 @@ public:
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
         _move_construct_count += 1;
 #else
+        assert(_impl_ptr);
         assert(_move_construct_count > 0);
         _move_construct_count -= 1;
 #endif
@@ -651,9 +652,9 @@ public:
            assert(qitem.impl_ptr);
            return make_ready_future<af_initial_context<Ppr>>(
                af_initial_context<Ppr>(
-                       std::move(qitem.pkt),
-                       qitem.direction,
-                       std::move(qitem.impl_ptr)
+                   std::move(qitem.pkt),
+                   qitem.direction,
+                   std::move(qitem.impl_ptr)
                )
            );
         });
