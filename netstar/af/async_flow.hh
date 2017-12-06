@@ -485,7 +485,7 @@ public:
 #endif
         {
     }
-    /*af_initial_context(af_initial_context&& other) noexcept
+    af_initial_context(af_initial_context&& other) noexcept
         : _impl_ptr(std::move(other._impl_ptr))
         , _pkt(std::move(other._pkt))
         , _direction(other._direction)
@@ -506,9 +506,7 @@ public:
             new (this) af_initial_context(std::move(other));
         }
         return *this;
-    }*/
-    af_initial_context(af_initial_context&& other) = delete;
-    af_initial_context& operator=(af_initial_context&& other) = delete;
+    }
     ~af_initial_context(){
         if(_is_valid) {
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
@@ -560,23 +558,6 @@ class async_flow_manager {
             , pkt(std::move(pkt_arg))
             , direction(direction_arg) {
         }
-
-        queue_item(queue_item&& other) noexcept
-            : impl_ptr(std::move(other.impl_ptr))
-            , pkt(std::move(other.pkt))
-            , direction(other.direction) {
-        }
-
-        queue_item& operator=(queue_item&& other) noexcept {
-            if(this != &other) {
-                this->~queue_item();
-                new (this) queue_item(std::move(other));
-            }
-            return *this;
-        }
-
-        queue_item(const queue_item& other) = delete;
-        queue_item& operator=(const queue_item& other) = delete;
     };
 
 
