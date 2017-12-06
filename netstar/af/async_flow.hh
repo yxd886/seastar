@@ -575,7 +575,15 @@ public:
             return _send_stream;
         }
     };
-
+    future<> on_new_initial_context() {
+        return _new_ic_q.not_empty();
+    }
+    af_initial_context<Ppr> get_initial_context() {
+        async_flow_assert(!_new_ic_q.empty());
+        auto qitem = _new_ic_q.pop();
+        return af_initial_context<Ppr>(std::move(qitem.pkt), qitem.direction, std::move(qitem.impl_ptr));
+    }
+private:
     subscription<net::packet> direction_registration(uint8_t direction,
                                                      uint8_t reverse_direction,
                                                      stream<net::packet, FlowKeyType*>& istream,
@@ -611,30 +619,16 @@ public:
         _directions[direction].reverse_direction = reverse_direction;
         return sub;
     }
-
-    future<> on_new_initial_context() {
-        return _new_ic_q.not_empty();
-    }
-
-    af_initial_context<Ppr> get_initial_context() {
-        async_flow_assert(!_new_ic_q.empty());
-        auto qitem = _new_ic_q.pop();
-        return af_initial_context<Ppr>(std::move(qitem.pkt), qitem.direction, std::move(qitem.impl_ptr));
-    }
-private:
     future<> send(net::packet pkt, uint8_t direction) {
         return _directions[direction].output_stream.produce(std::move(pkt));
     }
-
     uint8_t get_reverse_direction(uint8_t direction) {
         return _directions[direction].reverse_direction;
     }
-
     void add_new_mapping_to_flow_table(FlowKeyType& flow_key,
                                        lw_shared_ptr<internal::async_flow_impl<Ppr>> impl_lw_ptr){
         assert(_flow_table.insert({flow_key, impl_lw_ptr}).second);
     }
-
     void remove_mapping_on_flow_table(FlowKeyType& flow_key) {
         _flow_table.erase(flow_key);
     }
