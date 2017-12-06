@@ -8,7 +8,7 @@ namespace netstar{
 
 namespace internal {
 
-using event_storage_type = uint32_t;
+using event_storage_type = uint16_t;
 
 template<typename Enum>
 class filtered_events;
@@ -20,17 +20,16 @@ class registered_events;
 template<typename Enum>
 class filtered_events {
     friend class registered_events<Enum>;
-    using est = internal::event_storage_type;
+    using est = event_storage_type;
     est _filtered_events;
 public:
     filtered_events(est fe)
         : _filtered_events(fe){
     }
 public:
-    template<Enum EvT> bool on_event() const {
-        static_assert((static_cast<uint8_t>(EvT) < (sizeof(est)*8-1)),
-                      "event_type too large.\n");
-        est mask = 1 << static_cast<est>(EvT);
+    bool on_event(Enum ev) const {
+        assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
+        est mask = 1 << static_cast<est>(ev);
         return (_filtered_events&mask) != 0;
     }
 
@@ -42,6 +41,7 @@ public:
     bool no_event() const {
         return _filtered_events == 0;
     }
+
     static filtered_events make_close_event() {
         est mask = 1<< (static_cast<est>(sizeof(est)*8-1));
         return filtered_events(mask);
@@ -51,7 +51,7 @@ public:
 template<typename Enum>
 class generated_events {
     friend class registered_events<Enum>;
-    using est = internal::event_storage_type;
+    using est = event_storage_type;
     est _generated_events;
 public:
     generated_events() {
@@ -59,10 +59,9 @@ public:
     }
 
 public:
-    template<Enum EvT> void event_happen(){
-        static_assert((static_cast<uint8_t>(EvT) < (sizeof(est)*8-1)),
-                      "event_type too large.\n");
-        est mask = 1 << static_cast<est>(EvT);
+    void event_happen(Enum ev){
+        assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
+        est mask = 1 << static_cast<est>(ev);
         _generated_events |= mask;
     }
 
@@ -78,25 +77,22 @@ public:
 
 template<typename Enum>
 class registered_events {
-    using est = internal::event_storage_type;
+    using est = event_storage_type;
     est _registered_events;
 public:
     registered_events() {
         unregister_all_events();
     }
 public:
-    template<Enum EvT> void register_event() {
-        static_assert((static_cast<uint8_t>(EvT) < (sizeof(est)*8-1)),
-                      "event_type too large.\n");
-        est mask = 1 << static_cast<est>(EvT);
-        assert((_registered_events & mask) == 0);
+    void register_event(Enum ev) {
+        assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
+        est mask = 1 << static_cast<est>(ev);
         _registered_events |= mask;
     }
 
-    template<Enum EvT> void unregister_event() {
-        static_assert((static_cast<uint8_t>(EvT) < (sizeof(est)*8-1)),
-                      "event_type too large.\n");
-        est mask = ~(1 << static_cast<est>(EvT));
+    void unregister_event(Enum ev) {
+        assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
+        est mask = ~(1 << static_cast<est>(ev));
         _registered_events &= mask;
     }
 
