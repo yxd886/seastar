@@ -31,8 +31,6 @@ void async_flow_debug(const char* fmt, Args&&... args) {
 }
 
 template<typename Ppr>
-class af_ev_context;
-template<typename Ppr>
 class async_flow;
 template<typename Ppr>
 class af_initial_context;
@@ -357,75 +355,6 @@ public:
 };
 
 } // namespace internal
-
-template<typename Ppr>
-class af_ev_context{
-    using EventEnumType = typename Ppr::EventEnumType;
-
-    net::packet _pkt;
-    internal::filtered_events<EventEnumType> _fe;
-    bool _is_client;
-    bool _is_send;
-    internal::async_flow_impl<Ppr>* _impl;
-
-    friend class internal::async_flow_impl<Ppr>;
-
-public:
-
-    // Internal constructor used by async_flow_impl
-    af_ev_context(net::packet pkt,
-                  internal::filtered_events<EventEnumType> fe,
-                  bool is_client,
-                  bool is_send,
-                  internal::async_flow_impl<Ppr>* impl)
-        : _pkt(std::move(pkt))
-        , _fe(fe)
-        , _is_client(is_client)
-        , _is_send(is_send)
-        , _impl(impl) {
-    }
-
-    // Public constructor, uesful for temporarily storing
-    // af_ev_context object.
-    af_ev_context()
-        : _pkt(net::packet::make_null_packet())
-        , _fe(0)
-        , _is_client(false)
-        , _is_send(false)
-        , _impl(nullptr) {
-    }
-
-    af_ev_context(const af_ev_context& other) = delete;
-    af_ev_context(af_ev_context&& other) noexcept
-        : _pkt(std::move(other._pkt))
-        , _fe(other._fe)
-        , _is_client(other._is_client)
-        , _is_send(other._is_send)
-        , _impl(other._impl) {
-        other._impl = nullptr;
-    }
-    af_ev_context& operator=(const af_ev_context& other) = delete;
-    af_ev_context& operator=(af_ev_context&& other) noexcept {
-        if(&other != this){
-            this->~af_ev_context();
-            new (this) af_ev_context(std::move(other));
-        }
-        return *this;
-    }
-
-    const internal::filtered_events<EventEnumType>& events() {
-        return _fe;
-    }
-    bool is_client() {
-        return _is_client;
-    }
-    bool is_send() {
-        return _is_send;
-    }
-    bool is_null_pkt() {
-        return _pkt;
-    }
-};
 
 template<typename Ppr>
 class async_flow{
