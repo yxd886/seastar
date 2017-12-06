@@ -8,8 +8,6 @@ namespace netstar{
 
 template<typename Enum>
 class generated_events;
-template<typename Enum>
-class filtered_events;
 
 #define ENABLE_AF_ASSERTION
 
@@ -35,6 +33,8 @@ using event_storage_type = uint16_t;
 
 template<typename Enum>
 class registered_events;
+template<typename Enum>
+class filtered_events;
 
 template<typename Enum>
 class registered_events {
@@ -67,8 +67,6 @@ public:
     }
 };
 
-} // namespace internal
-
 template<typename Enum>
 class filtered_events {
     friend class internal::registered_events<Enum>;
@@ -99,6 +97,8 @@ public:
         return filtered_events(mask);
     }
 };
+
+} // namespace internal
 
 template<typename Enum>
 class generated_events {
