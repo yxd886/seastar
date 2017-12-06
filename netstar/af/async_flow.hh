@@ -456,8 +456,12 @@ public:
         return _impl->on_new_events(true);
     }
 
-    void register_events(af_side side, af_send_recv sr, EventEnumType ev) {
-        _impl->event_registration(static_cast<bool>(side), static_cast<bool>(sr), ev);
+    void register_client_events(af_send_recv sr, EventEnumType ev) {
+        _impl->event_registration(true, static_cast<bool>(sr), ev);
+    }
+
+    void register_server_events(af_send_recv sr, EventEnumType ev) {
+        _impl->event_registration(false, static_cast<bool>(sr), ev);
     }
 };
 
