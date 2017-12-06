@@ -486,7 +486,7 @@ public:
         {
     }
     af_initial_context(af_initial_context&& other) noexcept
-        : _impl_ptr(std::move(_impl_ptr))
+        : _impl_ptr(std::move(other._impl_ptr))
         , _pkt(std::move(other._pkt))
         , _direction(other._direction)
         , _is_valid(other._is_valid)
