@@ -466,7 +466,6 @@ class af_initial_context {
     impl_type _impl_ptr;
     net::packet _pkt;
     uint8_t _direction;
-    bool _is_valid;
     bool _extract_async_flow;
     int _move_construct_count;
 
@@ -476,29 +475,17 @@ public:
         : _impl_ptr(std::move(impl_ptr))
         , _pkt(std::move(pkt))
         , _direction(direction)
-        , _is_valid(true)
         , _extract_async_flow(false)
-#ifdef MEASURE_INITIAL_CONTEXT_MOVE
         , _move_construct_count(0)
-#else
-        , _move_construct_count(4)
-#endif
         {
     }
     af_initial_context(af_initial_context&& other) noexcept
         : _impl_ptr(std::move(other._impl_ptr))
         , _pkt(std::move(other._pkt))
         , _direction(other._direction)
-        , _is_valid(other._is_valid)
         , _extract_async_flow(other._extract_async_flow)
         , _move_construct_count(other._move_construct_count) {
-        other._is_valid = false;
-#ifdef MEASURE_INITIAL_CONTEXT_MOVE
         _move_construct_count += 1;
-#else
-        assert(_move_construct_count > 0);
-        _move_construct_count -= 1;
-#endif
     }
     af_initial_context& operator=(af_initial_context&& other) noexcept {
         if(&other != this) {
@@ -508,14 +495,10 @@ public:
         return *this;
     }
     ~af_initial_context(){
-        if(_is_valid) {
-#ifdef MEASURE_INITIAL_CONTEXT_MOVE
+        if(_impl_ptr) {
             async_flow_debug("af_initial_context is move-constructed %d "
                              "times.\n",
                              _move_construct_count);
-#else
-            assert(_move_construct_count == 0);
-#endif
             _impl_ptr->destroy_initial_context();
             // _impl_ptr->destroy_initial_context();
             // _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
