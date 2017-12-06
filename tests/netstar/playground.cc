@@ -180,7 +180,7 @@ int main(int ac, char** av) {
     async_flow_manager<dummy_udp_ppr>::external_io_direction egress(1);
     net::packet the_pkt = dummy_udp_ppr::async_flow_config::build_pkt("abcdefg");
     std::experimental::optional<dummy> d;
-    d = dummy(1);
+    d = dummy{1};
     d = {};
 
     return app.run_deprecated(ac, av, [&app, &to, &manager, &ingress, &egress, &the_pkt]{
