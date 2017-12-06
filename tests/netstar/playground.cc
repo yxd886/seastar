@@ -183,6 +183,7 @@ int main(int ac, char** av) {
     std::experimental::optional<dummy> d;
     d.emplace(1);
     d = {};
+    assert(!d);
 
     return app.run_deprecated(ac, av, [&app, &to, &manager, &ingress, &egress, &the_pkt]{
         ingress.register_to_manager(manager, [](net::packet pkt){return make_ready_future();}, egress);
