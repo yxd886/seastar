@@ -263,13 +263,13 @@ public:
 
     future<af_ev_context<Ppr>> on_new_events(bool is_client) {
         auto& working_unit = get_work_unit(is_client);
+
         async_flow_assert(working_unit.loop_has_context == false);
         async_flow_assert(!working_unit.async_loop_pr);
 
         if(working_unit.loop_started == false) {
             working_unit.loop_started = true;
         }
-
         while(!working_unit.buffer_q.empty()) {
             auto& next_pkt = working_unit.buffer_q.front();
             auto fe = preprocess_packet(working_unit,
@@ -453,7 +453,7 @@ public:
         return _impl->on_new_events(true);
     }
     future<af_ev_context<Ppr>> on_server_side_events() {
-        return _impl->on_new_events(true);
+        return _impl->on_new_events(false);
     }
 
     void register_client_events(af_send_recv sr, EventEnumType ev) {
