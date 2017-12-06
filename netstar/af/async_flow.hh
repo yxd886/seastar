@@ -496,7 +496,6 @@ public:
 #ifdef MEASURE_INITIAL_CONTEXT_MOVE
         _move_construct_count += 1;
 #else
-        assert(_impl_ptr);
         assert(_move_construct_count > 0);
         _move_construct_count -= 1;
 #endif
@@ -517,7 +516,6 @@ public:
 #else
             assert(_move_construct_count == 0);
 #endif
-            assert(_impl_ptr);
             _impl_ptr->destroy_initial_context();
             // _impl_ptr->destroy_initial_context();
             // _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
