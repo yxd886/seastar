@@ -352,7 +352,7 @@ class af_ev_context{
     using EventEnumType = typename Ppr::EventEnumType;
 
     net::packet _pkt;
-    internal::filtered_events<EventEnumType> _fe;
+    filtered_events<EventEnumType> _fe;
     bool _is_client;
     bool _is_send;
     internal::async_flow_impl<Ppr>* _impl;
@@ -363,7 +363,7 @@ public:
 
     // Internal constructor used by async_flow_impl
     af_ev_context(net::packet pkt,
-                  internal::filtered_events<EventEnumType> fe,
+                  filtered_events<EventEnumType> fe,
                   bool is_client,
                   bool is_send,
                   internal::async_flow_impl<Ppr>* impl)
@@ -402,7 +402,7 @@ public:
         return *this;
     }
 
-    const internal::filtered_events<EventEnumType>& events() {
+    const filtered_events<EventEnumType>& events() {
         return _fe;
     }
     bool is_client() {

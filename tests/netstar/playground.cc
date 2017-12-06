@@ -58,14 +58,14 @@ public:
     }
 
 public:
-    netstar::internal::generated_events<EventEnumType> handle_packet_send(net::packet& pkt){
-        netstar::internal::generated_events<EventEnumType> ge;
+    generated_events<EventEnumType> handle_packet_send(net::packet& pkt){
+        generated_events<EventEnumType> ge;
         ge.event_happen(dummy_udp_events::pkt_in);
         return ge;
     }
 
-    netstar::internal::generated_events<EventEnumType> handle_packet_recv(net::packet& pkt){
-        netstar::internal::generated_events<EventEnumType> ge;
+    generated_events<EventEnumType> handle_packet_recv(net::packet& pkt){
+        generated_events<EventEnumType> ge;
         ge.event_happen(dummy_udp_events::pkt_in);
         return ge;
     }

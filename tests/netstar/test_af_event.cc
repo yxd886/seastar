@@ -34,6 +34,7 @@
 
 using namespace seastar;
 using namespace netstar::internal;
+using namespace netstar;
 using namespace std::chrono_literals;
 
 enum class fk_events : uint8_t{
