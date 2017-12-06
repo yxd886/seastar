@@ -11,21 +11,13 @@ class generated_events;
 template<typename Enum>
 class filtered_events;
 
-#define ENABLE_ASSERTION
-#define ASYNC_FLOW_DEBUG
+#define ENABLE_AF_ASSERTION
 
-void async_flow_assert(bool boolean_expr) {
-#ifdef ENABLE_ASSERTION
-    assert(boolean_expr);
+#ifndef ENABLE_AF_ASSERTION
+#define async_flow_assert(condition) ((void)0)
+#else
+#define async_flow_assert(condition) assert(condition)
 #endif
-}
-
-template <typename... Args>
-void async_flow_debug(const char* fmt, Args&&... args) {
-#ifdef ASYNC_FLOW_DEBUG
-    print(fmt, std::forward<Args>(args)...);
-#endif
-}
 
 enum class af_side : bool {
     client=true,
@@ -54,13 +46,13 @@ public:
     }
 public:
     void register_event(Enum ev) {
-        assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
+        async_flow_assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
         est mask = 1 << static_cast<est>(ev);
         _registered_events |= mask;
     }
 
     void unregister_event(Enum ev) {
-        assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
+        async_flow_assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
         est mask = ~(1 << static_cast<est>(ev));
         _registered_events &= mask;
     }
@@ -88,7 +80,7 @@ public:
     }
 public:
     bool on_event(Enum ev) const {
-        assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
+        async_flow_assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
         est mask = 1 << static_cast<est>(ev);
         return (_filtered_events&mask) != 0;
     }
@@ -120,7 +112,7 @@ public:
 
 public:
     void event_happen(Enum ev){
-        assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
+        async_flow_assert(static_cast<uint8_t>(ev) < (sizeof(est)*8-1));
         est mask = 1 << static_cast<est>(ev);
         _generated_events |= mask;
     }
