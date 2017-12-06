@@ -52,6 +52,11 @@ enum class af_side : bool {
     server=false
 };
 
+enum class af_send_recv : bool {
+    send=true,
+    recv=false
+};
+
 namespace internal {
 
 template<typename Ppr>
@@ -469,8 +474,8 @@ public:
         return _impl->on_new_events(true);
     }
 
-    template<EventEnumType EvT> void register_events() {
-
+    template<EventEnumType EvT> void register_events(af_side side, af_send_recv sr) {
+        _impl->event_registration<EvT>(static_cast<bool>(side), static_cast<bool>(sr));
     }
 };
 
