@@ -133,7 +133,7 @@ private:
 
     void internal_packet_forward(net::packet pkt, bool is_client, bool is_send) {
         if(is_send) {
-            handle_packet_recv(std::move(pkt), ~is_client);
+            handle_packet_recv(std::move(pkt), !is_client);
         }
         else{
             send_packet_out(std::move(pkt), is_client);
@@ -167,7 +167,7 @@ private:
         else{
             if(is_send) {
                 working_unit.ppr.handle_packet_send(pkt);
-                handle_packet_recv(std::move(pkt), ~is_client);
+                handle_packet_recv(std::move(pkt), !is_client);
             }
             else{
                 working_unit.ppr.handle_packet_recv(pkt);
@@ -260,7 +260,7 @@ public:
         auto& working_unit = get_work_unit(is_client);
         working_unit.loop_has_conetxt = false;
         if(context.is_send()){
-            handle_packet_recv(std::move(context._pkt), ~context.is_client());
+            handle_packet_recv(std::move(context._pkt), !context.is_client());
         }
         else{
             send_packet_out(std::move(context._pkt), context.is_client());
@@ -330,7 +330,7 @@ public:
             auto& next_pkt = working_unit.buffer_q.front();
             if(next_pkt.is_send) {
                 working_unit.ppr.handle_packet_send(next_pkt.pkt);
-                handle_packet_recv(std::move(next_pkt.pkt), ~is_client);
+                handle_packet_recv(std::move(next_pkt.pkt), !is_client);
             }
             else{
                 working_unit.ppr.handle_packet_recv(next_pkt.pkt);
