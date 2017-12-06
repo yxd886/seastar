@@ -612,7 +612,7 @@ public:
         return sub;
     }
 
-    future<> on_new_flow() {
+    future<> on_new_initial_context() {
         return _new_flow_q.not_empty();
     }
 
