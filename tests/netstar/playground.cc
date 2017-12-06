@@ -165,6 +165,13 @@ public:
     }*/
 };
 
+struct dummy{
+    int i;
+    ~dummy(){
+        printf("dummy is deconstructed\n");
+    }
+};
+
 int main(int ac, char** av) {
     app_template app;
     timer<steady_clock_type> to;
@@ -172,6 +179,9 @@ int main(int ac, char** av) {
     async_flow_manager<dummy_udp_ppr>::external_io_direction ingress(0);
     async_flow_manager<dummy_udp_ppr>::external_io_direction egress(1);
     net::packet the_pkt = dummy_udp_ppr::async_flow_config::build_pkt("abcdefg");
+    std::experimental::optional<dummy> d;
+    d = {1};
+    d = {};
 
     return app.run_deprecated(ac, av, [&app, &to, &manager, &ingress, &egress, &the_pkt]{
         ingress.register_to_manager(manager, [](net::packet pkt){return make_ready_future();}, egress);
