@@ -561,8 +561,10 @@ public:
                                  external_io_direction& reverse_io) {
             assert(!_is_registered);
             _is_registered = true;
-            _receive_sub = manager.direction_registration(_direction, reverse_io.get_direction(),
-                                                          _send_stream, std::move(receive_fn));
+            _receive_sub.emplace(
+                    manager.direction_registration(_direction, reverse_io.get_direction(),
+                                                   _send_stream, std::move(receive_fn))
+            );
         }
         uint8_t get_direction() {
             return _direction;
