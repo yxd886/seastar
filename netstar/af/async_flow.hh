@@ -9,7 +9,7 @@
 #include "core/timer.hh"
 #include "core/queue.hh"
 
-#include "netstar/af/async_flow_event.hh"
+#include "netstar/af/async_flow_util.hh"
 
 #include <deque>
 #include <experimental/optional>
@@ -29,33 +29,6 @@ template<typename Ppr>
 class af_initial_context;
 template<typename Ppr>
 class async_flow_manager;
-
-#define ENABLE_ASSERTION
-#define ASYNC_FLOW_DEBUG
-#define MEASURE_INITIAL_CONTEXT_MOVE
-
-void async_flow_assert(bool boolean_expr) {
-#ifdef ENABLE_ASSERTION
-    assert(boolean_expr);
-#endif
-}
-
-template <typename... Args>
-void async_flow_debug(const char* fmt, Args&&... args) {
-#ifdef ASYNC_FLOW_DEBUG
-    print(fmt, std::forward<Args>(args)...);
-#endif
-}
-
-enum class af_side : bool {
-    client=true,
-    server=false
-};
-
-enum class af_send_recv : bool {
-    send=true,
-    recv=false
-};
 
 namespace internal {
 
@@ -323,10 +296,10 @@ public:
         }
     }
 
-    template<EventEnumType EvT> void event_registration (bool is_client, bool is_send) {
+    void event_registration (bool is_client, bool is_send, EventEnumType ev) {
         auto& working_unit = is_client ? _client : _server;
         auto& events = is_send ? working_unit.send_events : working_unit.recv_events;
-        events.register_event<EvT>(1);
+        events.register_event(ev);
     }
 
     void close_async_loop (bool is_client) {
@@ -379,7 +352,7 @@ class af_ev_context{
     using EventEnumType = typename Ppr::EventEnumType;
 
     net::packet _pkt;
-    filtered_events<EventEnumType> _fe;
+    internal::filtered_events<EventEnumType> _fe;
     bool _is_client;
     bool _is_send;
     internal::async_flow_impl<Ppr>* _impl;
@@ -390,7 +363,7 @@ public:
 
     // Internal constructor used by async_flow_impl
     af_ev_context(net::packet pkt,
-                  filtered_events<EventEnumType> fe,
+                  internal::filtered_events<EventEnumType> fe,
                   bool is_client,
                   bool is_send,
                   internal::async_flow_impl<Ppr>* impl)
@@ -429,7 +402,7 @@ public:
         return *this;
     }
 
-    const filtered_events<EventEnumType>& events() {
+    const internal::filtered_events<EventEnumType>& events() {
         return _fe;
     }
     bool is_client() {

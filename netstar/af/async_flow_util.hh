@@ -6,6 +6,32 @@
 
 namespace netstar{
 
+#define ENABLE_ASSERTION
+#define ASYNC_FLOW_DEBUG
+
+void async_flow_assert(bool boolean_expr) {
+#ifdef ENABLE_ASSERTION
+    assert(boolean_expr);
+#endif
+}
+
+template <typename... Args>
+void async_flow_debug(const char* fmt, Args&&... args) {
+#ifdef ASYNC_FLOW_DEBUG
+    print(fmt, std::forward<Args>(args)...);
+#endif
+}
+
+enum class af_side : bool {
+    client=true,
+    server=false
+};
+
+enum class af_send_recv : bool {
+    send=true,
+    recv=false
+};
+
 namespace internal {
 
 using event_storage_type = uint16_t;
