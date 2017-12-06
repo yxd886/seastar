@@ -496,9 +496,7 @@ public:
     }
     ~af_initial_context(){
         if(_impl_ptr) {
-            async_flow_debug("af_initial_context is move-constructed %d "
-                             "times.\n",
-                             _move_construct_count);
+            assert(_move_construct_count == 0);
             _impl_ptr->destroy_initial_context();
             // _impl_ptr->destroy_initial_context();
             // _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
