@@ -245,6 +245,7 @@ public:
     void send_packet_out(net::packet pkt, bool is_client){
         auto& working_unit = get_work_unit(is_client);
         _manager.send(std::move(pkt), working_unit.direction);
+        async_flow_debug("async_flow_impl: send packet out from direction %d.\n", working_unit.direction);
     }
 
     void destroy_event_context(af_ev_context<Ppr> context) {
