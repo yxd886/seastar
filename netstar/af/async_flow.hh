@@ -456,8 +456,8 @@ public:
         return _impl->on_new_events(true);
     }
 
-    template<EventEnumType EvT> void register_events(af_side side, af_send_recv sr) {
-        _impl->event_registration<EvT>(static_cast<bool>(side), static_cast<bool>(sr));
+    void register_events(af_side side, af_send_recv sr, EventEnumType ev) {
+        _impl->event_registration(static_cast<bool>(side), static_cast<bool>(sr), ev);
     }
 };
 
