@@ -47,6 +47,11 @@ void async_flow_debug(const char* fmt, Args&&... args) {
 #endif
 }
 
+enum class af_side : bool {
+    client=true,
+    server=false
+};
+
 namespace internal {
 
 template<typename Ppr>
@@ -436,6 +441,7 @@ public:
 template<typename Ppr>
 class async_flow{
     using impl_type = lw_shared_ptr<internal::async_flow_impl<Ppr>>;
+    using EventEnumType = typename Ppr::EventEnumType;
     impl_type _impl;
 public:
     explicit async_flow(impl_type impl)
@@ -461,6 +467,10 @@ public:
     }
     future<af_ev_context<Ppr>> on_server_side_events() {
         return _impl->on_new_events(true);
+    }
+
+    template<EventEnumType EvT> void register_events() {
+
     }
 };
 
