@@ -467,14 +467,14 @@ public:
 template<typename Ppr>
 class af_initial_context {
     using impl_type = lw_shared_ptr<internal::async_flow_impl<Ppr>>;
+    friend class async_flow_manager<Ppr>;
 
     impl_type _impl_ptr;
     net::packet _pkt;
     uint8_t _direction;
     bool _extract_async_flow;
     int _move_construct_count;
-
-public:
+private:
     explicit af_initial_context(net::packet pkt, uint8_t direction,
                                 impl_type impl_ptr)
         : _impl_ptr(std::move(impl_ptr))
@@ -484,6 +484,7 @@ public:
         , _move_construct_count(0)
         {
     }
+public:
     af_initial_context(af_initial_context&& other) noexcept
         : _impl_ptr(std::move(other._impl_ptr))
         , _pkt(std::move(other._pkt))
