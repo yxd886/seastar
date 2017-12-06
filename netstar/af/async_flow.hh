@@ -519,6 +519,7 @@ class async_flow_manager {
     using FlowKeyType = typename Ppr::FlowKeyType;
     using HashFunc = typename Ppr::HashFunc;
     using impl_type = lw_shared_ptr<internal::async_flow_impl<Ppr>>;
+    friend class internal::async_flow_impl<Ppr>;
 
     struct internal_io_direction {
         std::experimental::optional<subscription<net::packet, FlowKeyType*>> input_sub;
@@ -545,8 +546,7 @@ class async_flow_manager {
 
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>, HashFunc> _flow_table;
     std::array<internal_io_direction, Ppr::async_flow_config::max_directions> _directions;
-    seastar::queue<queue_item> _new_flow_q{Ppr::async_flow_config::new_flow_queue_size};
-    friend class internal::async_flow_impl<Ppr>;
+    seastar::queue<queue_item> _new_ic_q{Ppr::async_flow_config::new_flow_queue_size};
 public:
     class external_io_direction {
         std::experimental::optional<subscription<net::packet>> _receive_sub;
@@ -588,7 +588,7 @@ public:
             async_flow_debug("Receive a new packet from direction %d\n", direction);
             auto afi = _flow_table.find(*key);
             if(afi == _flow_table.end()) {
-                if(!_new_flow_q.full() &&
+                if(!_new_ic_q.full() &&
                    (_flow_table.size() <
                     Ppr::async_flow_config::max_flow_table_size) ){
                     auto impl_lw_ptr =
@@ -597,7 +597,7 @@ public:
                             );
                     _flow_table.insert({*key, impl_lw_ptr});
                     assert(impl_lw_ptr);
-                    _new_flow_q.push(queue_item(std::move(impl_lw_ptr), std::move(pkt), direction));
+                    _new_ic_q.push(queue_item(std::move(impl_lw_ptr), std::move(pkt), direction));
                     assert(!impl_lw_ptr);
                 }
             }
@@ -613,15 +613,15 @@ public:
     }
 
     future<> on_new_initial_context() {
-        return _new_flow_q.not_empty();
+        return _new_ic_q.not_empty();
     }
 
     af_initial_context<Ppr> get_initial_context() {
-        async_flow_assert(!_new_flow_q.empty());
-        auto qitem = _new_flow_q.pop();
+        async_flow_assert(!_new_ic_q.empty());
+        auto qitem = _new_ic_q.pop();
         return af_initial_context<Ppr>(std::move(qitem.pkt), qitem.direction, std::move(qitem.impl_ptr));
     }
-
+private:
     future<> send(net::packet pkt, uint8_t direction) {
         return _directions[direction].output_stream.produce(std::move(pkt));
     }
