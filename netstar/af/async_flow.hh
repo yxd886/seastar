@@ -32,7 +32,7 @@ class async_flow_manager;
 
 #define ENABLE_ASSERTION
 #define ASYNC_FLOW_DEBUG
-// #define MEASURE_INITIAL_CONTEXT_MOVE
+#define MEASURE_INITIAL_CONTEXT_MOVE
 
 void async_flow_assert(bool boolean_expr) {
 #ifdef ENABLE_ASSERTION
@@ -644,18 +644,14 @@ public:
         return sub;
     }
 
-    future<af_initial_context<Ppr>> on_new_flow() {
-        return _new_flow_q.not_empty().then([this]{
-           auto qitem = _new_flow_q.pop();
-           assert(qitem.impl_ptr);
-           return make_ready_future<af_initial_context<Ppr>>(
-               af_initial_context<Ppr>(
-                   std::move(qitem.pkt),
-                   qitem.direction,
-                   std::move(qitem.impl_ptr)
-               )
-           );
-        });
+    future<> on_new_flow() {
+        return _new_flow_q.not_empty();
+    }
+
+    af_initial_context<Ppr> get_initial_context() {
+        async_flow_assert(!_new_flow_q.empty());
+        auto qitem = _new_flow_q.pop();
+        return af_initial_context<Ppr>(std::move(qitem.pkt), qitem.direction, std::move(qitem.impl_ptr));
     }
 
     future<> send(net::packet pkt, uint8_t direction) {
