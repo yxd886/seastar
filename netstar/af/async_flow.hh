@@ -140,6 +140,22 @@ private:
         return fe;
     }
 
+    void preprocess_and_forward(net::packet pkt, bool is_client, bool is_send) {
+        auto& working_unit = get_work_unit(is_client);
+        auto ge = is_send ? working_unit.ppr.handle_packet_send(pkt) :
+                            working_unit.ppr.handle_packet_recv(pkt);
+        if(ge.close_event_happen()){
+            close_ppr_and_remove_flow_key(working_unit);
+        }
+        if(is_send) {
+            handle_packet_recv(std::move(pkt), !is_client);
+        }
+        else{
+            send_packet_out(std::move(pkt), is_client);
+            _pkts_in_pipeline -= 1;
+        }
+    }
+
     void internal_packet_forward(net::packet pkt, bool is_client, bool is_send) {
         if(is_send) {
             handle_packet_recv(std::move(pkt), !is_client);
@@ -173,15 +189,7 @@ private:
             }
         }
         else{
-            if(is_send) {
-                working_unit.ppr.handle_packet_send(pkt);
-                handle_packet_recv(std::move(pkt), !is_client);
-            }
-            else{
-                working_unit.ppr.handle_packet_recv(pkt);
-                send_packet_out(std::move(pkt), is_client);
-                _pkts_in_pipeline -= 1;
-            }
+            preprocess_and_forward(std::move(pkt), is_client, is_send);
         }
     }
 
@@ -192,15 +200,7 @@ private:
         working_unit.loop_fn = nullptr;
         while(!working_unit.buffer_q.empty()) {
             auto& next_pkt = working_unit.buffer_q.front();
-            if(next_pkt.is_send) {
-                working_unit.ppr.handle_packet_send(next_pkt.pkt);
-                handle_packet_recv(std::move(next_pkt.pkt), !is_client);
-            }
-            else{
-                working_unit.ppr.handle_packet_recv(next_pkt.pkt);
-                send_packet_out(std::move(next_pkt.pkt), is_client);
-                _pkts_in_pipeline -= 1;
-            }
+            preprocess_and_forward(std::move(next_pkt.pkt), is_client, next_pkt.is_send);
             working_unit.buffer_q.pop_front();
         }
         working_unit.async_loop_quit_pr->set_value();
@@ -214,6 +214,11 @@ private:
         if(action == af_action::forward || action == af_action::close_forward) {
             internal_packet_forward(std::move(context.pkt), is_client, context.is_send);
         }
+
+        if(action == af_action::drop || action == af_action::close_drop) {
+            _pkts_in_pipeline -= 1;
+        }
+
         working_unit.cur_context = {};
 
         if(action == af_action::close_drop || action == af_action::close_forward) {
@@ -244,6 +249,7 @@ private:
         }
 
         if(working_unit.ppr_close == true) {
+            _pkts_in_pipeline += 1;
             working_unit.cur_context.emplace(net::packet::make_null_packet(),
                                              filtered_events<EventEnumType>::make_close_event(),
                                              true);
