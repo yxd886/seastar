@@ -226,7 +226,7 @@ private:
             auto fe = preprocess_packet(working_unit,
                     next_pkt.pkt, next_pkt.is_send);
             if(fe.no_event()) {
-                internal_packet_forward(std::move(next_pkt),
+                internal_packet_forward(std::move(next_pkt.pkt),
                                         is_client,
                                         next_pkt.is_send);
                 working_unit.buffer_q.pop_front();
