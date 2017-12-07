@@ -27,6 +27,13 @@ enum class af_send_recv : bool {
     recv=false
 };
 
+enum class af_action {
+    forward,
+    drop,
+    close_forward,
+    close_drop
+};
+
 namespace internal {
 
 using event_storage_type = uint16_t;

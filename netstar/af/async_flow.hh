@@ -74,23 +74,23 @@ struct af_work_unit {
     using FlowKeyType = typename Ppr::FlowKeyType;
 
     Ppr ppr;
-    std::experimental::optional<promise<>> async_loop_pr;
+    std::experimental::optional<promise<>> async_loop_quit_pr;
     registered_events<EventEnumType> send_events;
     registered_events<EventEnumType> recv_events;
     circular_buffer<buffered_packet> buffer_q;
     std::experimental::optional<FlowKeyType> flow_key;
-    uint8_t direction;
-    bool loop_started;
-    bool ppr_close;
     std::experimental::optional<packet_context<Ppr>> cur_context;
+    std::function<future<af_action>()> loop_fn;
+    uint8_t direction;
+    bool ppr_close;
 
     af_work_unit(bool is_client_arg,
                  uint8_t direction_arg)
         : ppr(is_client_arg)
         , direction(direction_arg)
-        , loop_started(false)
         , ppr_close(false) {
         buffer_q.reserve(5);
+        loop_fn = nullptr;
     }
 };
 
@@ -149,8 +149,8 @@ private:
     void action_after_packet_handle(af_work_unit<Ppr>& working_unit,
                                     net::packet pkt,
                                     bool is_client, bool is_send) {
-        if(working_unit.loop_started) {
-            if(working_unit.async_loop_pr) {
+        if(working_unit.loop_fn != nullptr) {
+            if(!working_unit.cur_context) {
                 async_flow_assert(working_unit.buffer_q.empty());
                 auto fe = preprocess_packet(working_unit, pkt, is_send);
                 if(fe.no_event()) {
@@ -158,8 +158,9 @@ private:
                 }
                 else{
                     working_unit.cur_context.emplace(std::move(pkt), fe, is_send);
-                    working_unit.async_loop_pr->set_value();
-                    working_unit.async_loop_pr = {};
+                    working_unit.loop_fn().then([this, is_client](af_action action){
+                        loop_fn_post_handler(is_client);
+                    });
                 }
             }
             else{
@@ -176,6 +177,85 @@ private:
                 send_packet_out(std::move(pkt), is_client);
                 _pkts_in_pipeline -= 1;
             }
+        }
+    }
+
+private:
+    // Critical functions for controlling the loop
+    void close_async_loop(bool is_client) {
+        auto& working_unit = get_work_unit(is_client);
+        working_unit.loop_fn = nullptr;
+        while(!working_unit.buffer_q.empty()) {
+            auto& next_pkt = working_unit.buffer_q.front();
+            if(next_pkt.is_send) {
+                working_unit.ppr.handle_packet_send(next_pkt.pkt);
+                handle_packet_recv(std::move(next_pkt.pkt), !is_client);
+            }
+            else{
+                working_unit.ppr.handle_packet_recv(next_pkt.pkt);
+                send_packet_out(std::move(next_pkt.pkt), is_client);
+                _pkts_in_pipeline -= 1;
+            }
+            working_unit.buffer_q.pop_front();
+        }
+        working_unit.async_loop_quit_pr->set_value();
+        working_unit.async_loop_quit_pr = {};
+    }
+
+    void loop_fn_post_handler(bool is_client) {
+        auto& working_unit = get_work_unit(is_client);
+        auto& context = working_unit.cur_context.value();
+
+        if(action == af_action::forward || action == af_action::close_forward) {
+            if(context.pkt) {
+                if(context.is_send) {
+                    handle_packet_recv(std::move(pkt), !is_client);
+                }
+                else{
+                    send_packet_out(std::move(context.pkt), is_client);
+                    _pkts_in_pipeline -= 1;
+                }
+            }
+            else {
+                _pkts_in_pipeline -= 1;
+            }
+        }
+        working_unit.cur_context = {};
+
+        if(action == af_action::close_drop || action == af_action::close_forward) {
+            close_async_loop(is_client);
+            return;
+        }
+
+        while(!working_unit.buffer_q.empty()) {
+            auto& next_pkt = working_unit.buffer_q.front();
+            auto fe = preprocess_packet(working_unit,
+                    next_pkt.pkt, next_pkt.is_send);
+            if(fe.no_event()) {
+                internal_packet_forward(std::move(next_pkt),
+                                        is_client,
+                                        next_pkt.is_send);
+                working_unit.buffer_q.pop_front();
+            }
+            else{
+                working_unit.cur_context.emplace(std::move(next_pkt.pkt),
+                                                 fe,
+                                                 next_pkt.is_send);
+                working_unit.buffer_q.pop_front();
+                working_unit.loop_fn().then([this, is_client](af_action action){
+                    loop_fn_post_handler(is_client);
+                });
+                return;
+            }
+        }
+
+        if(working_unit.ppr_close == true) {
+            working_unit.cur_context.emplace(net::packet::make_null_packet(),
+                                             filtered_events<EventEnumType>::make_close_event(),
+                                             true);
+            working_unit.loop_fn().then([this, is_client](af_action action){
+                loop_fn_post_handler(is_client);
+            });
         }
     }
 
@@ -249,107 +329,33 @@ public:
         async_flow_debug("async_flow_impl: send packet out from direction %d.\n", working_unit.direction);
     }
 
-    void destroy_event_context(bool is_client) {
-        auto& working_unit = get_work_unit(is_client);
-        working_unit.cur_context = {};
-        _pkts_in_pipeline -= 1;
-    }
-
-    void forward_event_context(bool is_client) {
-        auto& working_unit = get_work_unit(is_client);
-        auto& context = working_unit.cur_context.value();
-        if(context.pkt) {
-            if(context.is_send){
-                handle_packet_recv(std::move(context.pkt), !is_client);
-            }
-            else{
-                send_packet_out(std::move(context.pkt), is_client);
-                _pkts_in_pipeline -= 1;
-            }
-        }
-        working_unit.cur_context = {};
-    }
-
-    future<> on_new_events(bool is_client) {
-        auto& working_unit = get_work_unit(is_client);
-
-        async_flow_assert(!working_unit.cur_context);
-        async_flow_assert(!working_unit.async_loop_pr);
-
-        if(working_unit.loop_started == false) {
-            working_unit.loop_started = true;
-        }
-        while(!working_unit.buffer_q.empty()) {
-            auto& next_pkt = working_unit.buffer_q.front();
-            auto fe = preprocess_packet(working_unit,
-                    next_pkt.pkt, next_pkt.is_send);
-            if(fe.no_event()) {
-                internal_packet_forward(std::move(next_pkt),
-                        is_client, next_pkt.is_send);
-                working_unit.buffer_q.pop_front();
-            }
-            else{
-                working_unit.cur_context.emplace(std::move(next_pkt.pkt),
-                                                 fe,
-                                                 next_pkt.is_send);
-                working_unit.buffer_q.pop_front();
-                return make_ready_future<>();
-            }
-        }
-
-        if(working_unit.ppr_close == true) {
-            working_unit.cur_context.emplace(net::packet::make_null_packet(),
-                                             filtered_events<EventEnumType>::make_close_event(),
-                                             true);
-            return make_ready_future<>();
-        }
-        else{
-            working_unit.async_loop_pr = promise<>();
-            return working_unit.async_loop_pr->get_future();
-        }
-    }
-
     void event_registration (bool is_client, bool is_send, EventEnumType ev) {
-        auto& working_unit = is_client ? _client : _server;
+        aauto& working_unit = get_work_unit(is_client);
         auto& events = is_send ? working_unit.send_events : working_unit.recv_events;
         events.register_event(ev);
-    }
-
-    void close_async_loop (bool is_client) {
-        auto& working_unit = get_work_unit(is_client);
-
-        async_flow_assert(!working_unit.cur_context);
-        async_flow_assert(!working_unit.async_loop_pr);
-        async_flow_assert(working_unit.loop_started == true);
-
-        working_unit.loop_started = false;
-        while(!working_unit.buffer_q.empty()) {
-            auto& next_pkt = working_unit.buffer_q.front();
-            if(next_pkt.is_send) {
-                working_unit.ppr.handle_packet_send(next_pkt.pkt);
-                handle_packet_recv(std::move(next_pkt.pkt), !is_client);
-            }
-            else{
-                working_unit.ppr.handle_packet_recv(next_pkt.pkt);
-                send_packet_out(std::move(next_pkt.pkt), is_client);
-                _pkts_in_pipeline -= 1;
-            }
-            working_unit.buffer_q.pop_front();
-        }
     }
 
     void ppr_passive_close(bool is_client){
         auto& working_unit = get_work_unit(is_client);
         close_ppr_and_remove_flow_key(working_unit);
 
-        if(working_unit.loop_started && working_unit.async_loop_pr) {
+        if(working_unit.loop_fn != nullptr && !working_unit.cur_context) {
             _pkts_in_pipeline += 1;
             working_unit.cur_context.emplace(net::packet::make_null_packet(),
                                              filtered_events<EventEnumType>::make_close_event(),
                                              true);
-            working_unit.async_loop_pr->set_value();
-            working_unit.async_loop_pr = {};
+            working_unit.loop_fn().then([this, is_client](af_action action){
+                loop_fn_post_handler(is_client);
+            });
         }
+    }
+
+    future<> run_async_loop(bool is_client, std::function<future<af_action>()> fn) {
+        auto& working_unit = get_work_unit(is_client);
+        async_flow_assert(working_unit.loop_fn==nullptr && !working_unit.cur_context);
+        working_unit.loop_fn = std::move(fn);
+        working_unit.async_loop_quit_pr = promise<>();
+        return working_unit.async_loop_quit_pr->get_future();
     }
 };
 
@@ -380,11 +386,13 @@ public:
     }
 
     future<> on_client_side_events() {
-        return _impl->on_new_events(true);
+        // return _impl->on_new_events(true);
+        return make_ready_future<>();
     }
 
     future<> on_server_side_events() {
-        return _impl->on_new_events(false);
+        // return _impl->on_new_events(false);
+        return make_ready_future<>();
     }
 
     void register_client_events(af_send_recv sr, EventEnumType ev) {
