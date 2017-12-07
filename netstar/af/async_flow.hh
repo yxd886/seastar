@@ -189,7 +189,7 @@ public:
         , _client(true, client_direction)
         , _server(false, manager.get_reverse_direction(client_direction))
         , _pkts_in_pipeline(0)
-        , _initial_context_destroyed(false){
+        , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;
     }
 
@@ -210,8 +210,7 @@ public:
         bool is_client = (direction == _client.direction);
         auto& working_unit = get_work_unit(is_client);
 
-        if( (_pkts_in_pipeline >=
-             Ppr::async_flow_config::max_event_context_queue_size) ||
+        if( _pkts_in_pipeline >= Ppr::async_flow_config::max_event_context_queue_size ||
              working_unit.ppr_close ||
              !_initial_context_destroyed) {
             // Unconditionally drop the packet.
@@ -383,6 +382,7 @@ public:
     future<> on_client_side_events() {
         return _impl->on_new_events(true);
     }
+
     future<> on_server_side_events() {
         return _impl->on_new_events(false);
     }

@@ -161,8 +161,31 @@ public:
     }
 
     /*future<> run() {
-        _af.on_client_side_events().then()
+        _af.on_client_side_events().then([](client_accessor cac){
+
+            auto& pkt = _af.get_pkt_ref(cac);
+
+            auto& wu = _af.get_work_unit(cac);
+            auto data = wu.read_data();
+
+            auto result = detection_engine().feed(std::move(data));
+
+
+
+            return _mica_client.query(xxx);
+        }).then([this](response){
+            _af.destroy_context(std::move(cac));
+        });
     }*/
+
+    /* final api:
+     * _af.run_async_loop([this](){
+     *
+     *
+     * });
+
+
+     */
 };
 
 struct dummy{
