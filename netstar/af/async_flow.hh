@@ -159,7 +159,6 @@ private:
     void internal_packet_forward(net::packet pkt, bool is_client, bool is_send) {
         if(is_send) {
             handle_packet_recv(std::move(pkt), !is_client);
-
         }
         else{
             send_packet_out(std::move(pkt), is_client);
