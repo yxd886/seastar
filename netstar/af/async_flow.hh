@@ -135,7 +135,7 @@ private:
                 working_unit.recv_events.filter(ge);
 
         if(fe.on_close_event()) {
-            close_ppr_and_remove_flow_key(work_unit);
+            close_ppr_and_remove_flow_key(working_unit);
         }
         return fe;
     }
