@@ -129,6 +129,11 @@ public:
         _generated_events |= mask;
     }
 
+    bool on_close_event() const {
+       est mask = 1<< (static_cast<est>(sizeof(est)*8-1));
+       return (_generated_events&mask) != 0;
+   }
+
     void clear(){
         _generated_events = 0;
     }

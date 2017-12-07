@@ -144,7 +144,7 @@ private:
         auto& working_unit = get_work_unit(is_client);
         auto ge = is_send ? working_unit.ppr.handle_packet_send(pkt) :
                             working_unit.ppr.handle_packet_recv(pkt);
-        if(ge.close_event_happen()){
+        if(ge.on_close_event()){
             close_ppr_and_remove_flow_key(working_unit);
         }
         if(is_send) {
