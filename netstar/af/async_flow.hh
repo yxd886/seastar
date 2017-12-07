@@ -110,7 +110,6 @@ class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>{
 private:
     // General helper utility function, useful for reducing the
     // boilerplates used in this class.
-
     af_work_unit<Ppr>& get_work_unit(bool is_client){
         return is_client ? _client : _server;
     }
@@ -353,6 +352,12 @@ private:
         auto& working_unit = get_work_unit(is_client);
         auto& events = is_send ? working_unit.send_events : working_unit.recv_events;
         events.register_event(ev);
+    }
+
+    void event_unregistration (bool is_client, bool is_send, EventEnumType ev) {
+        auto& working_unit = get_work_unit(is_client);
+        auto& events = is_send ? working_unit.send_events : working_unit.recv_events;
+        events.unregister_event(ev);
     }
 
     future<> run_async_loop(bool is_client, std::function<future<af_action>()> fn) {
