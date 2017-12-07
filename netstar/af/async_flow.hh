@@ -145,7 +145,7 @@ public:
     ~af_initial_context(){
         if(_impl_ptr) {
             async_flow_assert(_move_construct_count == 0);
-            _impl_ptr->destroy_initial_context();
+            // _impl_ptr->destroy_initial_context();
             _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
         }
     }
