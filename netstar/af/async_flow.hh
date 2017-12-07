@@ -88,19 +88,21 @@ public:
     }
 
     future<> on_client_side_events() {
-        return _impl->on_new_events(true);
+        // return _impl->on_new_events(true);
+        return make_ready_future<>();
     }
 
     future<> on_server_side_events() {
-        return _impl->on_new_events(false);
+        // return _impl->on_new_events(false);
+        return make_ready_future<>();
     }
 
     void register_client_events(af_send_recv sr, EventEnumType ev) {
-        _impl->event_registration(true, static_cast<bool>(sr), ev);
+        // _impl->event_registration(true, static_cast<bool>(sr), ev);
     }
 
     void register_server_events(af_send_recv sr, EventEnumType ev) {
-        _impl->event_registration(false, static_cast<bool>(sr), ev);
+        // _impl->event_registration(false, static_cast<bool>(sr), ev);
     }
 };
 
