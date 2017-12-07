@@ -345,7 +345,7 @@ private:
     // Async loop initialization sequences after acquring the
     // initial packet context.
     void event_registration (bool is_client, bool is_send, EventEnumType ev) {
-        aauto& working_unit = get_work_unit(is_client);
+        auto& working_unit = get_work_unit(is_client);
         auto& events = is_send ? working_unit.send_events : working_unit.recv_events;
         events.register_event(ev);
     }
