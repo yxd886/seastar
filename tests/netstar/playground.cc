@@ -178,13 +178,46 @@ public:
         });
     }*/
 
-    /* final api:
-     * _af.run_async_loop([this](){
+    /* final api 1:
+     * af_ptr = _af.get();
      *
+     * af_ptr->run_client_async_loop([af_ptr](client_accessor ca){
+     *    af_ptr->update_packet(ca);
+     *    af_ptr->check_for_event(ca);
+     *
+     *    return mica_client.query(xxx).then([std::move(ca), af_ptr](){
+     *          af_ptr->update_packet(ca);
+     *          ca.set_post_action(drop);
+     *          return ca;
+     *    });
+     * }).then([std::move(_af)](){
      *
      * });
-
-
+     *
+     * final api 2:
+     *
+     * 1. choose a simplified API design. Use this.
+     * 2. We can add a macro to choose whether protect the
+     * async loop.
+     * 3.
+     *
+     * af_ptr = _af.get();
+     * af_ptr->run_client_async_loop([af_ptr](){
+     *    af_ptr->update_client_packet();
+     *    af_ptr->check_for_client_event();
+     *
+     *    return mica_client.query(xxx).then([af_ptr](){
+     *          af_ptr->update_client_packet();
+     *          return drop;
+     *    })
+     * }).then([std::move(_af)](){
+     *
+     * });
+     *
+     * final api 3:
+     *
+     * may abort the entire program.
+     *
      */
 };
 
