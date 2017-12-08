@@ -403,6 +403,9 @@ public:
     void unregister_events(af_send_recv sr, EventEnumType ev) {
         _impl->event_unregistration(static_cast<bool>(Side), static_cast<bool>(sr), ev);
     }
+    future<> run_async_loop(std::function<future<af_action>()> fn) {
+        return _impl->run_async_loop(static_cast<bool>(Side), std::move(fn));
+    }
 };
 
 template<typename Ppr>
