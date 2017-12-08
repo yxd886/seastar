@@ -371,7 +371,7 @@ private:
 
 } // namespace internal
 
-template<typename Ppr>
+template<typename Ppr, af_side Side>
 class async_flow{
     using impl_type = lw_shared_ptr<internal::async_flow_impl<Ppr>>;
     using EventEnumType = typename Ppr::EventEnumType;
@@ -395,22 +395,12 @@ public:
         return *this;
     }
 
-    future<> on_client_side_events() {
-        // return _impl->on_new_events(true);
-        return make_ready_future<>();
+    void register_events(af_send_recv sr, EventEnumType ev) {
+        _impl->event_registration(static_cast<bool>(Side), static_cast<bool>(sr), ev);
     }
 
-    future<> on_server_side_events() {
-        // return _impl->on_new_events(false);
-        return make_ready_future<>();
-    }
-
-    void register_client_events(af_send_recv sr, EventEnumType ev) {
-        _impl->event_registration(true, static_cast<bool>(sr), ev);
-    }
-
-    void register_server_events(af_send_recv sr, EventEnumType ev) {
-        _impl->event_registration(false, static_cast<bool>(sr), ev);
+    void unregister_events(af_send_recv sr, EventEnumType ev) {
+        _impl->event_unregistration(static_cast<bool>(Side), static_cast<bool>(sr), ev);
     }
 };
 
@@ -457,10 +447,10 @@ public:
             _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
         }
     }
-    async_flow<Ppr> get_async_flow() {
+    async_flow<Ppr, af_side::client> get_async_flow() {
         async_flow_assert(!_extract_async_flow);
         _extract_async_flow = true;
-        return async_flow<Ppr>(_impl_ptr);
+        return async_flow<Ppr, af_side::client>(_impl_ptr);
     }
 };
 
@@ -492,7 +482,6 @@ class async_flow_manager {
             , direction(direction_arg) {
         }
     };
-
 
     std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>, HashFunc> _flow_table;
     std::array<internal_io_direction, Ppr::async_flow_config::max_directions> _directions;

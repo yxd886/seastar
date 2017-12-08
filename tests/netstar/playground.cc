@@ -150,14 +150,14 @@ public:
 };
 
 class async_flow_loop {
-    async_flow<dummy_udp_ppr> _af;
+    async_flow<dummy_udp_ppr, af_side::client> _af;
 public:
-    async_flow_loop(async_flow<dummy_udp_ppr> af)
+    async_flow_loop(async_flow<dummy_udp_ppr, af_side::client> af)
         : _af(std::move(af)){
     }
 
     void configure() {
-        _af.register_client_events(af_send_recv::send, dummy_udp_events::pkt_in);
+        _af.register_events(af_send_recv::send, dummy_udp_events::pkt_in);
     }
 
     /*future<> run() {
