@@ -172,7 +172,7 @@ private:
 
         auto f = futurator::apply(working_unit.loop_fn);
 
-        f.then_wrapped([this, is_client](future<af_action> f){
+        // f.then_wrapped([this, is_client](future<af_action> f){
             // try {
                 auto action = f.get0();
                 this->loop_fn_post_handler(is_client, action);
@@ -188,6 +188,9 @@ private:
                 working_unit.async_loop_quit_pr->set_exception(async_flow_unexpected_quit());
                 working_unit.async_loop_quit_pr = {};
             }*/
+        // });
+        f.then([this, is_client](af_action action){
+            this->loop_fn_post_handler(is_client, action);
         });
     }
 
