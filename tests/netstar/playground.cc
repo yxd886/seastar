@@ -260,7 +260,7 @@ int main(int ac, char** av) {
                 printf("async_flow_loop close.\n");
             });*/
 
-            async_flow_safe<dummy_udp_ppr> safe(ic.get_client_async_flow(), ic.get_server_async_flow());
+            /*async_flow_safe<dummy_udp_ppr> safe(ic.get_client_async_flow(), ic.get_server_async_flow());
             safe.register_client_events(af_send_recv::send, dummy_udp_events::pkt_in);
             safe.register_server_events(af_send_recv::recv, dummy_udp_events::pkt_in);
 
@@ -275,6 +275,13 @@ int main(int ac, char** av) {
 
             safe.on_quit().then([](){
                 printf("async_flow_safe quits.\n");
+            });*/
+
+            do_with(async_flow_safe_loop(ic.get_client_async_flow(), ic.get_server_async_flow()), [](async_flow_safe_loop& l){
+               l.configure();
+               return l.run();
+            }).then([](){
+                printf("async_flow_safe_loop close.\n");
             });
         }).then([](){
             engine().exit(0);
