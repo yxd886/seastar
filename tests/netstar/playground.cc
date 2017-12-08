@@ -61,12 +61,14 @@ public:
     generated_events<EventEnumType> handle_packet_send(net::packet& pkt){
         generated_events<EventEnumType> ge;
         ge.event_happen(dummy_udp_events::pkt_in);
+        ge.close_event_happen();
         return ge;
     }
 
     generated_events<EventEnumType> handle_packet_recv(net::packet& pkt){
         generated_events<EventEnumType> ge;
         ge.event_happen(dummy_udp_events::pkt_in);
+        ge.close_event_happen();
         return ge;
     }
 
@@ -264,16 +266,20 @@ int main(int ac, char** av) {
                 ac.register_events(af_send_recv::send, dummy_udp_events::pkt_in);
                 return ac.run_async_loop([&ac](){
                     printf("client async loop runs!\n");
-                    return make_ready_future<af_action>(af_action::forward);
+                    return make_ready_future<af_action>(af_action::close_forward);
                 });
+            }).then([](){
+                printf("client async flow is closed.\n");
             });
 
             do_with(ic.get_server_async_flow(), [](server_async_flow<dummy_udp_ppr>& as){
                 as.register_events(af_send_recv::recv, dummy_udp_events::pkt_in);
                 return as.run_async_loop([&as](){
                     printf("server async loop runs!\n");
-                    return make_ready_future<af_action>(af_action::forward);
+                    return make_ready_future<af_action>(af_action::close_forward);
                 });
+            }).then([](){
+                printf("server async flow is closed. \n");
             });
 
         }).then([](){
