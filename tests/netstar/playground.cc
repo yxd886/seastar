@@ -180,7 +180,7 @@ public:
         _server.run_async_loop([this](){
             return make_ready_future<af_action>(af_action::close_forward);
         }).then([this](){
-            _g.leaver();
+            _g.leave();
         });
         return _g.close();
     }
