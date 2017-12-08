@@ -259,9 +259,14 @@ int main(int ac, char** av) {
 
         return manager.on_new_initial_context().then([&manager]() mutable {
             auto ic = manager.get_initial_context();
-            async_flow_loop l(ic.get_client_async_flow());
-            l.configure();
-            return l.run();
+
+            do_with(ic.get_client_async_flow(), [](client_async_flow& ac){
+                ac.register_events(af_send_recv::send, dummy_udp_events::pkt_in);
+                return ac.run_async_loop([ac](){
+                    printf("async loop runs!\n");
+                    return make_ready_future<af_action>(af_action::forward);
+                });
+            });
         }).then([](){
             engine().exit(0);
         });
