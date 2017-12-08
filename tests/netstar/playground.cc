@@ -19,19 +19,20 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
-#include "netstar/port.hh"
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
 #include "core/distributed.hh"
 #include "core/gate.hh"
 
+#include "netstar/port.hh"
 #include "netstar/per_core_objs.hh"
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
 #include "netstar/stack_port.hh"
 #include "netstar/port_env.hh"
 #include "netstar/af/async_flow.hh"
+#include "netstar/af/async_flow_safe.hh"
 
 #include "net/ip.hh"
 #include "net/byteorder.hh"
@@ -182,15 +183,8 @@ public:
         }).then([this](){
             _g.leave();
         });
-        return _g.close();
-    }
-};
 
-struct dummy{
-    int i;
-    dummy(int i_arg) : i(i_arg){}
-    ~dummy(){
-        printf("dummy is deconstructed\n");
+        return _g.close();
     }
 };
 
@@ -201,10 +195,6 @@ int main(int ac, char** av) {
     async_flow_manager<dummy_udp_ppr>::external_io_direction ingress(0);
     async_flow_manager<dummy_udp_ppr>::external_io_direction egress(1);
     net::packet the_pkt = dummy_udp_ppr::async_flow_config::build_pkt("abcdefg");
-    std::experimental::optional<dummy> d;
-    d.emplace(1);
-    d = {};
-    assert(!d);
 
     return app.run_deprecated(ac, av, [&app, &to, &manager, &ingress, &egress, &the_pkt]{
         ingress.register_to_manager(manager, [](net::packet pkt){return make_ready_future();}, egress);
