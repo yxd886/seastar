@@ -47,7 +47,7 @@ public:
         static_assert(std::is_same<typename futurator::type, future<af_action>>::value, "bad_signature");
 
         std::function<future<af_action>()> loop_fn = [client = _client.get(), func=std::forward<LoopFunc>(func)](){
-            using futurator = futurize<std::result_of<LoopFunc(client_async_flow<Ppr>&)>>;
+            using futurator = futurize<std::result_of_t<LoopFunc(client_async_flow<Ppr>&)>>;
             return  futurator::apply(func, (*client));
         };
 
