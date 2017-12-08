@@ -190,7 +190,15 @@ private:
                             this->loop_fn_post_handler(is_client, action);
                         }
                         catch(...){
-
+                            this->_initial_context_destroyed = false;
+                            auto& working_unit = this->get_work_unit(is_client);
+                            working_unit.cur_context = {};
+                            working_unit.loop_fn = nullptr;
+                            while(!working_unit.buffer_q.empty()) {
+                                working_unit.buffer_q.pop_front();
+                            }
+                            working_unit.async_loop_quit_pr->set_exception(async_flow_unexpected_quit());
+                            working_unit.async_loop_quit_pr = {};
                         }
                     });
                 }
