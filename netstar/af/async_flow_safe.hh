@@ -17,7 +17,7 @@ class async_flow_safe {
     lw_shared_ptr<client_async_flow<Ppr>> _client;
     lw_shared_ptr<server_async_flow<Ppr>> _server;
     lw_shared_ptr<gate> _g;
-
+public:
     async_flow_safe(client_async_flow<Ppr>&& client,
                     server_async_flow<Ppr>&& server)
         : _client(make_lw_shared(std::move(client)))
@@ -25,7 +25,6 @@ class async_flow_safe {
         , _g(make_lw_shared(gate())){
     }
 
-public:
     void register_client_events(af_send_recv sr, EventEnumType ev) {
         _client->register_events(sr, ev);
     }
