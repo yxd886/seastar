@@ -174,8 +174,8 @@ private:
 
         // f.then_wrapped([this, is_client](future<af_action> f){
             // try {
-                auto action = f.get0();
-                this->loop_fn_post_handler(is_client, action);
+                // auto action = f.get0();
+                // this->loop_fn_post_handler(is_client, action);
             /*}
             catch(...){
                 this->_initial_context_destroyed = false;
