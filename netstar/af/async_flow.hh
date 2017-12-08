@@ -197,7 +197,7 @@ private:
                             while(!working_unit.buffer_q.empty()) {
                                 working_unit.buffer_q.pop_front();
                             }
-                            working_unit.async_loop_quit_pr->set_exception(async_flow_unexpected_quit());
+                            working_unit.async_loop_quit_pr->set_exception(std::current_exception());
                             working_unit.async_loop_quit_pr = {};
                         }
                     });
