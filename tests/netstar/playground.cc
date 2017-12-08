@@ -263,10 +263,19 @@ int main(int ac, char** av) {
             do_with(ic.get_client_async_flow(), [](client_async_flow<dummy_udp_ppr>& ac){
                 ac.register_events(af_send_recv::send, dummy_udp_events::pkt_in);
                 return ac.run_async_loop([&ac](){
-                    printf("async loop runs!\n");
+                    printf("client async loop runs!\n");
                     return make_ready_future<af_action>(af_action::forward);
                 });
             });
+
+            do_with(ic.get_server_async_flow(), [](server_async_flow<dummy_udp_ppr>& as){
+                as.register_events(af_send_recv::send, dummy_udp_events::pkt_in);
+                return as.run_async_loop([&as](){
+                    printf("server async loop runs!\n");
+                    return make_ready_future<af_action>(af_action::forward);
+                });
+            });
+
         }).then([](){
             engine().exit(0);
         });
