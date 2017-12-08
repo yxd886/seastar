@@ -24,6 +24,7 @@
 #include "core/app-template.hh"
 #include "core/print.hh"
 #include "core/distributed.hh"
+#include "core/gate.hh"
 
 #include "netstar/per_core_objs.hh"
 #include "netstar/mica_client.hh"
@@ -152,84 +153,37 @@ public:
 };
 
 class async_flow_loop {
-    client_async_flow<dummy_udp_ppr> _af;
+    client_async_flow<dummy_udp_ppr> _client;
+    server_async_flow<dummy_udp_ppr> _server;
+    seastar::gate _g;
 public:
-    async_flow_loop(client_async_flow<dummy_udp_ppr> af)
-        : _af(std::move(af)){
+    async_flow_loop(client_async_flow<dummy_udp_ppr> client,
+                    server_async_flow<dummy_udp_ppr> server)
+        : _client(std::move(client))
+        , _server(std::move(server)){
     }
 
     void configure() {
-        _af.register_events(af_send_recv::send, dummy_udp_events::pkt_in);
+        _client.register_events(af_send_recv::send, dummy_udp_events::pkt_in);
+        _server.register_events(af_send_recv::recv, dummy_udp_events::pkt_in);
     }
 
     future<> run() {
-        auto f = _af.run_async_loop([](){
-            printf("async loop runs!\n");
-
-            return make_ready_future<af_action>(af_action::forward);
+        _g.enter();
+        _client.run_async_loop([this](){
+            return make_ready_future<af_action>(af_action::close_forward);
+        }).then([this](){
+            _g.leave();
         });
-        return f.then([af = std::move(_af)](){});
+
+        _g.enter();
+        _server.run_async_loop([this](){
+            return make_ready_future<af_action>(af_action::close_forward);
+        }).then([this](){
+            _g.leaver();
+        });
+        return _g.close();
     }
-
-    /*future<> run() {
-        _af.on_client_side_events().then([](client_accessor cac){
-
-            auto& pkt = _af.get_pkt_ref(cac);
-
-            auto& wu = _af.get_work_unit(cac);
-            auto data = wu.read_data();
-
-            auto result = detection_engine().feed(std::move(data));
-
-
-
-            return _mica_client.query(xxx);
-        }).then([this](response){
-            _af.destroy_context(std::move(cac));
-        });
-    }*/
-
-    /* final api 1:
-     * af_ptr = _af.get();
-     *
-     * af_ptr->run_client_async_loop([af_ptr](client_accessor ca){
-     *    af_ptr->update_packet(ca);
-     *    af_ptr->check_for_event(ca);
-     *
-     *    return mica_client.query(xxx).then([std::move(ca), af_ptr](){
-     *          af_ptr->update_packet(ca);
-     *          ca.set_post_action(drop);
-     *          return ca;
-     *    });
-     * }).then([std::move(_af)](){
-     *
-     * });
-     *
-     * final api 2:
-     *
-     * 1. choose a simplified API design. Use this.
-     * 2. We can add a macro to choose whether protect the
-     * async loop.
-     * 3.
-     *
-     * af_ptr = _af.get();
-     * af_ptr->run_client_async_loop([af_ptr](){
-     *    af_ptr->update_client_packet();
-     *    af_ptr->check_for_client_event();
-     *
-     *    return mica_client.query(xxx).then([af_ptr](){
-     *          af_ptr->update_client_packet();
-     *          return drop;
-     *    })
-     * }).then([std::move(_af)](){
-     *
-     * });
-     *
-     * final api 3:
-     *
-     * may abort the entire program.
-     *
-     */
 };
 
 struct dummy{
@@ -262,7 +216,7 @@ int main(int ac, char** av) {
         return manager.on_new_initial_context().then([&manager]() mutable {
             auto ic = manager.get_initial_context();
 
-            do_with(ic.get_client_async_flow(), [](client_async_flow<dummy_udp_ppr>& ac){
+            /*do_with(ic.get_client_async_flow(), [](client_async_flow<dummy_udp_ppr>& ac){
                 ac.register_events(af_send_recv::send, dummy_udp_events::pkt_in);
                 return ac.run_async_loop([&ac](){
                     printf("client async loop runs!\n");
@@ -280,8 +234,14 @@ int main(int ac, char** av) {
                 });
             }).then([](){
                 printf("server async flow is closed. \n");
-            });
+            });*/
 
+            do_with(async_flow_loop(ic.get_client_async_flow(), ic.get_server_async_flow()), [](async_flow_loop& l){
+               l.configure();
+               return l.run();
+            }).then([](){
+                printf("async_flow_loop close.\n");
+            });
         }).then([](){
             engine().exit(0);
         });
