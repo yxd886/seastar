@@ -185,8 +185,13 @@ private:
                     static_assert(std::is_same<future<af_action>, typename futurator::type>::value, "bad signature");
                     auto f = futurator::apply(working_unit.loop_fn);
                     f.then_wrapped([this, is_client](future<af_action> f){
-                        af_action action = f.get0();
-                        this->loop_fn_post_handler(is_client, action);
+                        try {
+                            af_action action = f.get0();
+                            this->loop_fn_post_handler(is_client, action);
+                        }
+                        catch(...){
+
+                        }
                     });
                 }
             }
