@@ -250,7 +250,7 @@ int main(int ac, char** av) {
 
         return manager.on_new_initial_context().then([&manager]() mutable {
             auto ic = manager.get_initial_context();
-            async_flow_loop l(ic.get_async_flow());
+            async_flow_loop l(ic.get_client_async_flow());
             l.configure();
         }).then([](){
             engine().exit(0);
