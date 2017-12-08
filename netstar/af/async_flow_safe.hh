@@ -43,7 +43,7 @@ public:
 
     template<typename LoopFunc>
     void run_client_async_loop(LoopFunc&& func) {
-        using futurator = futurize<std::result_of<LoopFunc(client_async_flow<Ppr>&)>>;
+        using futurator = futurize<std::result_of_t<LoopFunc(client_async_flow<Ppr>&)>>;
         static_assert(std::is_same<typename futurator::type, future<af_action>>::value, "bad_signature");
 
         _g->enter();
