@@ -100,6 +100,7 @@ class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>{
     using FlowKeyType = typename Ppr::FlowKeyType;
     static constexpr bool packet_recv = true;
     friend class async_flow<Ppr, af_side::client>;
+    friend class async_flow<Ppr, af_side::server>;
 
     async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
@@ -403,6 +404,12 @@ public:
         _impl->event_unregistration(static_cast<bool>(Side), static_cast<bool>(sr), ev);
     }
 };
+
+template<typename Ppr>
+using client_async_flow = async_flow<Ppr, af_side::client>;
+
+template<typename Ppr>
+using server_async_flow = async_flow<Ppr, af_side::server>;
 
 template<typename Ppr>
 class af_initial_context {
