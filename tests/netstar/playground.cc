@@ -238,10 +238,12 @@ int main(int ac, char** av) {
             safe.register_server_events(af_send_recv::recv, dummy_udp_events::pkt_in);
 
             safe.run_client_async_loop([](client_async_flow<dummy_udp_ppr>& client){
+                printf("client async loop runs!\n");
                 return af_action::close_forward;
             });
             // safe.run_server_async_loop([](server_async_flow<dummy_udp_ppr>& server){
-            //    return af_action::close_forward;
+            //     printf("server async loop runs!\n");
+            //     return af_action::close_forward;
             // });
 
             safe.on_quit().then([](){
