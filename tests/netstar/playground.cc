@@ -162,6 +162,7 @@ public:
 
     future<> run() {
         auto f = _af.run_async_loop([](){
+            printf("async loop runs!\n");
             return make_ready_future<af_action>(af_action::forward);
         });
         return f.then([af = std::move(_af)](){});
