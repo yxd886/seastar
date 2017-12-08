@@ -72,6 +72,10 @@ public:
             g->leave();
         });
     }
+
+    future<> on_quit() {
+        return _g->close();
+    }
 };
 
 }
