@@ -48,7 +48,7 @@ struct buffered_packet {
 
     buffered_packet(net::packet pkt_arg, bool is_send_arg)
         : pkt(std::move(pkt_arg))
-        , is_send(is_send_arg){
+        , is_send(is_send_arg) {
     }
 };
 
