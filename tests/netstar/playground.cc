@@ -160,6 +160,13 @@ public:
         _af.register_events(af_send_recv::send, dummy_udp_events::pkt_in);
     }
 
+    future<> run() {
+        auto f = _af.run_async_loop([](){
+            return make_ready_future<af_action>(af_action::forward);
+        });
+        return f.then([af = std::move(_af)](){});
+    }
+
     /*future<> run() {
         _af.on_client_side_events().then([](client_accessor cac){
 
@@ -252,6 +259,8 @@ int main(int ac, char** av) {
             auto ic = manager.get_initial_context();
             async_flow_loop l(ic.get_client_async_flow());
             l.configure();
+            l.run();
+
         }).then([](){
             engine().exit(0);
         });
