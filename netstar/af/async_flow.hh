@@ -172,7 +172,7 @@ private:
 
         auto f = futurator::apply(working_unit.loop_fn);
 
-        f.then_warpped([this, is_client](auto&& f){
+        f.then_wrapped([this, is_client](auto&& f){
             try {
                 auto action = f.get0();
                 loop_fn_post_handler(is_client, action);
