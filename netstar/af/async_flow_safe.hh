@@ -51,6 +51,8 @@ public:
         _client->run_async_loop([client = _client.get(), func=std::forward<LoopFunc>(func)](){
             using futurator = futurize<std::result_of<LoopFunc(client_async_flow<Ppr>&)>>;
             return  futurator::apply(func, (*client));
+        }).then([client = _client, g = _g](){
+            g->leave();
         });
     }
 
