@@ -226,20 +226,20 @@ int main(int ac, char** av) {
                 printf("server async flow is closed. \n");
             });*/
 
-            /*do_with(async_flow_loop(ic.get_client_async_flow(), ic.get_server_async_flow()), [](async_flow_loop& l){
+            do_with(async_flow_loop(ic.get_client_async_flow(), ic.get_server_async_flow()), [](async_flow_loop& l){
                l.configure();
                return l.run();
             }).then([](){
                 printf("async_flow_loop close.\n");
-            });*/
+            });
 
-            async_flow_safe<dummy_udp_ppr> safe(ic.get_client_async_flow(), ic.get_server_async_flow());
+            /*async_flow_safe<dummy_udp_ppr> safe(ic.get_client_async_flow(), ic.get_server_async_flow());
             safe.run_client_async_loop([](client_async_flow<dummy_udp_ppr>& client){
                 return af_action::forward;
             });
             safe.run_server_async_loop([](server_async_flow<dummy_udp_ppr>& server){
                 return af_action::forward;
-            });
+            });*/
         }).then([](){
             engine().exit(0);
         });

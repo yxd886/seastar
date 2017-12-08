@@ -176,10 +176,7 @@ private:
     // loop_fn. In order to catch the exception, we replace the
     // implementation with this.
     void invoke_async_loop(af_work_unit<Ppr>& working_unit, bool is_client) {
-        using futurator = futurize<std::result_of_t<std::function<future<af_action>()>()>>;
-        static_assert(std::is_same<future<af_action>, typename futurator::type>::value, "bad signature");
-        auto f = futurator::apply(working_unit.loop_fn);
-        f.then_wrapped([this, is_client](auto&& f){
+        working_unit.loop_fn().then_wrapped([this, is_client](auto&& f){
             try {
                 auto action = f.get0();
                 this->loop_fn_post_handler(is_client, action);
