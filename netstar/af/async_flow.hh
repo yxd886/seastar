@@ -48,7 +48,7 @@ struct buffered_packet {
 
     buffered_packet(net::packet pkt_arg, bool is_send_arg)
         : pkt(std::move(pkt_arg))
-        , is_send(is_send_arg) {
+        , is_send(is_send_arg){
     }
 };
 
@@ -166,34 +166,6 @@ private:
         }
     }
 
-    void run_async_loop(af_work_unit<Ppr>& working_unit, bool is_client) {
-        // using futurator = futurize<std::result_of_t<std::function<future<af_action>()>()>>;
-        // static_assert(std::is_same<future<af_action>, typename futurator::type>::value, "bad signature");
-
-        // auto f = futurator::apply(working_unit.loop_fn);
-
-        // f.then_wrapped([this, is_client](future<af_action> f){
-            // try {
-                // auto action = f.get0();
-                // this->loop_fn_post_handler(is_client, action);
-            /*}
-            catch(...){
-                this->_initial_context_destroyed = false;
-                auto& working_unit = this->get_work_unit(is_client);
-                working_unit.cur_context = {};
-                working_unit.loop_fn = nullptr;
-                while(!working_unit.buffer_q.empty()) {
-                    working_unit.buffer_q.pop_front();
-                }
-                working_unit.async_loop_quit_pr->set_exception(async_flow_unexpected_quit());
-                working_unit.async_loop_quit_pr = {};
-            }*/
-        // });
-        working_unit.loop_fn().then([this, is_client](af_action action){
-            this->loop_fn_post_handler(is_client, action);
-        });
-    }
-
     void action_after_packet_handle(af_work_unit<Ppr>& working_unit,
                                     net::packet pkt,
                                     bool is_client, bool is_send) {
@@ -205,7 +177,10 @@ private:
                     internal_packet_forward(std::move(pkt), is_client, is_send);
                 }
                 else{
-                    run_async_loop(working_unit, is_client);
+                    working_unit.cur_context.emplace(std::move(pkt), fe, is_send);
+                    working_unit.loop_fn().then([this, is_client](af_action action){
+                        loop_fn_post_handler(is_client, action);
+                    });
                 }
             }
             else{
@@ -265,7 +240,9 @@ private:
                                                  fe,
                                                  next_pkt.is_send);
                 working_unit.buffer_q.pop_front();
-                run_async_loop(working_unit, is_client);
+                working_unit.loop_fn().then([this, is_client](af_action action){
+                    loop_fn_post_handler(is_client, action);
+                });
                 return;
             }
         }
@@ -275,7 +252,9 @@ private:
             working_unit.cur_context.emplace(net::packet::make_null_packet(),
                                              filtered_events<EventEnumType>::make_close_event(),
                                              true);
-            run_async_loop(working_unit, is_client);
+            working_unit.loop_fn().then([this, is_client](af_action action){
+                loop_fn_post_handler(is_client, action);
+            });
         }
     }
 
@@ -361,7 +340,9 @@ public:
             working_unit.cur_context.emplace(net::packet::make_null_packet(),
                                              filtered_events<EventEnumType>::make_close_event(),
                                              true);
-            run_async_loop(working_unit, is_client);
+            working_unit.loop_fn().then([this, is_client](af_action action){
+                loop_fn_post_handler(is_client, action);
+            });
         }
     }
 
