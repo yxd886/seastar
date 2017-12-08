@@ -56,6 +56,22 @@ public:
             g->leave();
         });
     }
+
+    template<typename LoopFunc>
+    void run_server_async_loop(LoopFunc&& func) {
+        using futurator = futurize<std::result_of_t<LoopFunc(server_async_flow<Ppr>&)>>;
+        static_assert(std::is_same<typename futurator::type, future<af_action>>::value, "bad_signature");
+
+        std::function<future<af_action>()> loop_fn = [server = _server.get(), func=std::forward<LoopFunc>(func)](){
+            using futurator = futurize<std::result_of_t<LoopFunc(server_async_flow<Ppr>&)>>;
+            return  futurator::apply(func, (*server));
+        };
+
+        _g->enter();
+        _server->run_async_loop(std::move(loop_fn)).then([server = _server, g = _g](){
+            g->leave();
+        });
+    }
 };
 
 }

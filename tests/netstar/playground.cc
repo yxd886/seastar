@@ -237,6 +237,9 @@ int main(int ac, char** av) {
             safe.run_client_async_loop([](client_async_flow<dummy_udp_ppr>& client){
                 return af_action::forward;
             });
+            safe.run_server_async_loop([](server_async_flow<dummy_udp_ppr>& server){
+                return af_action::forward;
+            });
         }).then([](){
             engine().exit(0);
         });
