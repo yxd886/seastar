@@ -188,6 +188,33 @@ public:
     }
 };
 
+class async_flow_safe_loop {
+    async_flow_safe<dummy_udp_ppr> _safe;
+public:
+    async_flow_safe_loop(client_async_flow<dummy_udp_ppr>&& client,
+                         server_async_flow<dummy_udp_ppr>&& server)
+        : _safe(std::move(client), std::move(server)){
+    }
+
+    void configure() {
+        _safe.register_client_events(af_send_recv::send, dummy_udp_events::pkt_in);
+        _safe.register_server_events(af_send_recv::recv, dummy_udp_events::pkt_in);
+    }
+
+    future<> run() {
+        _safe.run_client_async_loop([](client_async_flow<dummy_udp_ppr>& client){
+            printf("client async loop runs!\n");
+            return af_action::close_forward;
+        });
+        _safe.run_server_async_loop([](server_async_flow<dummy_udp_ppr>& server){
+            printf("server async loop runs!\n");
+            return af_action::close_forward;
+        });
+
+        return _safe.on_quit();
+    }
+};
+
 int main(int ac, char** av) {
     app_template app;
     timer<steady_clock_type> to;
@@ -241,10 +268,10 @@ int main(int ac, char** av) {
                 printf("client async loop runs!\n");
                 return af_action::close_forward;
             });
-            // safe.run_server_async_loop([](server_async_flow<dummy_udp_ppr>& server){
-            //     printf("server async loop runs!\n");
-            //     return af_action::close_forward;
-            // });
+            safe.run_server_async_loop([](server_async_flow<dummy_udp_ppr>& server){
+                printf("server async loop runs!\n");
+                return af_action::close_forward;
+            });
 
             safe.on_quit().then([](){
                 printf("async_flow_safe quits.\n");
