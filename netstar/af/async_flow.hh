@@ -387,7 +387,9 @@ private:
 
     future<> run_async_loop(bool is_client, std::function<future<af_action>()> fn) {
         auto& working_unit = get_work_unit(is_client);
-        async_flow_assert(working_unit.loop_fn==nullptr && !working_unit.cur_context);
+
+        async_flow_assert(working_unit.loop_fn==nullptr && !working_unit.cur_context && working_unit.async_loop_quit_pr);
+
         working_unit.loop_fn = std::move(fn);
         working_unit.async_loop_quit_pr = promise<>();
         return working_unit.async_loop_quit_pr->get_future();
