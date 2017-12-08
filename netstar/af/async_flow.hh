@@ -166,6 +166,17 @@ private:
         }
     }
 
+    void run_async_loop(af_work_unit<Ppr>& working_unit, bool is_client) {
+        using futurator = futurize<std::result_of_t<std::function<future<af_action>()>()>>;
+        static_assert(std::is_same<future<af_action>, typename futurator::type>::value, "bad signature");
+
+        auto f = futurator::apply(working_unit.loop_fn);
+
+        f.then([this, is_client](af_action action){
+            loop_fn_post_handler(is_client, action);
+        });
+    }
+
     void action_after_packet_handle(af_work_unit<Ppr>& working_unit,
                                     net::packet pkt,
                                     bool is_client, bool is_send) {
