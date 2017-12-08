@@ -178,8 +178,8 @@ private:
                 loop_fn_post_handler(is_client, action);
             }
             catch(...) {
-                _initial_context_destroyed = false;
-                auto working_unit = get_work_unit(is_client);
+                this->_initial_context_destroyed = false;
+                auto working_unit = this->get_work_unit(is_client);
                 working_unit.cur_context = {};
                 working_unit.loop_fn = nullptr;
                 while(!working_unit.buffer_q.empty()) {
