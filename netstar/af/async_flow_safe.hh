@@ -46,11 +46,13 @@ public:
         using futurator = futurize<std::result_of_t<LoopFunc(client_async_flow<Ppr>&)>>;
         static_assert(std::is_same<typename futurator::type, future<af_action>>::value, "bad_signature");
 
-        _g->enter();
-        _client->run_async_loop([client = _client.get(), func=std::forward<LoopFunc>(func)](){
+        std::function<future<af_action>()> loop_fn = [client = _client.get(), func=std::forward<LoopFunc>(func)](){
             using futurator = futurize<std::result_of<LoopFunc(client_async_flow<Ppr>&)>>;
             return  futurator::apply(func, (*client));
-        }).then([client = _client, g = _g](){
+        };
+
+        _g->enter();
+        _client->run_async_loop(std::move(loop_fn)).then([client = _client, g = _g](){
             g->leave();
         });
     }
