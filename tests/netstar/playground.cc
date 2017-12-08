@@ -234,6 +234,9 @@ int main(int ac, char** av) {
             });*/
 
             async_flow_safe<dummy_udp_ppr> safe(ic.get_client_async_flow(), ic.get_server_async_flow());
+            safe.run_client_async_loop([](client_async_flow<dummy_udp_ppr>& client){
+                return af_action::forward;
+            });
         }).then([](){
             engine().exit(0);
         });
