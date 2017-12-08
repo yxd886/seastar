@@ -173,11 +173,11 @@ private:
         auto f = futurator::apply(working_unit.loop_fn);
 
         f.then_wrapped([this, is_client](auto&& f){
-            try {
+            // try {
                 auto action = f.get0();
                 this->loop_fn_post_handler(is_client, action);
-            }
-            catch(...) {
+            /*}
+            catch(...){
                 this->_initial_context_destroyed = false;
                 auto& working_unit = this->get_work_unit(is_client);
                 working_unit.cur_context = {};
@@ -187,7 +187,7 @@ private:
                 }
                 working_unit.async_loop_quit_pr->set_exception(async_flow_unexpected_quit());
                 working_unit.async_loop_quit_pr = {};
-            }
+            }*/
         });
     }
 
