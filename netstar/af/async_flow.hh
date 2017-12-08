@@ -166,6 +166,13 @@ private:
         }
     }
 
+    // invoke_async_loop can be as simple as this:
+    // working_unit.loop_fn().then([this, is_client](af_action action){
+    //    loop_fn_post_handler(is_client, action);
+    // })
+    // However, this will not handle exceptions thrown when executing
+    // loop_fn. In order to catch the exception, we replace the
+    // implementation with this.
     void invoke_async_loop(af_work_unit<Ppr>& working_unit, bool is_client) {
         using futurator = futurize<std::result_of_t<std::function<future<af_action>()>()>>;
         static_assert(std::is_same<future<af_action>, typename futurator::type>::value, "bad signature");
@@ -201,9 +208,6 @@ private:
                 }
                 else{
                     working_unit.cur_context.emplace(std::move(pkt), fe, is_send);
-                    /*working_unit.loop_fn().then([this, is_client](af_action action){
-                        loop_fn_post_handler(is_client, action);
-                    });*/
                     invoke_async_loop(working_unit, is_client);
                 }
             }
@@ -264,9 +268,6 @@ private:
                                                  fe,
                                                  next_pkt.is_send);
                 working_unit.buffer_q.pop_front();
-                /*working_unit.loop_fn().then([this, is_client](af_action action){
-                    loop_fn_post_handler(is_client, action);
-                });*/
                 invoke_async_loop(working_unit, is_client);
                 return;
             }
@@ -277,9 +278,6 @@ private:
             working_unit.cur_context.emplace(net::packet::make_null_packet(),
                                              filtered_events<EventEnumType>::make_close_event(),
                                              true);
-            /*working_unit.loop_fn().then([this, is_client](af_action action){
-                loop_fn_post_handler(is_client, action);
-            });*/
             invoke_async_loop(working_unit, is_client);
         }
     }
@@ -366,9 +364,6 @@ public:
             working_unit.cur_context.emplace(net::packet::make_null_packet(),
                                              filtered_events<EventEnumType>::make_close_event(),
                                              true);
-            /*working_unit.loop_fn().then([this, is_client](af_action action){
-                loop_fn_post_handler(is_client, action);
-            });*/
             invoke_async_loop(working_unit, is_client);
         }
     }
