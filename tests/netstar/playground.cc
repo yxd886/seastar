@@ -233,7 +233,7 @@ int main(int ac, char** av) {
                 printf("async_flow_loop close.\n");
             });*/
 
-            async_flow_safe safe(ic.get_client_async_flow(), ic.get_server_async_flow());
+            async_flow_safe<dummy_udp_ppr> safe(ic.get_client_async_flow(), ic.get_server_async_flow());
         }).then([](){
             engine().exit(0);
         });
