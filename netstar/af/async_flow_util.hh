@@ -34,6 +34,13 @@ enum class af_action {
     close_drop
 };
 
+class async_flow_unexpected_quit : public std::exception {
+public:
+    virtual const char* what() const noexcept override {
+        return "async_flow quits unexpectedly\n";
+    }
+};
+
 namespace internal {
 
 using event_storage_type = uint16_t;
