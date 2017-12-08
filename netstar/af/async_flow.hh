@@ -167,10 +167,10 @@ private:
     }
 
     void run_async_loop(af_work_unit<Ppr>& working_unit, bool is_client) {
-        using futurator = futurize<std::result_of_t<std::function<future<af_action>()>()>>;
-        static_assert(std::is_same<future<af_action>, typename futurator::type>::value, "bad signature");
+        // using futurator = futurize<std::result_of_t<std::function<future<af_action>()>()>>;
+        // static_assert(std::is_same<future<af_action>, typename futurator::type>::value, "bad signature");
 
-        auto f = futurator::apply(working_unit.loop_fn);
+        // auto f = futurator::apply(working_unit.loop_fn);
 
         // f.then_wrapped([this, is_client](future<af_action> f){
             // try {
@@ -189,7 +189,7 @@ private:
                 working_unit.async_loop_quit_pr = {};
             }*/
         // });
-        f.then([this, is_client](af_action action){
+        working_unit.loop_fn().then([this, is_client](af_action action){
             this->loop_fn_post_handler(is_client, action);
         });
     }
