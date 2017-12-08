@@ -241,12 +241,7 @@ struct dummy{
 int main(int ac, char** av) {
     app_template app;
     timer<steady_clock_type> to;
-    async_flow_manager<dummy_udp_ppr> manager([](async_flow_manager<dummy_udp_ppr>* manager){
-        auto ic = manager.get_initial_context();
-        async_flow_loop l(ic.get_client_async_flow());
-        l.configure();
-        return l.run();
-    });
+    async_flow_manager<dummy_udp_ppr> manager;
     async_flow_manager<dummy_udp_ppr>::external_io_direction ingress(0);
     async_flow_manager<dummy_udp_ppr>::external_io_direction egress(1);
     net::packet the_pkt = dummy_udp_ppr::async_flow_config::build_pkt("abcdefg");
