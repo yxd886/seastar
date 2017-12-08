@@ -264,9 +264,10 @@ private:
                                                  fe,
                                                  next_pkt.is_send);
                 working_unit.buffer_q.pop_front();
-                working_unit.loop_fn().then([this, is_client](af_action action){
+                /*working_unit.loop_fn().then([this, is_client](af_action action){
                     loop_fn_post_handler(is_client, action);
-                });
+                });*/
+                invoke_async_loop(working_unit, is_client);
                 return;
             }
         }
