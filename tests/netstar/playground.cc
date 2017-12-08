@@ -226,12 +226,14 @@ int main(int ac, char** av) {
                 printf("server async flow is closed. \n");
             });*/
 
-            do_with(async_flow_loop(ic.get_client_async_flow(), ic.get_server_async_flow()), [](async_flow_loop& l){
+            /*do_with(async_flow_loop(ic.get_client_async_flow(), ic.get_server_async_flow()), [](async_flow_loop& l){
                l.configure();
                return l.run();
             }).then([](){
                 printf("async_flow_loop close.\n");
-            });
+            });*/
+
+            async_flow_safe safe(ic.get_client_async_flow(), ic.get_server_async_flow());
         }).then([](){
             engine().exit(0);
         });
