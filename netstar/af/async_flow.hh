@@ -419,7 +419,8 @@ class af_initial_context {
     impl_type _impl_ptr;
     net::packet _pkt;
     uint8_t _direction;
-    bool _extract_async_flow;
+    bool _extract_client_async_flow;
+    bool _extract_server_async_flow;
     int _move_construct_count;
 private:
     explicit af_initial_context(net::packet pkt, uint8_t direction,
@@ -427,7 +428,8 @@ private:
         : _impl_ptr(std::move(impl_ptr))
         , _pkt(std::move(pkt))
         , _direction(direction)
-        , _extract_async_flow(false)
+        , _extract_client_async_flow(false)
+        , _extract_server_async_flow(false)
         , _move_construct_count(0)
         {
     }
@@ -436,7 +438,8 @@ public:
         : _impl_ptr(std::move(other._impl_ptr))
         , _pkt(std::move(other._pkt))
         , _direction(other._direction)
-        , _extract_async_flow(other._extract_async_flow)
+        , _extract_client_async_flow(other._extract_client_async_flow)
+        , _extract_server_async_flow(other._extract_server_async_flow)
         , _move_construct_count(other._move_construct_count) {
         _move_construct_count += 1;
     }
@@ -454,10 +457,15 @@ public:
             _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
         }
     }
-    async_flow<Ppr, af_side::client> get_async_flow() {
-        async_flow_assert(!_extract_async_flow);
-        _extract_async_flow = true;
-        return async_flow<Ppr, af_side::client>(_impl_ptr);
+    client_async_flow<Ppr> get_client_async_flow() {
+        async_flow_assert(!_extract_client_async_flow);
+        _extract_client_async_flow = true;
+        return client_async_flow<Ppr>(_impl_ptr);
+    }
+    server_async_flow<Ppr> get_server_async_flow() {
+        async_flow_assert(!_extract_server_async_flow);
+        _extract_server_async_flow = true;
+        return server_async_flow<Ppr>(_impl_ptr);
     }
 };
 

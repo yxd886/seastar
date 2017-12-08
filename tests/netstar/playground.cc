@@ -150,9 +150,9 @@ public:
 };
 
 class async_flow_loop {
-    async_flow<dummy_udp_ppr, af_side::client> _af;
+    client_async_flow<dummy_udp_ppr> _af;
 public:
-    async_flow_loop(async_flow<dummy_udp_ppr, af_side::client> af)
+    async_flow_loop(client_async_flow<dummy_udp_ppr> af)
         : _af(std::move(af)){
     }
 
