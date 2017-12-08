@@ -202,10 +202,7 @@ private:
                     internal_packet_forward(std::move(pkt), is_client, is_send);
                 }
                 else{
-                    working_unit.cur_context.emplace(std::move(pkt), fe, is_send);
-                    working_unit.loop_fn().then([this, is_client](af_action action){
-                        loop_fn_post_handler(is_client, action);
-                    });
+                    run_async_loop(working_unit, is_client);
                 }
             }
             else{
@@ -265,9 +262,7 @@ private:
                                                  fe,
                                                  next_pkt.is_send);
                 working_unit.buffer_q.pop_front();
-                working_unit.loop_fn().then([this, is_client](af_action action){
-                    loop_fn_post_handler(is_client, action);
-                });
+                run_async_loop(working_unit, is_client);
                 return;
             }
         }
@@ -277,9 +272,7 @@ private:
             working_unit.cur_context.emplace(net::packet::make_null_packet(),
                                              filtered_events<EventEnumType>::make_close_event(),
                                              true);
-            working_unit.loop_fn().then([this, is_client](af_action action){
-                loop_fn_post_handler(is_client, action);
-            });
+            run_async_loop(working_unit, is_client);
         }
     }
 
@@ -365,9 +358,7 @@ public:
             working_unit.cur_context.emplace(net::packet::make_null_packet(),
                                              filtered_events<EventEnumType>::make_close_event(),
                                              true);
-            working_unit.loop_fn().then([this, is_client](af_action action){
-                loop_fn_post_handler(is_client, action);
-            });
+            run_async_loop(working_unit, is_client);
         }
     }
 
