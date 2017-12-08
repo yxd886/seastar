@@ -303,7 +303,6 @@ public:
         async_flow_assert(!_client.cur_context);
         async_flow_assert(!_server.cur_context);
         async_flow_assert(_pkts_in_pipeline == 0);
-        async_flow_assert(_initial_context_destroyed);
     }
 
     void destroy_initial_context() {
