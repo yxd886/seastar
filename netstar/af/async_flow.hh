@@ -30,7 +30,7 @@ void async_flow_debug(const char* fmt, Args&&... args) {
 #endif
 }
 
-template<typename Ppr>
+template<typename Ppr, af_side Side>
 class async_flow;
 template<typename Ppr>
 class af_initial_context;
