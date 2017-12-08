@@ -178,8 +178,15 @@ private:
                 }
                 else{
                     working_unit.cur_context.emplace(std::move(pkt), fe, is_send);
-                    working_unit.loop_fn().then([this, is_client](af_action action){
+                    /*working_unit.loop_fn().then([this, is_client](af_action action){
                         loop_fn_post_handler(is_client, action);
+                    });*/
+                    using futurator = futurize<std::result_of_t<std::function<future<af_action>()>()>>;
+                    static_assert(std::is_same<future<af_action>, typename futurator::type>::value, "bad signature");
+                    auto f = futurator::apply(working_unit.loop_fn);
+                    f.then_wrapped([this, is_client](future<af_action> f){
+                        af_action action = f.get0();
+                        this->loop_fn_post_handler(is_client, action);
                     });
                 }
             }
