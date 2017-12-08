@@ -299,6 +299,7 @@ public:
     }
 
     ~async_flow_impl() {
+        async_flow_debug("async_flow_impl: deconstruction.\n");
         async_flow_assert(!_client.cur_context);
         async_flow_assert(!_server.cur_context);
         async_flow_assert(_pkts_in_pipeline == 0);
