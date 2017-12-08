@@ -259,8 +259,7 @@ int main(int ac, char** av) {
             auto ic = manager.get_initial_context();
             async_flow_loop l(ic.get_client_async_flow());
             l.configure();
-            l.run();
-
+            return l.run();
         }).then([](){
             engine().exit(0);
         });
