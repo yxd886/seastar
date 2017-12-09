@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <assert.h>
 
+#include "core/future.hh"
+
 namespace netstar{
 
 template<typename Enum>
@@ -109,6 +111,58 @@ public:
     static filtered_events make_close_event() {
         est mask = 1<< (static_cast<est>(sizeof(est)*8-1));
         return filtered_events(mask);
+    }
+};
+
+struct buffered_packet {
+    net::packet pkt;
+    bool is_send;
+
+    buffered_packet(net::packet pkt_arg, bool is_send_arg)
+        : pkt(std::move(pkt_arg))
+        , is_send(is_send_arg){
+    }
+};
+
+template<typename Ppr>
+struct packet_context {
+    using EventEnumType = typename Ppr::EventEnumType;
+    net::packet pkt;
+    filtered_events<EventEnumType> fe;
+    bool is_send;
+
+    packet_context(net::packet pkt_arg,
+                   filtered_events<EventEnumType> fe_arg,
+                   bool is_send_arg)
+        : pkt(std::move(pkt_arg))
+        , fe(fe_arg)
+        , is_send(is_send_arg) {
+    }
+};
+
+template<typename Ppr>
+struct af_work_unit {
+    using EventEnumType = typename Ppr::EventEnumType;
+    using FlowKeyType = typename Ppr::FlowKeyType;
+
+    Ppr ppr;
+    std::experimental::optional<promise<>> async_loop_quit_pr;
+    registered_events<EventEnumType> send_events;
+    registered_events<EventEnumType> recv_events;
+    circular_buffer<buffered_packet> buffer_q;
+    std::experimental::optional<FlowKeyType> flow_key;
+    std::experimental::optional<packet_context<Ppr>> cur_context;
+    std::function<future<af_action>()> loop_fn;
+    uint8_t direction;
+    bool ppr_close;
+
+    af_work_unit(bool is_client_arg,
+                 uint8_t direction_arg)
+        : ppr(is_client_arg)
+        , direction(direction_arg)
+        , ppr_close(false) {
+        buffer_q.reserve(5);
+        loop_fn = nullptr;
     }
 };
 
