@@ -36,6 +36,10 @@ template<typename Ppr>
 class af_initial_context;
 template<typename Ppr>
 class async_flow_manager;
+template<typename Ppr>
+using client_async_flow = async_flow<Ppr, af_side::client>;
+template<typename Ppr>
+using server_async_flow = async_flow<Ppr, af_side::server>;
 
 namespace internal {
 
@@ -378,12 +382,6 @@ public:
         return _impl->run_async_loop(static_cast<bool>(Side), std::move(fn));
     }
 };
-
-template<typename Ppr>
-using client_async_flow = async_flow<Ppr, af_side::client>;
-
-template<typename Ppr>
-using server_async_flow = async_flow<Ppr, af_side::server>;
 
 template<typename Ppr>
 class af_initial_context {
