@@ -93,13 +93,8 @@ private:
     }
 
     void internal_packet_forward(net::packet pkt, bool is_client, bool is_send) {
-        if(is_send) {
-            handle_packet_recv(std::move(pkt), !is_client);
-        }
-        else{
-            send_packet_out(std::move(pkt), is_client);
-            _pkts_in_pipeline -= 1;
-        }
+        send_packet_out(std::move(pkt), is_client);
+        _pkts_in_pipeline -= 1;
     }
 
     // invoke_async_loop can be as simple as this:
