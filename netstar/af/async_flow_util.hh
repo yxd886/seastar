@@ -164,12 +164,14 @@ struct af_work_unit {
     std::function<future<af_action>()> loop_fn;
     uint8_t direction;
     bool ppr_close;
+    bool is_client;
 
     af_work_unit(bool is_client_arg,
                  uint8_t direction_arg)
         : ppr(is_client_arg)
         , direction(direction_arg)
-        , ppr_close(false) {
+        , ppr_close(false)
+        , is_client(is_client_arg) {
         buffer_q.reserve(5);
         loop_fn = nullptr;
     }

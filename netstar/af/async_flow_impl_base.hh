@@ -13,34 +13,21 @@ namespace internal {
 
 using namespace seastar;
 
-template<typename Ppr>
-class async_flow_impl_base;
-
-template<typename Ppr>
-class async_flow_impl_base {
+template<typename Ppr, typename Whatever>
+struct async_flow_impl_base {
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
 
-public:
-    ~async_flow_impl_base() {
-    }
-
-protected:
     unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
     bool _initial_context_destroyed;
 
-protected:
-    // Public interfaces that must be implemented by the
-    // deriving sub-class.
-    virtual af_work_unit<Ppr>& get_work_unit(bool is_client) = 0;
-    virtual void internal_packet_forward(net::packet pkt, bool is_client, bool is_send)  = 0;
-    virtual void close_ppr_and_remove_flow_key(af_work_unit<Ppr>& work_unit) = 0;
-    virtual void send_packet_out(net::packet pkt, bool is_client) = 0;
-    virtual void handle_packet_recv(net::packet pkt, bool is_client) = 0;
-    virtual bool check_is_client(uint8_t direction) = 0;
+    af_work_unit<Ppr>& get_work_unit(bool is_client);
+    void internal_packet_forward(net::packet pkt, bool is_client, bool is_send);
+    void close_ppr_and_remove_flow_key(af_work_unit<Ppr>& work_unit);
+    void send_packet_out(net::packet pkt, bool is_client);
+    void handle_packet_recv(net::packet pkt, bool is_client);
+    bool check_is_client(uint8_t direction);
 
-protected:
-    // Utility functions.
     filtered_events<EventEnumType> preprocess_packet(
             af_work_unit<Ppr>& working_unit, net::packet& pkt, bool is_send) {
         generated_events<EventEnumType> ge =
@@ -94,7 +81,6 @@ protected:
         }
     }
 
-protected:
     // Critical functions for controlling the loop
     void close_async_loop(bool is_client) {
         auto& working_unit = get_work_unit(is_client);
@@ -183,7 +169,6 @@ protected:
         });
     }
 
-protected:
     // Interfaces used by a manager and the preprocessor.
     void destroy_initial_context() {
         _initial_context_destroyed = true;
@@ -221,7 +206,6 @@ protected:
         }
     }
 
-protected:
     // Async loop initialization sequences after acquring the
     // initial packet context.
     void event_registration (bool is_client, bool is_send, EventEnumType ev) {
