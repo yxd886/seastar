@@ -235,6 +235,13 @@ private:
         _client.flow_key = *client_flow_key;
     }
 
+    ~async_flow_impl() {
+        async_flow_debug("async_flow_impl: deconstruction.\n");
+        async_flow_assert(!_client.cur_context);
+        async_flow_assert(!_server.cur_context);
+        async_flow_assert(_pkts_in_pipeline == 0);
+    }
+
     void destroy_initial_context() {
         _initial_context_destroyed = true;
     }
@@ -323,13 +330,6 @@ private:
         working_unit.loop_fn = std::move(fn);
         working_unit.async_loop_quit_pr = promise<>();
         return working_unit.async_loop_quit_pr->get_future();
-    }
-public:
-    ~async_flow_impl() {
-        async_flow_debug("async_flow_impl: deconstruction.\n");
-        async_flow_assert(!_client.cur_context);
-        async_flow_assert(!_server.cur_context);
-        async_flow_assert(_pkts_in_pipeline == 0);
     }
 };
 
