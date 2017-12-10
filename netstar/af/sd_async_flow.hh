@@ -353,7 +353,7 @@ public:
     sd_async_flow& operator=(sd_async_flow&& other) {
         if(&other != this){
             this->~sd_async_flow();
-            new (this) async_flow(std::move(other));
+            new (this) sd_async_flow(std::move(other));
         }
         return *this;
     }
@@ -394,7 +394,7 @@ public:
     sd_af_initial_context& operator=(sd_af_initial_context&& other) noexcept {
         if(&other != this) {
             this->~sd_af_initial_context();
-            new (this) af_initial_context(std::move(other));
+            new (this) sd_af_initial_context(std::move(other));
         }
         return *this;
     }
