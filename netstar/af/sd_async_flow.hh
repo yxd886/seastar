@@ -44,6 +44,7 @@ class sd_async_flow_impl : public enable_lw_shared_from_this<sd_async_flow_impl<
 
     sd_async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
+    af_work_unit<Ppr> _server;
     unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
     bool _initial_context_destroyed;
 
