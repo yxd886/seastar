@@ -21,7 +21,7 @@ using namespace seastar;
 
 namespace netstar {
 
-template<typename Ppr, af_side Side>
+template<typename Ppr>
 class sd_async_flow;
 template<typename Ppr>
 class sd_af_initial_context;
@@ -334,7 +334,7 @@ private:
 
 } // namespace internal
 
-template<typename Ppr, af_side Side>
+template<typename Ppr>
 class sd_async_flow{
     using impl_type = lw_shared_ptr<internal::sd_async_flow_impl<Ppr>>;
     using EventEnumType = typename Ppr::EventEnumType;
@@ -358,15 +358,12 @@ public:
         return *this;
     }
 
-    void register_events(af_send_recv sr, EventEnumType ev) {
-        _impl->event_registration(static_cast<bool>(Side), static_cast<bool>(sr), ev);
+    void register_events(EventEnumType ev) {
+        _impl->event_registration(true, true, ev);
     }
 
-    void unregister_events(af_send_recv sr, EventEnumType ev) {
-        _impl->event_unregistration(static_cast<bool>(Side), static_cast<bool>(sr), ev);
-    }
     future<> run_async_loop(std::function<future<af_action>()> fn) {
-        return _impl->run_async_loop(static_cast<bool>(Side), std::move(fn));
+        return _impl->run_async_loop(true, std::move(fn));
     }
 };
 
