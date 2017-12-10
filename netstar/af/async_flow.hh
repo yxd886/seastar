@@ -41,7 +41,6 @@ template<typename Ppr>
 class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>{
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
-    static constexpr bool packet_recv = true;
     friend class async_flow<Ppr, af_side::client>;
     friend class async_flow<Ppr, af_side::server>;
 

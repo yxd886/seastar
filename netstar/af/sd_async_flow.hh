@@ -29,7 +29,7 @@ template<typename Ppr>
 class sd_async_flow_manager;
 
 template<typename Ppr>
-using client_async_flow = async_flow<Ppr, af_side::client>;
+using client_sd_async_flow = sd_async_flow<Ppr, af_side::client>;
 
 namespace internal {
 
@@ -40,12 +40,10 @@ template<typename Ppr>
 class sd_async_flow_impl : public enable_lw_shared_from_this<sd_async_flow_impl<Ppr>>{
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
-    static constexpr bool packet_recv = true;
     friend class sd_async_flow<Ppr, af_side::client>;
 
     sd_async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
-    af_work_unit<Ppr> _server;
     unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
     bool _initial_context_destroyed;
 
@@ -53,7 +51,7 @@ private:
     // General helper utility function, useful for reducing the
     // boilerplates used in this class.
     af_work_unit<Ppr>& get_work_unit(bool is_client){
-        return is_client ? _client : _server;
+        return _client;
     }
 
     void close_ppr_and_remove_flow_key(af_work_unit<Ppr>& work_unit) {
