@@ -21,7 +21,7 @@ using namespace seastar;
 
 namespace netstar {
 
-template<typename Ppr, af_side Side>
+template<typename Ppr>
 class sd_async_flow;
 template<typename Ppr>
 class sd_af_initial_context;
@@ -29,7 +29,7 @@ template<typename Ppr>
 class sd_async_flow_manager;
 
 template<typename Ppr>
-using client_sd_async_flow = sd_async_flow<Ppr, af_side::client>;
+using client_sd_async_flow = sd_async_flow<Ppr>;
 
 namespace internal {
 
@@ -40,7 +40,7 @@ template<typename Ppr>
 class sd_async_flow_impl : public enable_lw_shared_from_this<sd_async_flow_impl<Ppr>>{
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
-    friend class sd_async_flow<Ppr, af_side::client>;
+    friend class sd_async_flow<Ppr>;
 
     sd_async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
@@ -267,7 +267,7 @@ private:
 } // namespace internal
 
 template<typename Ppr>
-class sd_async_flow<Ppr, af_side::client>{
+class sd_async_flow{
     using impl_type = lw_shared_ptr<internal::sd_async_flow_impl<Ppr>>;
     using EventEnumType = typename Ppr::EventEnumType;
     impl_type _impl;
