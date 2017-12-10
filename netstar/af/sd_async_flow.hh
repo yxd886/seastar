@@ -96,7 +96,6 @@ private:
     }
 
     void loop_fn_post_handler(af_action action) {
-        auto& _client = get_work_unit(is_client);
         auto& context = _client.cur_context.value();
 
         if(action == af_action::forward || action == af_action::close_forward) {
