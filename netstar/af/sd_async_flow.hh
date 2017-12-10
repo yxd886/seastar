@@ -152,6 +152,7 @@ private:
                 }
                 catch(...){
                     this->_initial_context_destroyed = false;
+                    this->_pkts_in_pipeline = 0;
                     _client.cur_context = {};
                     _client.loop_fn = nullptr;
                     while(!_client.buffer_q.empty()) {
@@ -164,6 +165,7 @@ private:
         }
         catch(...) {
             this->_initial_context_destroyed = false;
+            this->_pkts_in_pipeline = 0;
             _client.cur_context = {};
             _client.loop_fn = nullptr;
             while(!_client.buffer_q.empty()) {
