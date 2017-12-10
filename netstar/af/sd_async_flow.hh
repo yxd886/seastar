@@ -21,40 +21,27 @@ using namespace seastar;
 
 namespace netstar {
 
-#define ASYNC_FLOW_DEBUG
-
-template <typename... Args>
-void async_flow_debug(const char* fmt, Args&&... args) {
-#ifdef ASYNC_FLOW_DEBUG
-    print(fmt, std::forward<Args>(args)...);
-#endif
-}
-
 template<typename Ppr, af_side Side>
-class async_flow;
+class sd_async_flow;
 template<typename Ppr>
-class af_initial_context;
+class sd_af_initial_context;
 template<typename Ppr>
-class async_flow_manager;
-template<typename Ppr>
-using client_async_flow = async_flow<Ppr, af_side::client>;
-template<typename Ppr>
-using server_async_flow = async_flow<Ppr, af_side::server>;
+class sd_async_flow_manager;
 
 namespace internal {
 
 template<typename Ppr>
-class async_flow_impl;
+class sd_async_flow_impl;
 
 template<typename Ppr>
-class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>{
+class sd_async_flow_impl : public enable_lw_shared_from_this<sd_async_flow_impl<Ppr>>{
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
     static constexpr bool packet_recv = true;
-    friend class async_flow<Ppr, af_side::client>;
-    friend class async_flow<Ppr, af_side::server>;
+    friend class sd_async_flow<Ppr, af_side::client>;
+    friend class sd_async_flow<Ppr, af_side::server>;
 
-    async_flow_manager<Ppr>& _manager;
+    sd_async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
     unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
@@ -236,9 +223,9 @@ private:
 public:
     // Internal interfaces, exposed to async_flow and
     // async_flow manager.
-    async_flow_impl(async_flow_manager<Ppr>& manager,
-                    uint8_t client_direction,
-                    FlowKeyType* client_flow_key)
+    sd_async_flow_impl(sd_async_flow_manager<Ppr>& manager,
+                       uint8_t client_direction,
+                       FlowKeyType* client_flow_key)
         : _manager(manager)
         , _client(true, client_direction)
         , _server(false, manager.get_reverse_direction(client_direction))
@@ -247,7 +234,7 @@ public:
         _client.flow_key = *client_flow_key;
     }
 
-    ~async_flow_impl() {
+    ~sd_async_flow_impl() {
         async_flow_debug("async_flow_impl: deconstruction.\n");
         async_flow_assert(!_client.cur_context);
         async_flow_assert(!_server.cur_context);
@@ -348,24 +335,24 @@ private:
 } // namespace internal
 
 template<typename Ppr, af_side Side>
-class async_flow{
-    using impl_type = lw_shared_ptr<internal::async_flow_impl<Ppr>>;
+class sd_async_flow{
+    using impl_type = lw_shared_ptr<internal::sd_async_flow_impl<Ppr>>;
     using EventEnumType = typename Ppr::EventEnumType;
     impl_type _impl;
 public:
-    explicit async_flow(impl_type impl)
+    explicit sd_async_flow(impl_type impl)
         : _impl(std::move(impl)) {
     }
-    ~async_flow(){
+    ~sd_async_flow(){
     }
-    async_flow(const async_flow& other) = delete;
-    async_flow(async_flow&& other) noexcept
+    sd_async_flow(const sd_async_flow& other) = delete;
+    sd_async_flow(sd_async_flow&& other) noexcept
         : _impl(std::move(other._impl)) {
     }
-    async_flow& operator=(const async_flow& other) = delete;
-    async_flow& operator=(async_flow&& other) {
+    sd_async_flow& operator=(const sd_async_flow& other) = delete;
+    sd_async_flow& operator=(sd_async_flow&& other) {
         if(&other != this){
-            this->~async_flow();
+            this->~sd_async_flow();
             new (this) async_flow(std::move(other));
         }
         return *this;
@@ -384,53 +371,47 @@ public:
 };
 
 template<typename Ppr>
-class af_initial_context {
-    using impl_type = lw_shared_ptr<internal::async_flow_impl<Ppr>>;
-    friend class async_flow_manager<Ppr>;
+class sd_af_initial_context {
+    using impl_type = lw_shared_ptr<internal::sd_async_flow_impl<Ppr>>;
+    friend class sd_async_flow_manager<Ppr>;
 
     impl_type _impl_ptr;
     net::packet _pkt;
     uint8_t _direction;
 private:
-    explicit af_initial_context(net::packet pkt, uint8_t direction,
-                                impl_type impl_ptr)
+    explicit sd_af_initial_context(net::packet pkt, uint8_t direction,
+                                   impl_type impl_ptr)
         : _impl_ptr(std::move(impl_ptr))
         , _pkt(std::move(pkt))
         , _direction(direction) {
     }
 public:
-    af_initial_context(af_initial_context&& other) noexcept
+    sd_af_initial_context(sd_af_initial_context&& other) noexcept
         : _impl_ptr(std::move(other._impl_ptr))
         , _pkt(std::move(other._pkt))
         , _direction(other._direction) {
     }
-    af_initial_context& operator=(af_initial_context&& other) noexcept {
+    sd_af_initial_context& operator=(sd_af_initial_context&& other) noexcept {
         if(&other != this) {
-            this->~af_initial_context();
+            this->~sd_af_initial_context();
             new (this) af_initial_context(std::move(other));
         }
         return *this;
     }
-    ~af_initial_context(){
+    ~sd_af_initial_context(){
         if(_impl_ptr) {
             _impl_ptr->destroy_initial_context();
             _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
         }
     }
-    client_async_flow<Ppr> get_client_async_flow() {
-        return client_async_flow<Ppr>(_impl_ptr);
-    }
-    server_async_flow<Ppr> get_server_async_flow() {
-        return server_async_flow<Ppr>(_impl_ptr);
-    }
 };
 
 template<typename Ppr>
-class async_flow_manager {
+class sd_async_flow_manager {
     using FlowKeyType = typename Ppr::FlowKeyType;
     using HashFunc = typename Ppr::HashFunc;
-    using impl_type = lw_shared_ptr<internal::async_flow_impl<Ppr>>;
-    friend class internal::async_flow_impl<Ppr>;
+    using impl_type = lw_shared_ptr<internal::sd_async_flow_impl<Ppr>>;
+    friend class internal::sd_async_flow_impl<Ppr>;
 
     struct internal_io_direction {
         std::experimental::optional<subscription<net::packet, FlowKeyType*>> input_sub;
@@ -454,7 +435,7 @@ class async_flow_manager {
         }
     };
 
-    std::unordered_map<FlowKeyType, lw_shared_ptr<internal::async_flow_impl<Ppr>>, HashFunc> _flow_table;
+    std::unordered_map<FlowKeyType, lw_shared_ptr<internal::sd_async_flow_impl<Ppr>>, HashFunc> _flow_table;
     std::array<internal_io_direction, Ppr::async_flow_config::max_directions> _directions;
     seastar::queue<queue_item> _new_ic_q{Ppr::async_flow_config::new_flow_queue_size};
 
@@ -469,7 +450,7 @@ public:
             : _direction(direction)
             , _is_registered(false) {
         }
-        void register_to_manager(async_flow_manager<Ppr>& manager,
+        void register_to_manager(sd_async_flow_manager<Ppr>& manager,
                                  std::function<future<>(net::packet)> receive_fn,
                                  external_io_direction& reverse_io) {
             async_flow_assert(!_is_registered);
@@ -489,10 +470,10 @@ public:
     future<> on_new_initial_context() {
         return _new_ic_q.not_empty();
     }
-    af_initial_context<Ppr> get_initial_context() {
+    sd_af_initial_context<Ppr> get_initial_context() {
         async_flow_assert(!_new_ic_q.empty());
         auto qitem = _new_ic_q.pop();
-        return af_initial_context<Ppr>(std::move(qitem.pkt), qitem.direction, std::move(qitem.impl_ptr));
+        return sd_af_initial_context<Ppr>(std::move(qitem.pkt), qitem.direction, std::move(qitem.impl_ptr));
     }
 
 private:
@@ -537,7 +518,7 @@ private:
         return _directions[direction].reverse_direction;
     }
     void add_new_mapping_to_flow_table(FlowKeyType& flow_key,
-                                       lw_shared_ptr<internal::async_flow_impl<Ppr>> impl_lw_ptr){
+                                       lw_shared_ptr<internal::sd_async_flow_impl<Ppr>> impl_lw_ptr){
         assert(_flow_table.insert({flow_key, impl_lw_ptr}).second);
     }
     void remove_mapping_on_flow_table(FlowKeyType& flow_key) {
