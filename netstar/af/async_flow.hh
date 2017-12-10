@@ -107,6 +107,18 @@ private:
         }
     }
 
+    void async_loop_exception_handler(bool is_client, std::exception_ptr cur_exception) {
+        this->_initial_context_destroyed = false;
+        auto& working_unit = this->get_work_unit(is_client);
+        working_unit.cur_context = {};
+        working_unit.loop_fn = nullptr;
+        while(!working_unit.buffer_q.empty()) {
+            working_unit.buffer_q.pop_front();
+        }
+        working_unit.async_loop_quit_pr->set_exception(cur_exception);
+        working_unit.async_loop_quit_pr = {};
+    }
+
     // invoke_async_loop can be as simple as this:
     // working_unit.loop_fn().then([this, is_client](af_action action){
     //    loop_fn_post_handler(is_client, action);
@@ -117,33 +129,17 @@ private:
     void invoke_async_loop(af_work_unit<Ppr>& working_unit, bool is_client) {
         try {
             working_unit.loop_fn().then_wrapped([this, is_client](auto&& f){
-                try {
+                if(!f.failed()) {
                     auto action = f.get0();
                     this->loop_fn_post_handler(is_client, action);
                 }
-                catch(...){
-                    this->_initial_context_destroyed = false;
-                    auto& working_unit = this->get_work_unit(is_client);
-                    working_unit.cur_context = {};
-                    working_unit.loop_fn = nullptr;
-                    while(!working_unit.buffer_q.empty()) {
-                        working_unit.buffer_q.pop_front();
-                    }
-                    working_unit.async_loop_quit_pr->set_exception(std::current_exception());
-                    working_unit.async_loop_quit_pr = {};
+                else {
+                    this->async_loop_exception_handler(is_client, f.get_exception());
                 }
             });
         }
         catch(...) {
-            this->_initial_context_destroyed = false;
-            auto& working_unit = this->get_work_unit(is_client);
-            working_unit.cur_context = {};
-            working_unit.loop_fn = nullptr;
-            while(!working_unit.buffer_q.empty()) {
-                working_unit.buffer_q.pop_front();
-            }
-            working_unit.async_loop_quit_pr->set_exception(std::current_exception());
-            working_unit.async_loop_quit_pr = {};
+            async_loop_exception_handler(is_client, std::current_exception());
         }
     }
 
@@ -345,7 +341,7 @@ public:
        async_flow_debug("async_flow_impl: deconstruction.\n");
        async_flow_assert(!_client.cur_context);
        async_flow_assert(!_server.cur_context);
-       async_flow_assert(_pkts_in_pipeline == 0);
+       // async_flow_assert(_pkts_in_pipeline == 0);
    }
 };
 
