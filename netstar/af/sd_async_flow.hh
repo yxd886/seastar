@@ -38,8 +38,7 @@ class sd_async_flow_impl : public enable_lw_shared_from_this<sd_async_flow_impl<
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
     static constexpr bool packet_recv = true;
-    friend class sd_async_flow<Ppr, af_side::client>;
-    friend class sd_async_flow<Ppr, af_side::server>;
+    friend class sd_async_flow<Ppr>;
 
     sd_async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
