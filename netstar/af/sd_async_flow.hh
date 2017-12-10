@@ -336,10 +336,6 @@ private:
 
 } // namespace internal
 
-template<typename Ppr, af_side Side>
-class sd_async_flow {
-};
-
 template<typename Ppr>
 class sd_async_flow<Ppr, af_side::client>{
     using impl_type = lw_shared_ptr<internal::sd_async_flow_impl<Ppr>>;
