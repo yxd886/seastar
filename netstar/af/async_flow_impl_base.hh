@@ -21,6 +21,10 @@ class async_flow_impl_base {
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
 
+public:
+    ~async_flow_impl_base() {
+    }
+
 protected:
     unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
     bool _initial_context_destroyed;
