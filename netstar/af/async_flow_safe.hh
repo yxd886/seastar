@@ -52,7 +52,12 @@ public:
         };
 
         _g->enter();
-        _client->run_async_loop(std::move(loop_fn)).then([client = _client, g = _g](){
+        _client->run_async_loop(std::move(loop_fn)).then([client = _client, g = _g](auto&& f){
+            try {
+                f.get();
+            }
+            catch(...){
+            }
             g->leave();
         });
     }
@@ -68,7 +73,12 @@ public:
         };
 
         _g->enter();
-        _server->run_async_loop(std::move(loop_fn)).then([server = _server, g = _g](){
+        _server->run_async_loop(std::move(loop_fn)).then_wrapped([server = _server, g = _g](auto&& f){
+            try {
+                f.get();
+            }
+            catch(...){
+            }
             g->leave();
         });
     }
