@@ -66,7 +66,7 @@ protected:
         }
         else{
             send_packet_out(std::move(pkt), is_client);
-            _pkts_in_pipeline -= 1;
+            this->_pkts_in_pipeline -= 1;
         }
     }
 
@@ -93,7 +93,7 @@ protected:
 
         if(working_unit.ppr_close || !pkt) {
             // Unconditionally drop the packet.
-            _pkts_in_pipeline -= 1;
+            this->_pkts_in_pipeline -= 1;
             return;
         }
 
@@ -119,10 +119,10 @@ private:
                     FlowKeyType* client_flow_key)
         : _manager(manager)
         , _client(true, client_direction)
-        , _server(false, manager.get_reverse_direction(client_direction))
-        , _pkts_in_pipeline(0)
-        , _initial_context_destroyed(false) {
+        , _server(false, manager.get_reverse_direction(client_direction)) {
         _client.flow_key = *client_flow_key;
+        this->_pkts_in_pipeline = 0;
+        this->_initial_context_destroyed = false;
     }
 
 public:
@@ -130,7 +130,7 @@ public:
         async_flow_debug("async_flow_impl: deconstruction.\n");
         async_flow_assert(!_client.cur_context);
         async_flow_assert(!_server.cur_context);
-        async_flow_assert(_pkts_in_pipeline == 0);
+        async_flow_assert(this->_pkts_in_pipeline == 0);
     }
 };
 
