@@ -188,8 +188,9 @@ public:
         _initial_context_destroyed = true;
     }
 
-    void handle_packet_send(net::packet pkt) {
+    void handle_packet_send(net::packet pkt, uint8_t direction) {
         async_flow_debug("sd_async_flow_impl: handle_packet_send is called\n");
+        async_flow_assert(direction == _client.direction);
 
         if( _pkts_in_pipeline >= Ppr::async_flow_config::max_event_context_queue_size ||
              _client.ppr_close ||
@@ -329,7 +330,7 @@ public:
     ~sd_af_initial_context(){
         if(_impl_ptr) {
             _impl_ptr->destroy_initial_context();
-            _impl_ptr->handle_packet_send(std::move(_pkt));
+            _impl_ptr->handle_packet_send(std::move(_pkt). _direction);
         }
     }
 };
@@ -430,7 +431,7 @@ private:
                 }
             }
             else {
-                afi->second->handle_packet_send(std::move(pkt));
+                afi->second->handle_packet_send(std::move(pkt), direction);
             }
 
             return make_ready_future<>();
