@@ -99,7 +99,7 @@ private:
         auto& context = _client.cur_context.value();
 
         if(action == af_action::forward || action == af_action::close_forward) {
-            internal_packet_forward(std::move(context.pkt), is_client, context.is_send);
+            internal_packet_forward(std::move(context.pkt));
         }
 
         if(action == af_action::drop || action == af_action::close_drop) {
