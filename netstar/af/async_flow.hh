@@ -43,6 +43,7 @@ class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>{
     using FlowKeyType = typename Ppr::FlowKeyType;
     friend class async_flow<Ppr, af_side::client>;
     friend class async_flow<Ppr, af_side::server>;
+    friend class async_flow_manager<Ppr>;
 
     async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
@@ -217,7 +218,7 @@ private:
         }
     }
 
-public:
+private:
     // Internal interfaces, exposed to async_flow and
     // async_flow manager.
     async_flow_impl(async_flow_manager<Ppr>& manager,
@@ -229,13 +230,6 @@ public:
         , _pkts_in_pipeline(0)
         , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;
-    }
-
-    ~async_flow_impl() {
-        async_flow_debug("async_flow_impl: deconstruction.\n");
-        async_flow_assert(!_client.cur_context);
-        async_flow_assert(!_server.cur_context);
-        async_flow_assert(_pkts_in_pipeline == 0);
     }
 
     void destroy_initial_context() {
@@ -327,6 +321,14 @@ private:
         working_unit.async_loop_quit_pr = promise<>();
         return working_unit.async_loop_quit_pr->get_future();
     }
+
+public:
+    ~async_flow_impl() {
+       async_flow_debug("async_flow_impl: deconstruction.\n");
+       async_flow_assert(!_client.cur_context);
+       async_flow_assert(!_server.cur_context);
+       async_flow_assert(_pkts_in_pipeline == 0);
+   }
 };
 
 } // namespace internal
