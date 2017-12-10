@@ -163,7 +163,7 @@ private:
                     this->loop_fn_post_handler(action);
                 }
                 else{
-                    async_loop_exception_handler(f.get_exception());
+                    this->async_loop_exception_handler(f.get_exception());
                 }
             });
         }
