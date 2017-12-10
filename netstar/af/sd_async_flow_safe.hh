@@ -40,7 +40,7 @@ public:
             return  futurator::apply(func, (*client));
         };
 
-        _client->run_async_loop(std::move(loop_fn)).then([client = _client, pr = _pr](){
+        _client->run_async_loop(std::move(loop_fn)).then_wrapped([client = _client, pr = _pr](auto&& f){
             pr->set_value();
         });
     }
