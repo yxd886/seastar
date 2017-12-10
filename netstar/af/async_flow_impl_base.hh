@@ -46,30 +46,28 @@ struct async_flow_impl_base {
         return fe;
     }
 
-    void preprocess_and_forward(net::packet pkt, bool is_client, bool is_send) {
-        auto& working_unit = get_work_unit(is_client);
+    void preprocess_and_forward(af_work_unit<Ppr>& working_unit, net::packet pkt, bool is_send) {
         auto ge = is_send ? working_unit.ppr.handle_packet_send(pkt) :
                             working_unit.ppr.handle_packet_recv(pkt);
         if(ge.on_close_event()){
             async_flow_debug("async_flow_impl_base: Close preprocessor and remove flow key.\n");
             close_ppr_and_remove_flow_key(working_unit);
         }
-        internal_packet_forward(std::move(pkt), is_client, is_send);
+        internal_packet_forward(std::move(pkt), working_unit.is_client, is_send);
     }
 
     void action_after_packet_handle(af_work_unit<Ppr>& working_unit,
-                                    net::packet pkt,
-                                    bool is_client, bool is_send) {
+                                    net::packet pkt, bool is_send) {
         if(working_unit.loop_fn != nullptr) {
             if(!working_unit.cur_context) {
                 async_flow_assert(working_unit.buffer_q.empty());
                 auto fe = preprocess_packet(working_unit, pkt, is_send);
                 if(fe.no_event()) {
-                    internal_packet_forward(std::move(pkt), is_client, is_send);
+                    internal_packet_forward(std::move(pkt), working_unit.is_client, is_send);
                 }
                 else{
                     working_unit.cur_context.emplace(std::move(pkt), fe, is_send);
-                    invoke_async_loop(working_unit, is_client);
+                    invoke_async_loop(working_unit, working_unit.is_client);
                 }
             }
             else{
@@ -77,7 +75,7 @@ struct async_flow_impl_base {
             }
         }
         else{
-            preprocess_and_forward(std::move(pkt), is_client, is_send);
+            preprocess_and_forward(std::move(pkt), working_unit.is_client, is_send);
         }
     }
 
