@@ -33,7 +33,6 @@
 #include "netstar/port_env.hh"
 #include "netstar/af/async_flow.hh"
 #include "netstar/af/async_flow_safe.hh"
-#include "netstar/af/sd_async_flow.hh"
 
 #include "net/ip.hh"
 #include "net/byteorder.hh"

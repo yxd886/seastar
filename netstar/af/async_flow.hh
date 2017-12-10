@@ -21,15 +21,6 @@ using namespace seastar;
 
 namespace netstar {
 
-#define ASYNC_FLOW_DEBUG
-
-template <typename... Args>
-void async_flow_debug(const char* fmt, Args&&... args) {
-#ifdef ASYNC_FLOW_DEBUG
-    print(fmt, std::forward<Args>(args)...);
-#endif
-}
-
 template<typename Ppr, af_side Side>
 class async_flow;
 template<typename Ppr>
