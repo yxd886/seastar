@@ -30,14 +30,9 @@ public:
         _client->unregister_events(ev);
     }
 
-    template<typename LoopFunc>
-    void run_async_loop(LoopFunc&& func) {
-        using futurator = futurize<std::result_of_t<LoopFunc(sd_async_flow<Ppr>&)>>;
-        static_assert(std::is_same<typename futurator::type, future<af_action>>::value, "bad_signature");
-
-        std::function<future<af_action>()> loop_fn = [client = _client.get(), func=std::forward<LoopFunc>(func)](){
-            using futurator = futurize<std::result_of_t<LoopFunc(sd_async_flow<Ppr>&)>>;
-            return  futurator::apply(func, (*client));
+    void run_async_loop(std::function<future<af_action>(sd_async_flow<Ppr>&)> func) {
+        std::function<future<af_action>()> loop_fn = [client = _client.get(), func = std::move(func)](){
+            return  func(*client);
         };
 
         _client->run_async_loop(std::move(loop_fn)).then_wrapped([client = _client, pr = _pr](auto&& f){

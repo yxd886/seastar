@@ -168,7 +168,7 @@ public:
         _safe.run_async_loop([this](sd_async_flow<dummy_udp_ppr>& client){
             throw std::runtime_error("wtf??");
             printf("client async loop runs!\n");
-            return af_action::close_forward;
+            return make_ready_future<af_action>(af_action::close_forward);
         });
         return _safe.on_quit();
     }
