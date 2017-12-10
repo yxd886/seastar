@@ -52,7 +52,7 @@ public:
         };
 
         _g->enter();
-        _client->run_async_loop(std::move(loop_fn)).then([client = _client, g = _g](auto&& f){
+        _client->run_async_loop(std::move(loop_fn)).then_wrapped([client = _client, g = _g](auto&& f){
             try {
                 f.get();
             }
