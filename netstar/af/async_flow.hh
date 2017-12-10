@@ -115,31 +115,36 @@ private:
     // loop_fn. In order to catch the exception, we replace the
     // implementation with this.
     void invoke_async_loop(af_work_unit<Ppr>& working_unit, bool is_client) {
-        future<af_action> f;
         try {
-            f = working_unit.loop_fn();
+            working_unit.loop_fn().then_wrapped([this, is_client](auto&& f){
+                try {
+                    auto action = f.get0();
+                    this->loop_fn_post_handler(is_client, action);
+                }
+                catch(...){
+                    this->_initial_context_destroyed = false;
+                    auto& working_unit = this->get_work_unit(is_client);
+                    working_unit.cur_context = {};
+                    working_unit.loop_fn = nullptr;
+                    while(!working_unit.buffer_q.empty()) {
+                        working_unit.buffer_q.pop_front();
+                    }
+                    working_unit.async_loop_quit_pr->set_exception(std::current_exception());
+                    working_unit.async_loop_quit_pr = {};
+                }
+            });
         }
         catch(...) {
-            f = make_exception_future<af_action>(std::current_exception());
+            this->_initial_context_destroyed = false;
+            auto& working_unit = this->get_work_unit(is_client);
+            working_unit.cur_context = {};
+            working_unit.loop_fn = nullptr;
+            while(!working_unit.buffer_q.empty()) {
+                working_unit.buffer_q.pop_front();
+            }
+            working_unit.async_loop_quit_pr->set_exception(std::current_exception());
+            working_unit.async_loop_quit_pr = {};
         }
-
-        f.then_wrapped([this, is_client](auto&& f){
-            try {
-                auto action = f.get0();
-                this->loop_fn_post_handler(is_client, action);
-            }
-            catch(...){
-                this->_initial_context_destroyed = false;
-                auto& working_unit = this->get_work_unit(is_client);
-                working_unit.cur_context = {};
-                working_unit.loop_fn = nullptr;
-                while(!working_unit.buffer_q.empty()) {
-                    working_unit.buffer_q.pop_front();
-                }
-                working_unit.async_loop_quit_pr->set_exception(std::current_exception());
-                working_unit.async_loop_quit_pr = {};
-            }
-        });
     }
 
     void action_after_packet_handle(af_work_unit<Ppr>& working_unit,

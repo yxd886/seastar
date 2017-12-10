@@ -144,30 +144,34 @@ private:
     // loop_fn. In order to catch the exception, we replace the
     // implementation with this.
     void invoke_async_loop() {
-        future<af_action> f;
         try {
-            f = _client.loop_fn();
+            _client.loop_fn().then_wrapped([this](auto&& f){
+                try {
+                    auto action = f.get0();
+                    this->loop_fn_post_handler(action);
+                }
+                catch(...){
+                    this->_initial_context_destroyed = false;
+                    _client.cur_context = {};
+                    _client.loop_fn = nullptr;
+                    while(!_client.buffer_q.empty()) {
+                        _client.buffer_q.pop_front();
+                    }
+                    _client.async_loop_quit_pr->set_exception(std::current_exception());
+                    _client.async_loop_quit_pr = {};
+                }
+            });
         }
         catch(...) {
-            f = make_exception_future<af_action>(std::current_exception());
+            this->_initial_context_destroyed = false;
+            _client.cur_context = {};
+            _client.loop_fn = nullptr;
+            while(!_client.buffer_q.empty()) {
+                _client.buffer_q.pop_front();
+            }
+            _client.async_loop_quit_pr->set_exception(std::current_exception());
+            _client.async_loop_quit_pr = {};
         }
-
-        f.then_wrapped([this](auto&& f){
-            try {
-                auto action = f.get0();
-                this->loop_fn_post_handler(action);
-            }
-            catch(...){
-                this->_initial_context_destroyed = false;
-                _client.cur_context = {};
-                _client.loop_fn = nullptr;
-                while(!_client.buffer_q.empty()) {
-                    _client.buffer_q.pop_front();
-                }
-                _client.async_loop_quit_pr->set_exception(std::current_exception());
-                _client.async_loop_quit_pr = {};
-            }
-        });
     }
 
 public:
