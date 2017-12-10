@@ -153,6 +153,26 @@ public:
     };
 };
 
+class sd_async_flow_safe_loop {
+    sd_async_flow_safe<dummy_udp_ppr> _safe;
+public:
+    sd_async_flow_safe_loop(sd_async_flow<dummy_udp_ppr>&& client)
+        : _safe(std::move(client)){
+    }
+
+    void configure() {
+        _safe.register_events(dummy_udp_events::pkt_in);
+    }
+
+    future<> run() {
+        _safe.run_async_loop([this](sd_async_flow<dummy_udp_ppr>& client){
+            printf("client async loop runs!\n");
+            return af_action::close_forward;
+        });
+        return _safe.on_quit();
+    }
+};
+
 int main(int ac, char** av) {
     app_template app;
     timer<steady_clock_type> to;
