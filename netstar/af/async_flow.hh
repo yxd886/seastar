@@ -115,7 +115,7 @@ private:
         while(!working_unit.buffer_q.empty()) {
             working_unit.buffer_q.pop_front();
         }
-        working_unit.async_loop_quit_pr->set_exception(cur_exception);
+        working_unit.async_loop_quit_pr->set_exception(std::move(cur_exception));
         working_unit.async_loop_quit_pr = {};
     }
 
