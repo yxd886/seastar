@@ -45,7 +45,7 @@ public:
                 pr->set_value();
             }
             else{
-                pr->set_exception(f.get_available_state().get_exception());
+                pr->set_exception(f.get_exception());
             }
         });
     }
