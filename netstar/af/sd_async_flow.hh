@@ -28,9 +28,6 @@ class sd_af_initial_context;
 template<typename Ppr>
 class sd_async_flow_manager;
 
-template<typename Ppr>
-using client_sd_async_flow = sd_async_flow<Ppr>;
-
 namespace internal {
 
 template<typename Ppr>
@@ -336,8 +333,8 @@ public:
             _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
         }
     }
-    client_sd_async_flow<Ppr> get_client_sd_async_flow() {
-        return client_sd_async_flow<Ppr>(_impl_ptr);
+    sd_async_flow<Ppr> get_client_sd_async_flow() {
+        return sd_async_flow<Ppr>(_impl_ptr);
     }
 };
 

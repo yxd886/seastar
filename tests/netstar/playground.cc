@@ -170,7 +170,7 @@ int main(int ac, char** av) {
         return manager.on_new_initial_context().then([&manager]() mutable {
             auto ic = manager.get_initial_context();
 
-            do_with(ic.get_client_sd_async_flow(), [](client_sd_async_flow<dummy_udp_ppr>& ac){
+            do_with(ic.get_client_sd_async_flow(), [](sd_async_flow<dummy_udp_ppr>& ac){
                 ac.register_events(dummy_udp_events::pkt_in);
                 return ac.run_async_loop([&ac](){
                     printf("client async loop runs!\n");
