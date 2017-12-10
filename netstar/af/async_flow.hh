@@ -44,6 +44,7 @@ class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>{
     using FlowKeyType = typename Ppr::FlowKeyType;
     friend class async_flow<Ppr, af_side::client>;
     friend class async_flow<Ppr, af_side::server>;
+    friend class async_flow_manager<Ppr>;
 
     async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
@@ -218,7 +219,7 @@ private:
         }
     }
 
-public:
+private:
     // Internal interfaces, exposed to async_flow and
     // async_flow manager.
     async_flow_impl(async_flow_manager<Ppr>& manager,
