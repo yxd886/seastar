@@ -144,7 +144,15 @@ private:
     // loop_fn. In order to catch the exception, we replace the
     // implementation with this.
     void invoke_async_loop() {
-        _client.loop_fn().then_wrapped([this](auto&& f){
+        future<af_action> f;
+        try {
+            f = working_unit.loop_fn();
+        }
+        catch(...) {
+            f = make_exception_future<af_action>(std::current_exception());
+        }
+
+        f.then_wrapped([this](auto&& f){
             try {
                 auto action = f.get0();
                 this->loop_fn_post_handler(action);
