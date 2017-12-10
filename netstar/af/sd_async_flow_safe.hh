@@ -41,7 +41,12 @@ public:
         };
 
         _client->run_async_loop(std::move(loop_fn)).then_wrapped([client = _client, pr = _pr](auto&& f){
-            pr->set_value();
+            if(!f.failed()) {
+                pr->set_value();
+            }
+            else{
+                pr->set_exception(f.get_available_state().get_exception());
+            }
         });
     }
 
