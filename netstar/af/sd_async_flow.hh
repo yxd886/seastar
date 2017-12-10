@@ -333,6 +333,9 @@ public:
             _impl_ptr->handle_packet_send(std::move(_pkt), _direction);
         }
     }
+    client_sd_async_flow<Ppr> get_client_sd_async_flow() {
+        return client_sd_async_flow<Ppr>(_impl_ptr);
+    }
 };
 
 template<typename Ppr>
