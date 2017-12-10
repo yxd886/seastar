@@ -204,7 +204,8 @@ int main(int ac, char** av) {
                     f.get();
                     printf("async_flow_safe_loop close.\n");
                 }
-                catch(...){
+                catch(std::exception& e){
+                    std::cout<<e.what()<<std::endl;
                     printf("Exception happen!\n");
                 }
             });*/
