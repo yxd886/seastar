@@ -10,6 +10,7 @@
 #include "core/queue.hh"
 
 #include "netstar/af/async_flow_util.hh"
+#include "netstar/af/async_flow_impl_base.hh"
 
 #include <deque>
 #include <experimental/optional>
