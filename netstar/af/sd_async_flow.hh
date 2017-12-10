@@ -136,6 +136,18 @@ private:
         }
     }
 
+    void async_loop_exception_handler(std::exception_ptr ptr) {
+        this->_initial_context_destroyed = false;
+        this->_pkts_in_pipeline = 0;
+        _client.cur_context = {};
+        _client.loop_fn = nullptr;
+        while(!_client.buffer_q.empty()) {
+            _client.buffer_q.pop_front();
+        }
+        _client.async_loop_quit_pr->set_exception(std::move(ptr));
+        _client.async_loop_quit_pr = {};
+    }
+
     // invoke_async_loop can be as simple as this:
     // working_unit.loop_fn().then([this, is_client](af_action action){
     //    loop_fn_post_handler(is_client, action);
@@ -146,33 +158,17 @@ private:
     void invoke_async_loop() {
         try {
             _client.loop_fn().then_wrapped([this](auto&& f){
-                try {
+                if(!f.failed()) {
                     auto action = f.get0();
                     this->loop_fn_post_handler(action);
                 }
-                catch(...){
-                    this->_initial_context_destroyed = false;
-                    this->_pkts_in_pipeline = 0;
-                    _client.cur_context = {};
-                    _client.loop_fn = nullptr;
-                    while(!_client.buffer_q.empty()) {
-                        _client.buffer_q.pop_front();
-                    }
-                    _client.async_loop_quit_pr->set_exception(std::current_exception());
-                    _client.async_loop_quit_pr = {};
+                else{
+                    async_loop_exception_handler(f.get_exception());
                 }
             });
         }
         catch(...) {
-            this->_initial_context_destroyed = false;
-            this->_pkts_in_pipeline = 0;
-            _client.cur_context = {};
-            _client.loop_fn = nullptr;
-            while(!_client.buffer_q.empty()) {
-                _client.buffer_q.pop_front();
-            }
-            _client.async_loop_quit_pr->set_exception(std::current_exception());
-            _client.async_loop_quit_pr = {};
+            async_loop_exception_handler(std::current_exception());
         }
     }
 
