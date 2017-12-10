@@ -21,12 +21,15 @@ using namespace seastar;
 
 namespace netstar {
 
-template<typename Ppr>
+template<typename Ppr, af_side Side>
 class sd_async_flow;
 template<typename Ppr>
 class sd_af_initial_context;
 template<typename Ppr>
 class sd_async_flow_manager;
+
+template<typename Ppr>
+using client_async_flow = async_flow<Ppr, af_side::client>;
 
 namespace internal {
 
@@ -38,7 +41,7 @@ class sd_async_flow_impl : public enable_lw_shared_from_this<sd_async_flow_impl<
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
     static constexpr bool packet_recv = true;
-    friend class sd_async_flow<Ppr>;
+    friend class sd_async_flow<Ppr, af_side::client>;
 
     sd_async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
@@ -333,8 +336,8 @@ private:
 
 } // namespace internal
 
-template<typename Ppr>
-class sd_async_flow{
+template<typename Ppr, af_side Side>
+class sd_async_flow<Ppr, Side=af_side::client>{
     using impl_type = lw_shared_ptr<internal::sd_async_flow_impl<Ppr>>;
     using EventEnumType = typename Ppr::EventEnumType;
     impl_type _impl;
@@ -358,11 +361,14 @@ public:
     }
 
     void register_events(EventEnumType ev) {
-        _impl->event_registration(true, true, ev);
+        _impl->event_registration(static_cast<bool>(Side), true, ev);
     }
 
+    void unregister_events(EventEnumType ev) {
+        _impl->event_unregistration(static_cast<bool>(Side), true, ev);
+    }
     future<> run_async_loop(std::function<future<af_action>()> fn) {
-        return _impl->run_async_loop(true, std::move(fn));
+        return _impl->run_async_loop(static_cast<bool>(Side), std::move(fn));
     }
 };
 
