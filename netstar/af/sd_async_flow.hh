@@ -179,7 +179,7 @@ public:
     }
 
     ~sd_async_flow_impl() {
-        async_flow_debug("async_flow_impl: deconstruction.\n");
+        async_flow_debug("sd_async_flow_impl: deconstruction.\n");
         async_flow_assert(!_client.cur_context);
         async_flow_assert(_pkts_in_pipeline == 0);
     }
@@ -189,7 +189,7 @@ public:
     }
 
     void handle_packet_send(net::packet pkt) {
-        async_flow_debug("async_flow_impl: handle_packet_send is called\n");
+        async_flow_debug("sd_async_flow_impl: handle_packet_send is called\n");
 
         if( _pkts_in_pipeline >= Ppr::async_flow_config::max_event_context_queue_size ||
              _client.ppr_close ||
@@ -224,7 +224,7 @@ public:
     void send_packet_out(net::packet pkt, uint8_t direction){
         if(pkt) {
             _manager.send(std::move(pkt), direction);
-            async_flow_debug("async_flow_impl: send packet out from direction %d.\n", _client.direction);
+            async_flow_debug("sd_async_flow_impl: send packet out from direction %d.\n", direction);
         }
     }
 
