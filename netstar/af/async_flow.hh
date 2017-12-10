@@ -53,7 +53,7 @@ class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>
     af_work_unit<Ppr> _client;
     af_work_unit<Ppr> _server;
 
-private:
+protected:
     // General helper utility function, useful for reducing the
     // boilerplates used in this class.
     af_work_unit<Ppr>& get_work_unit(bool is_client) override {
