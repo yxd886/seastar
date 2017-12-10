@@ -169,14 +169,6 @@ public:
             throw std::runtime_error("wtf??");
             printf("client async loop runs!\n");
             return af_action::close_forward;
-        }).then_wrapped([](auto&& f){
-            try {
-                f.get();
-                printf("async_flow_safe_loop close.\n");
-            }
-            catch(...){
-                printf("Exception happen!\n");
-            }
         });
         return _safe.on_quit();
     }
