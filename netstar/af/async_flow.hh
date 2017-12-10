@@ -45,6 +45,7 @@ class async_flow_impl : public enable_lw_shared_from_this<async_flow_impl<Ppr>>{
     friend class async_flow<Ppr, af_side::server>;
     friend class async_flow_manager<Ppr>;
     friend class af_initial_context<Ppr>;
+    friend class lw_shared_ptr<async_flow_impl<Ppr>>;
 
     async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
