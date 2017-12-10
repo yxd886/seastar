@@ -91,13 +91,7 @@ private:
             async_flow_debug("async_flow_impl: Close preprocessor and remove flow key.\n");
             close_ppr_and_remove_flow_key(working_unit);
         }
-        if(is_send) {
-            handle_packet_recv(std::move(pkt), !is_client);
-        }
-        else{
-            send_packet_out(std::move(pkt), is_client);
-            _pkts_in_pipeline -= 1;
-        }
+        internal_packet_forward(std::move(pkt), is_client, is_send);
     }
 
     void internal_packet_forward(net::packet pkt, bool is_client, bool is_send) {
