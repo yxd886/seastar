@@ -146,7 +146,7 @@ private:
     void invoke_async_loop() {
         future<af_action> f;
         try {
-            f = working_unit.loop_fn();
+            f = _client.loop_fn();
         }
         catch(...) {
             f = make_exception_future<af_action>(std::current_exception());
