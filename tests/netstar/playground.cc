@@ -192,17 +192,24 @@ int main(int ac, char** av) {
         return manager.on_new_initial_context().then([&manager]() mutable {
             auto ic = manager.get_initial_context();
 
-            /*do_with(ic.get_sd_async_flow(), [](sd_async_flow<dummy_udp_ppr>& ac){
+            do_with(ic.get_sd_async_flow(), [](sd_async_flow<dummy_udp_ppr>& ac){
                 ac.register_events(dummy_udp_events::pkt_in);
                 return ac.run_async_loop([&ac](){
                     printf("client async loop runs!\n");
+                    throw std::runtime_error("wtf??");
                     return make_ready_future<af_action>(af_action::close_forward);
                 });
-            }).then([](){
-                printf("client async flow is closed.\n");
-            });*/
+            }).then_wrapped([](auto&& f){
+                try {
+                    f.get();
+                    printf("async_flow_safe_loop close.\n");
+                }
+                catch(...){
+                    printf("Exception happen!\n");
+                }
+            });
 
-            do_with(sd_async_flow_safe_loop(ic.get_sd_async_flow()), [](sd_async_flow_safe_loop& l){
+            /*do_with(sd_async_flow_safe_loop(ic.get_sd_async_flow()), [](sd_async_flow_safe_loop& l){
                l.configure();
                return l.run();
             }).then_wrapped([](auto&& f){
@@ -213,7 +220,7 @@ int main(int ac, char** av) {
                 catch(...){
                     printf("Exception happen!\n");
                 }
-            });
+            });*/
 
         }).then([](){
             engine().exit(0);
