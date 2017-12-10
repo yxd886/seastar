@@ -166,6 +166,7 @@ public:
 
     future<> run() {
         _safe.run_async_loop([this](sd_async_flow<dummy_udp_ppr>& client){
+            throw std::runtime_error("wtf??");
             printf("client async loop runs!\n");
             return af_action::close_forward;
         });
@@ -204,8 +205,14 @@ int main(int ac, char** av) {
             do_with(sd_async_flow_safe_loop(ic.get_sd_async_flow()), [](sd_async_flow_safe_loop& l){
                l.configure();
                return l.run();
-            }).then([](){
-                printf("async_flow_safe_loop close.\n");
+            }).then_wrapped([](auto&& f){
+                try {
+                    f.get();
+                    printf("async_flow_safe_loop close.\n");
+                }
+                catch(...){
+                    printf("Exception happen!\n");
+                }
             });
 
         }).then([](){
