@@ -103,8 +103,8 @@ protected:
             _manager.add_new_mapping_to_flow_table(flow_key, this->shared_from_this());
         }
 
-        action_after_packet_handle(working_unit, std::move(pkt),
-                                   is_client, false);
+        this->action_after_packet_handle(working_unit, std::move(pkt),
+                                         is_client, false);
     }
 
     bool check_is_client(uint8_t direction) override{
