@@ -15,11 +15,11 @@ class sd_async_flow_safe {
     using EventEnumType = typename Ppr::EventEnumType;
 
     lw_shared_ptr<sd_async_flow<Ppr>> _client;
-    lw_shared_ptr<gate> _g;
+    lw_shared_ptr<promise<>> _pr;
 public:
     sd_async_flow_safe(sd_async_flow<Ppr>&& client)
         : _client(make_lw_shared(std::move(client)))
-        , _g(make_lw_shared(gate())){
+        , _pr(make_lw_shared(promise<>())){
     }
 
     void register_events(EventEnumType ev) {
@@ -40,14 +40,13 @@ public:
             return  futurator::apply(func, (*client));
         };
 
-        _g->enter();
-        _client->run_async_loop(std::move(loop_fn)).then([client = _client, g = _g](){
-            g->leave();
+        _client->run_async_loop(std::move(loop_fn)).then([client = _client, pr = _pr](){
+            pr->set_value();
         });
     }
 
     future<> on_quit() {
-        return _g->close();
+        return _pr->get_future();
     }
 };
 
