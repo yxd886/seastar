@@ -1099,6 +1099,7 @@ void tcp<InetTraits>::tcb::input_handle_listen_state(tcp_hdr* th, packet p) {
 
 template <typename InetTraits>
 void tcp<InetTraits>::tcb::input_handle_syn_sent_state(tcp_hdr* th, packet p) {
+    printf("In input_handle_syn_sent_state.\n");
     auto opt_len = th->data_offset * 4 - tcp_hdr::len;
     auto opt_start = reinterpret_cast<uint8_t*>(p.get_header(0, th->data_offset * 4)) + tcp_hdr::len;
     auto opt_end = opt_start + opt_len;
@@ -1136,6 +1137,7 @@ void tcp<InetTraits>::tcb::input_handle_syn_sent_state(tcp_hdr* th, packet p) {
 
     // 3.4 fourth check the SYN bit
     if (th->f_syn) {
+        printf("syn bit is on.\n");
         // RCV.NXT is set to SEG.SEQ+1, IRS is set to SEG.SEQ.  SND.UNA should
         // be advanced to equal SEG.ACK (if there is an ACK), and any segments
         // on the retransmission queue which are thereby acknowledged should be
