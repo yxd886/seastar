@@ -1681,7 +1681,12 @@ void tcp<InetTraits>::tcb::output_one(bool data_retransmit) {
     // if advertised TCP receive window is 0 we may only transmit zero window probing segment.
     // Payload size of this segment is 1. Queueing anything bigger when _snd.window == 0 is bug
     // and violation of RFC
-    assert((_snd.window > 0) || ((_snd.window == 0) && (len == 1)));
+    /*
+     * patch by djp
+     * remove this assertion as it is not correct and will abort
+     * normal program.
+     */
+    // assert((_snd.window > 0) || ((_snd.window == 0) && (len == 1)));
     queue_packet(std::move(p));
 }
 
