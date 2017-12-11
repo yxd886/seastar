@@ -22,6 +22,7 @@
 #include "core/app-template.hh"
 #include "core/future-util.hh"
 #include "core/distributed.hh"
+#include "core/sleep.hh"
 
 using namespace seastar;
 using namespace net;
@@ -205,6 +206,22 @@ public:
         _concurrent_connections = ncon * smp::count;
         _total_pings = _pings_per_connection * _concurrent_connections;
         _test = test;
+
+        repeat([server_addr](){
+            socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
+            return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([](auto&& future_fd){
+                try {
+                    future_fd.get();
+                    return make_ready_future<stop_iteration>(stop_iteration::yes);;
+                }
+                catch(...) {
+                    return sleep(std::chrono::seconds(2s)).then([]{
+                         printf("Attempted connection fails, try again.\n");
+                         return stop_iteration::no;
+                    });
+                }
+            });
+        });
 
         for (unsigned i = 0; i < ncon; i++) {
             socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
