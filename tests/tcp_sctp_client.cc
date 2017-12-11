@@ -261,7 +261,10 @@ public:
                             return stop_iteration::no;
                         }
                     }
-                    catch(...){
+                    catch(std::exception& e){
+                        std::cout<<"Exception happen when creating the "
+                                 <<_connected_connections.size()+1<<" connection, "
+                                 <<"the error message is: "<<e.what()<<std::endl;
                         return stop_iteration::no;
                     }
                 });
