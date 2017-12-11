@@ -132,7 +132,9 @@ public:
             });
         }
     };
-
+private:
+    std::vector<connection*> _connected_connections;
+public:
     future<> ping_test(connection *conn) {
         auto started = lowres_clock::now();
         return conn->ping(_pings_per_connection).then([started] {
@@ -213,7 +215,7 @@ public:
         _test = test;
         _latest_finished = lowres_clock::now();
 
-        repeat([server_addr](){
+        return repeat([server_addr](){
             socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
             printf("Try an attempted connection\n");
             return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([](auto&& future_fd){
@@ -229,7 +231,7 @@ public:
                 }
             });
         }).then([server_addr, test, ncon, this]{
-            for (unsigned i = 0; i < ncon; i++) {
+            /*for (unsigned i = 0; i < ncon; i++) {
                 socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
                 engine().net().connect(make_ipv4_address(server_addr), local, protocol).then([this, test] (connected_socket fd) {
                     auto conn = new connection(std::move(fd));
@@ -242,7 +244,26 @@ public:
                         }
                     });
                 });
-            }
+            }*/
+            return repeat([server_addr, test, ncon, this](){
+                socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
+                return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([this](future<connected_socket> f){
+                    try{
+                        auto t = f.get();
+                        auto conn = new connection(std::get<0>(t));
+                        _connected_connections.push_back(conn);
+                        if(_connected_connections.size() == ncon){
+                            return stop_iteration::yes;
+                        }
+                        else{
+                            return stop_iteration::no;
+                        }
+                    }
+                    catch(...){
+                        return stop_iteration::no;
+                    }
+                });
+            });
         });
 
         return make_ready_future();
