@@ -165,7 +165,7 @@ public:
  * hijack arp
  */
 private:
-    std::vector<arp_for<L3>*> _other_arp_fors;
+    std::vector<arp_for<L3>*> _other_arp_fors{0};
 public:
     void set_other_arp_fors(std::vector<arp_for<L3>*> other_arp_fors){
         printf("Thread %d: arp_for instance setting other_arp_fors with size %zu\n", engine().cpu_id(), other_arp_fors.size());
@@ -238,12 +238,7 @@ arp_for<L3>::lookup(const l3addr& paddr) {
             }
             res._waiters.clear();
         });
-        // res._timeout_timer.arm_periodic(std::chrono::seconds(1));
-        /*
-         * patch by djp
-         * inrease the frequency of arp time out
-         */
-        res._timeout_timer.arm_periodic(std::chrono::milliseconds(100));
+        res._timeout_timer.arm_periodic(std::chrono::seconds(1));
         send_query(paddr);
     }
 

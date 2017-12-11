@@ -1336,7 +1336,6 @@ private:
         uint16_t sent = rte_eth_tx_burst(_dev->port_idx(), _qid,
                                          _tx_burst.data() + _tx_burst_idx,
                                          _tx_burst.size() - _tx_burst_idx);
-        printf("rte_eth_tx_burst: send out %d packets\n", sent);
 
         uint64_t nr_frags = 0, bytes = 0;
 
@@ -2221,7 +2220,6 @@ bool dpdk_qp<HugetlbfsMemBackend>::poll_rx_once()
 
     /* Now process the NIC packets read */
     if (likely(rx_count > 0)) {
-        printf("rte_eth_rx_burst: receive %d packets.\n", rx_count);
         process_packets(buf, rx_count);
     }
 
