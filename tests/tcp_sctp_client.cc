@@ -253,6 +253,7 @@ public:
                         auto conn = new connection(std::move(std::get<0>(t)));
                         _connected_connections.push_back(conn);
                         if(_connected_connections.size() == ncon){
+                            printf("%d connections are created on core %d\n", ncon, engine().cpu_id());
                             return stop_iteration::yes;
                         }
                         else{
