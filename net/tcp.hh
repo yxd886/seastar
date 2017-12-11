@@ -1711,6 +1711,7 @@ void tcp<InetTraits>::tcb::output_one(bool data_retransmit) {
      * remove this assertion as it is not correct and will abort
      * normal program.
      */
+    printf("_snd.window: %d, len: %d", _snd.window, len);
     assert((_snd.window > 0) || ((_snd.window == 0) && (len == 1)));
     queue_packet(std::move(p));
 }
