@@ -1287,7 +1287,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
             }
         }
         auto update_window = [this, th, seg_seq, seg_ack] {
-            printf("window update seg_seq=%d, seg_ack=%d, old window=%d new window=%d\n",
+            tcp_debug("window update seg_seq=%d, seg_ack=%d, old window=%d new window=%d\n",
                       seg_seq, seg_ack, _snd.window, th->window << _snd.window_scale);
             _snd.window = th->window << _snd.window_scale;
             _snd.wl1 = seg_seq;
