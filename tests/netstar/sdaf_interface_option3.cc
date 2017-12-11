@@ -31,8 +31,8 @@
 #include "netstar/extendable_buffer.hh"
 #include "netstar/stack_port.hh"
 #include "netstar/port_env.hh"
-#include "netstar/af/async_flow.hh"
-#include "netstar/af/async_flow_safe.hh"
+#include "netstar/af/sd_async_flow.hh"
+#include "netstar/af/sd_async_flow_safe.hh"
 
 #include "net/ip.hh"
 #include "net/byteorder.hh"
@@ -153,30 +153,23 @@ public:
     };
 };
 
-class async_flow_safe_loop {
-    async_flow_safe<dummy_udp_ppr> _safe;
+class sd_async_flow_safe_loop {
+    sd_async_flow_safe<dummy_udp_ppr> _safe;
 public:
-    async_flow_safe_loop(client_async_flow<dummy_udp_ppr>&& client,
-                         server_async_flow<dummy_udp_ppr>&& server)
-        : _safe(std::move(client), std::move(server)){
+    sd_async_flow_safe_loop(sd_async_flow<dummy_udp_ppr>&& client)
+        : _safe(std::move(client)){
     }
 
     void configure() {
-        _safe.register_client_events(af_send_recv::send, dummy_udp_events::pkt_in);
-        _safe.register_server_events(af_send_recv::recv, dummy_udp_events::pkt_in);
+        _safe.register_events(dummy_udp_events::pkt_in);
     }
 
     future<> run() {
-        _safe.run_client_async_loop([this](client_async_flow<dummy_udp_ppr>& client){
-            printf("client async loop runs!\n");
+        _safe.run_async_loop([this](sd_async_flow<dummy_udp_ppr>& client){
             throw std::runtime_error("wtf??");
+            printf("client async loop runs!\n");
             return af_action::close_forward;
         });
-        _safe.run_server_async_loop([this](server_async_flow<dummy_udp_ppr>& server){
-            printf("server async loop runs!\n");
-            return af_action::close_forward;
-        });
-
         return _safe.on_quit();
     }
 };
@@ -184,9 +177,9 @@ public:
 int main(int ac, char** av) {
     app_template app;
     timer<steady_clock_type> to;
-    async_flow_manager<dummy_udp_ppr> manager;
-    async_flow_manager<dummy_udp_ppr>::external_io_direction ingress(0);
-    async_flow_manager<dummy_udp_ppr>::external_io_direction egress(1);
+    sd_async_flow_manager<dummy_udp_ppr> manager;
+    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction ingress(0);
+    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction egress(1);
     net::packet the_pkt = dummy_udp_ppr::async_flow_config::build_pkt("abcdefg");
 
     return app.run_deprecated(ac, av, [&app, &to, &manager, &ingress, &egress, &the_pkt]{
@@ -199,29 +192,38 @@ int main(int ac, char** av) {
         return manager.on_new_initial_context().then([&manager]() mutable {
             auto ic = manager.get_initial_context();
 
-            /*async_flow_safe<dummy_udp_ppr> safe(ic.get_client_async_flow(), ic.get_server_async_flow());
-            safe.register_client_events(af_send_recv::send, dummy_udp_events::pkt_in);
-            safe.register_server_events(af_send_recv::recv, dummy_udp_events::pkt_in);
-
-            safe.run_client_async_loop([](client_async_flow<dummy_udp_ppr>& client){
-                printf("client async loop runs!\n");
-                return af_action::close_forward;
-            });
-            safe.run_server_async_loop([](server_async_flow<dummy_udp_ppr>& server){
-                printf("server async loop runs!\n");
-                return af_action::close_forward;
-            });
-
-            safe.on_quit().then([](){
-                printf("async_flow_safe quits.\n");
+            /*do_with(ic.get_sd_async_flow(), [](sd_async_flow<dummy_udp_ppr>& ac){
+                ac.register_events(dummy_udp_events::pkt_in);
+                return ac.run_async_loop([&ac](){
+                    printf("client async loop runs!\n");
+                    throw std::runtime_error("wtf??");
+                    return make_ready_future<af_action>(af_action::close_forward);
+                });
+            }).then_wrapped([](auto&& f){
+                try {
+                    f.get();
+                    printf("async_flow_safe_loop close.\n");
+                }
+                catch(std::exception& e){
+                    std::cout<<e.what()<<std::endl;
+                    printf("Exception happen!\n");
+                }
             });*/
 
-            do_with(async_flow_safe_loop(ic.get_client_async_flow(), ic.get_server_async_flow()), [](async_flow_safe_loop& l){
+            do_with(sd_async_flow_safe_loop(ic.get_sd_async_flow()), [](sd_async_flow_safe_loop& l){
                l.configure();
                return l.run();
-            }).then([](){
-                printf("async_flow_safe_loop close.\n");
+            }).then_wrapped([](auto&& f){
+                try {
+                    f.get();
+                    printf("async_flow_safe_loop close.\n");
+                }
+                catch(std::exception& e){
+                    std::cout<<e.what()<<std::endl;
+                    printf("Exception happen!\n");
+                }
             });
+
         }).then([](){
             engine().exit(0);
         });
