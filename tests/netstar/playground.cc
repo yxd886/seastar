@@ -169,11 +169,11 @@ public:
     future<> run() {
         _safe.run_client_async_loop([this](client_async_flow<dummy_udp_ppr>& client){
             printf("client async loop runs!\n");
-            throw std::runtime_error("wtf??");
             return af_action::close_forward;
         });
         _safe.run_server_async_loop([this](server_async_flow<dummy_udp_ppr>& server){
             printf("server async loop runs!\n");
+            throw std::runtime_error("wtf??");
             return af_action::close_forward;
         });
 
