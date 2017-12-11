@@ -171,7 +171,6 @@ public:
     future<> run() {
         _g.enter();
         _client.run_async_loop([this](){
-            throw std::runtime_error("wtf?");
             return make_ready_future<af_action>(af_action::close_forward);
         }).then_wrapped([this](auto&& f){
             try{
@@ -185,6 +184,7 @@ public:
 
         _g.enter();
         _server.run_async_loop([this](){
+            throw std::runtime_error("wtf?");
             return make_ready_future<af_action>(af_action::close_forward);
         }).then_wrapped([this](auto&& f){
             try{
