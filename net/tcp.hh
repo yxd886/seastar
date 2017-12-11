@@ -1417,7 +1417,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
         }
         // FIN_WAIT_1 STATE
         if (in_state(FIN_WAIT_1)) {
-            prinf("In fin_wait_1.\n");
+            printf("In fin_wait_1.\n");
             // In addition to the processing for the ESTABLISHED state, if
             // our FIN is now acknowledged then enter FIN-WAIT-2 and continue
             // processing in that state.
@@ -1429,7 +1429,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
         }
         // FIN_WAIT_2 STATE
         if (in_state(FIN_WAIT_2)) {
-            prinf("In fin_wait_2.\n");
+            printf("In fin_wait_2.\n");
             // In addition to the processing for the ESTABLISHED state, if
             // the retransmission queue is empty, the user’s CLOSE can be
             // acknowledged ("ok") but do not delete the TCB.
@@ -1437,7 +1437,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
         }
         // CLOSING STATE
         if (in_state(CLOSING)) {
-            prinf("In closing.\n");
+            printf("In closing.\n");
             if (seg_ack == _snd.next + 1) {
                 tcp_debug("ack: CLOSING -> TIME_WAIT\n");
                 do_local_fin_acked();
@@ -1448,7 +1448,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
         }
         // LAST_ACK STATE
         if (in_state(LAST_ACK)) {
-            prinf("In last_ack.\n");
+            printf("In last_ack.\n");
             if (seg_ack == _snd.next + 1) {
                 tcp_debug("ack: LAST_ACK -> CLOSED\n");
                 do_local_fin_acked();
@@ -1457,7 +1457,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
         }
         // TIME_WAIT STATE
         if (in_state(TIME_WAIT)) {
-            prinf("In time_wait.\n");
+            printf("In time_wait.\n");
             // The only thing that can arrive in this state is a
             // retransmission of the remote FIN. Acknowledge it, and restart
             // the 2 MSL timeout.
