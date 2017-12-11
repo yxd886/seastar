@@ -888,23 +888,23 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
         tcbp = tcbi->second;
         switch(tcbp->state()){
         case tcp_state::SYN_SENT: {
-            printf("tcb with local port %d:%d is in state SYN_SENT.\n", tcbi->first->local_port, tcbi->first->foreign_port);
+            printf("tcb with local port %d:%d is in state SYN_SENT.\n", tcbi->first.local_port, tcbi.first->foreign_port);
             break;
         }
         case tcp_state::LISTEN: {
-            printf("tcb with local port %d:%d is in state LISTEN.\n", tcbi->first->local_port, tcbi->first->foreign_port);
+            printf("tcb with local port %d:%d is in state LISTEN.\n", tcbi->first.local_port, tcbi.first->foreign_port);
             break;
         }
         case tcp_state::SYN_RECEIVED: {
-            printf("tcb with local port %d:%d is in state SYN_RECEIVED.\n", tcbi->first->local_port, tcbi->first->foreign_port);
+            printf("tcb with local port %d:%d is in state SYN_RECEIVED.\n", tcbi->first.local_port, tcbi.first->foreign_port);
             break;
         }
         case tcp_state::ESTABLISHED: {
-            printf("tcb with local port %d:%d is in state ESTABLISHED.\n", tcbi->first->local_port, tcbi->first->foreign_port);
+            printf("tcb with local port %d:%d is in state ESTABLISHED.\n", tcbi->first.local_port, tcbi.first->foreign_port);
             break;
         }
         default:{
-            printf("tcb with local port %d:%d is in uninterested state.\n", tcbi->first->local_port, tcbi->first->foreign_port);
+            printf("tcb with local port %d:%d is in uninterested state.\n", tcbi->first.local_port, tcbi.first->foreign_port);
             break;
         }
         }
