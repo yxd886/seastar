@@ -1216,7 +1216,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
     // FIXME: We should trim data outside the right edge of the receive window as well
 
     if (seg_seq != _rcv.next) {
-        printf("2. seg_seq is %d, _rcv.next is %d\n", seg_seq.raw, _rcv.next);
+        printf("2. seg_seq is %d, _rcv.next is %d\n", seg_seq.raw, _rcv.next.raw);
         insert_out_of_order(seg_seq, std::move(p));
         // A TCP receiver SHOULD send an immediate duplicate ACK
         // when an out-of-order segment arrives.
