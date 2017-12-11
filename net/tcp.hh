@@ -823,11 +823,13 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
     printf("Recieved a tcp packet.\n");
     auto th = p.get_header(0, tcp_hdr::len);
     if (!th) {
+        printf("Invalid ength.\n");
         return;
     }
     // data_offset is correct even before ntoh()
     auto data_offset = uint8_t(th[12]) >> 4;
     if (size_t(data_offset * 4) < tcp_hdr::len) {
+        printf("Invalid offset.\n");
         return;
     }
 
@@ -836,6 +838,7 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
         InetTraits::tcp_pseudo_header_checksum(csum, from, to, p.len());
         csum.sum(p);
         if (csum.get() != 0) {
+            printf("Invalid checksome.\n");
             return;
         }
     }
@@ -844,6 +847,7 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
     auto tcbi = _tcbs.find(id);
     lw_shared_ptr<tcb> tcbp;
     if (tcbi == _tcbs.end()) {
+        printf("No tcbs.\n");
         auto listener = _listening.find(id.local_port);
         if (listener == _listening.end() || listener->second->full()) {
             // 1) In CLOSE state
@@ -891,6 +895,7 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
             // 3) In SYN_SENT State
             return tcbp->input_handle_syn_sent_state(&h, std::move(p));
         } else {
+            printf("Other state.\n");
             // 4) In other state, can be one of the following:
             // SYN_RECEIVED, ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2
             // CLOSE_WAIT, CLOSING, LAST_ACK, TIME_WAIT
