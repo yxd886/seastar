@@ -209,34 +209,36 @@ public:
 
         repeat([server_addr](){
             socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
+            printf("Try an attempted connection\n");
             return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([](auto&& future_fd){
                 try {
                     future_fd.get();
                     return make_ready_future<stop_iteration>(stop_iteration::yes);;
                 }
                 catch(...) {
+                    printf("Attempted connection fails, try again in 2s.\n");
                     return sleep(std::chrono::seconds(2s)).then([]{
-                         printf("Attempted connection fails, try again.\n");
                          return stop_iteration::no;
                     });
                 }
             });
+        }).then([server_addr, test, ncon, this]{
+            for (unsigned i = 0; i < ncon; i++) {
+                socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
+                engine().net().connect(make_ipv4_address(server_addr), local, protocol).then([this, test] (connected_socket fd) {
+                    auto conn = new connection(std::move(fd));
+                    (this->*tests.at(test))(conn).then_wrapped([conn] (auto&& f) {
+                        delete conn;
+                        try {
+                            f.get();
+                        } catch (std::exception& ex) {
+                            fprint(std::cerr, "request error: %s\n", ex.what());
+                        }
+                    });
+                });
+            }
         });
 
-        for (unsigned i = 0; i < ncon; i++) {
-            socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
-            engine().net().connect(make_ipv4_address(server_addr), local, protocol).then([this, test] (connected_socket fd) {
-                auto conn = new connection(std::move(fd));
-                (this->*tests.at(test))(conn).then_wrapped([conn] (auto&& f) {
-                    delete conn;
-                    try {
-                        f.get();
-                    } catch (std::exception& ex) {
-                        fprint(std::cerr, "request error: %s\n", ex.what());
-                    }
-                });
-            });
-        }
         return make_ready_future();
     }
     future<> stop() {
