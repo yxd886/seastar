@@ -145,7 +145,7 @@ private:
             _client.buffer_q.pop_front();
         }
         _client.async_loop_quit_pr->set_exception(std::move(ptr));
-        _client.async_loop_quit_pr = {};
+        // _client.async_loop_quit_pr = {};
     }
 
     // invoke_async_loop can be as simple as this:

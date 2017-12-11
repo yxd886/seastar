@@ -107,42 +107,6 @@ private:
         }
     }
 
-    void async_loop_exception_handler(bool is_client, std::exception_ptr cur_exception) {
-        this->_initial_context_destroyed = false;
-        auto& working_unit = this->get_work_unit(is_client);
-        working_unit.cur_context = {};
-        working_unit.loop_fn = nullptr;
-        while(!working_unit.buffer_q.empty()) {
-            working_unit.buffer_q.pop_front();
-        }
-        working_unit.async_loop_quit_pr->set_exception(std::move(cur_exception));
-        working_unit.async_loop_quit_pr = {};
-    }
-
-    // invoke_async_loop can be as simple as this:
-    // working_unit.loop_fn().then([this, is_client](af_action action){
-    //    loop_fn_post_handler(is_client, action);
-    // })
-    // However, this will not handle exceptions thrown when executing
-    // loop_fn. In order to catch the exception, we replace the
-    // implementation with this.
-    void invoke_async_loop(af_work_unit<Ppr>& working_unit, bool is_client) {
-        try {
-            working_unit.loop_fn().then_wrapped([this, is_client](auto&& f){
-                if(!f.failed()) {
-                    auto action = f.get0();
-                    this->loop_fn_post_handler(is_client, action);
-                }
-                else {
-                    this->async_loop_exception_handler(is_client, f.get_exception());
-                }
-            });
-        }
-        catch(...) {
-            async_loop_exception_handler(is_client, std::current_exception());
-        }
-    }
-
     void action_after_packet_handle(af_work_unit<Ppr>& working_unit,
                                     net::packet pkt,
                                     bool is_client, bool is_send) {
@@ -226,6 +190,42 @@ private:
                                              filtered_events<EventEnumType>::make_close_event(),
                                              true);
             invoke_async_loop(working_unit, is_client);
+        }
+    }
+
+    void async_loop_exception_handler(bool is_client, std::exception_ptr cur_exception) {
+        this->_initial_context_destroyed = false;
+        auto& working_unit = this->get_work_unit(is_client);
+        working_unit.cur_context = {};
+        working_unit.loop_fn = nullptr;
+        while(!working_unit.buffer_q.empty()) {
+            working_unit.buffer_q.pop_front();
+        }
+        working_unit.async_loop_quit_pr->set_exception(std::move(cur_exception));
+        // working_unit.async_loop_quit_pr = {};
+    }
+
+    // invoke_async_loop can be as simple as this:
+    // working_unit.loop_fn().then([this, is_client](af_action action){
+    //    loop_fn_post_handler(is_client, action);
+    // })
+    // However, this will not handle exceptions thrown when executing
+    // loop_fn. In order to catch the exception, we replace the
+    // implementation with this.
+    void invoke_async_loop(af_work_unit<Ppr>& working_unit, bool is_client) {
+        try {
+            working_unit.loop_fn().then_wrapped([this, is_client](auto&& f){
+                if(!f.failed()) {
+                    auto action = f.get0();
+                    this->loop_fn_post_handler(is_client, action);
+                }
+                else {
+                    this->async_loop_exception_handler(is_client, f.get_exception());
+                }
+            });
+        }
+        catch(...) {
+            async_loop_exception_handler(is_client, std::current_exception());
         }
     }
 
