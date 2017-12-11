@@ -48,6 +48,7 @@ private:
     std::string _test;
     lowres_clock::time_point _earliest_started;
     lowres_clock::time_point _latest_finished;
+    bool _earliest_started_recorded = false;
     size_t _processed_bytes;
     unsigned _num_reported;
 public:
@@ -157,8 +158,10 @@ public:
     }
 
     void ping_report(lowres_clock::time_point started, lowres_clock::time_point finished) {
-        if (_earliest_started > started)
+        if (!_earliest_started_recorded) {
+            _earliest_started_recorded = true;
             _earliest_started = started;
+        }
         if (_latest_finished < finished)
             _latest_finished = finished;
         if (++_num_reported == _concurrent_connections) {
@@ -179,8 +182,10 @@ public:
     }
 
     void rxtx_report(lowres_clock::time_point started, lowres_clock::time_point finished, size_t bytes) {
-        if (_earliest_started > started)
+        if (!_earliest_started_recorded) {
+            _earliest_started_recorded = true;
             _earliest_started = started;
+        }
         if (_latest_finished < finished)
             _latest_finished = finished;
         _processed_bytes += bytes;
@@ -206,6 +211,7 @@ public:
         _concurrent_connections = ncon * smp::count;
         _total_pings = _pings_per_connection * _concurrent_connections;
         _test = test;
+        _latest_finished = lowres_clock::now();
 
         repeat([server_addr](){
             socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
