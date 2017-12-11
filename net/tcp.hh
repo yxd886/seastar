@@ -1039,6 +1039,7 @@ bool tcp<InetTraits>::tcb::segment_acceptable(tcp_seq seg_seq, unsigned seg_len)
 
 template <typename InetTraits>
 void tcp<InetTraits>::tcb::init_from_options(tcp_hdr* th, uint8_t* opt_start, uint8_t* opt_end) {
+    printf("init_from_options, th->window is %d\n", th->window);
     // Handle tcp options
     _option.parse(opt_start, opt_end);
 
@@ -1055,6 +1056,7 @@ void tcp<InetTraits>::tcb::init_from_options(tcp_hdr* th, uint8_t* opt_start, ui
     // Linux's default window size
     _rcv.window = 29200 << _rcv.window_scale;
     _snd.window = th->window << _snd.window_scale;
+    printf("_snd.window becomes %d\n", _snd.window);
 
     // Segment sequence number used for last window update
     _snd.wl1 = th->seq;
@@ -1285,7 +1287,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
             }
         }
         auto update_window = [this, th, seg_seq, seg_ack] {
-            tcp_debug("window update seg_seq=%d, seg_ack=%d, old window=%d new window=%d\n",
+            printf("window update seg_seq=%d, seg_ack=%d, old window=%d new window=%d\n",
                       seg_seq, seg_ack, _snd.window, th->window << _snd.window_scale);
             _snd.window = th->window << _snd.window_scale;
             _snd.wl1 = seg_seq;
