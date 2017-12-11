@@ -247,10 +247,10 @@ public:
             }*/
             return repeat([server_addr, test, ncon, this](){
                 socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
-                return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([this](future<connected_socket> f){
+                return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([this, ncon](future<connected_socket> f){
                     try{
                         auto t = f.get();
-                        auto conn = new connection(std::get<0>(t));
+                        auto conn = new connection(std::move(std::get<0>(t)));
                         _connected_connections.push_back(conn);
                         if(_connected_connections.size() == ncon){
                             return stop_iteration::yes;
