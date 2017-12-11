@@ -87,7 +87,7 @@ enum class tcp_state : uint16_t {
 inline tcp_state operator|(tcp_state s1, tcp_state s2) {
     return tcp_state(uint16_t(s1) | uint16_t(s2));
 }
-#define TCP_DEBUG 1
+// #define TCP_DEBUG 1
 template <typename... Args>
 void tcp_debug(const char* fmt, Args&&... args) {
 #if TCP_DEBUG

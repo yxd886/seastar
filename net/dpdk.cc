@@ -1336,6 +1336,7 @@ private:
         uint16_t sent = rte_eth_tx_burst(_dev->port_idx(), _qid,
                                          _tx_burst.data() + _tx_burst_idx,
                                          _tx_burst.size() - _tx_burst_idx);
+        printf("rte_eth_tx_burst: send out %d packets\n", sent);
 
         uint64_t nr_frags = 0, bytes = 0;
 
