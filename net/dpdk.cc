@@ -2221,6 +2221,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::poll_rx_once()
 
     /* Now process the NIC packets read */
     if (likely(rx_count > 0)) {
+        printf("rte_eth_rx_burst: receive %d packets.\n", rx_count);
         process_packets(buf, rx_count);
     }
 
