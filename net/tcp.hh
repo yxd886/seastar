@@ -876,7 +876,7 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
                 // TODO: we need to remove the tcb and decrease the pending if
                 // it stays SYN_RECEIVED state forever.
                 listener->second->inc_pending();
-
+                printf("First packet: tcb with local port %d:%d is created.\n", id.local_port, id.foreign_port);
                 return tcbp->input_handle_listen_state(&h, std::move(p));
             }
             // 2.4 fourth other text or control
@@ -1197,7 +1197,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
     tcp_seq seg_seq = th->seq;
     auto seg_ack = th->ack;
     auto seg_len = p.len();
-    printf("1. seg_seq is %d, seg_len is %d\n", seg_seq.raw, seg_len);
+    printf("1. seg_seq is %" PRIu32 ", seg_len is %d\n", seg_seq.raw, seg_len);
     // 4.1 first check sequence number
     if (!segment_acceptable(seg_seq, seg_len)) {
         //<SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
