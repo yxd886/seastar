@@ -1186,6 +1186,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
 
     // 4.1 first check sequence number
     if (!segment_acceptable(seg_seq, seg_len)) {
+        printf("Segment unacceptable.\n");
         //<SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
         return output();
     }
