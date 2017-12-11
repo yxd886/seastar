@@ -331,7 +331,7 @@ private:
         struct send {
             tcp_seq unacknowledged;
             tcp_seq next;
-            uint32_t window;
+            uint32_t window=3737600;
             uint8_t window_scale;
             uint16_t mss;
             tcp_seq urgent;
