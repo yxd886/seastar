@@ -87,7 +87,7 @@ enum class tcp_state : uint16_t {
 inline tcp_state operator|(tcp_state s1, tcp_state s2) {
     return tcp_state(uint16_t(s1) | uint16_t(s2));
 }
-
+#define TCP_DEBUG 1
 template <typename... Args>
 void tcp_debug(const char* fmt, Args&&... args) {
 #if TCP_DEBUG
@@ -886,6 +886,28 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
         }
     } else {
         tcbp = tcbi->second;
+        switch(tcbp->state()){
+        case tcp_state::SYN_SENT: {
+            printf("tcb with local port %d:%d is in state SYN_SENT.\n", tcbi->first->local_port, tcbi->first->foreign_port);
+            break;
+        }
+        case tcp_state::LISTEN: {
+            printf("tcb with local port %d:%d is in state LISTEN.\n", tcbi->first->local_port, tcbi->first->foreign_port);
+            break;
+        }
+        case tcp_state::SYN_RECEIVED: {
+            printf("tcb with local port %d:%d is in state SYN_RECEIVED.\n", tcbi->first->local_port, tcbi->first->foreign_port);
+            break;
+        }
+        case tcp_state::ESTABLISHED: {
+            printf("tcb with local port %d:%d is in state ESTABLISHED.\n", tcbi->first->local_port, tcbi->first->foreign_port);
+            break;
+        }
+        default:{
+            printf("tcb with local port %d:%d is in uninterested state.\n", tcbi->first->local_port, tcbi->first->foreign_port);
+            break;
+        }
+        }
         if (tcbp->state() == tcp_state::SYN_SENT) {
             // 3) In SYN_SENT State
             return tcbp->input_handle_syn_sent_state(&h, std::move(p));
