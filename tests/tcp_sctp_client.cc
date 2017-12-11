@@ -247,7 +247,7 @@ public:
             }*/
             return repeat([server_addr, test, ncon, this](){
                 socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
-                printf("Creating the %dth connections on core %d\n", _connected_connections.size(), engine().cpu_id());
+                printf("Creating the %zuth connections on core %d\n", _connected_connections.size()+1, engine().cpu_id());
                 return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([this, ncon](future<connected_socket> f){
                     try{
                         auto t = f.get();
