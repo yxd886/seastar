@@ -331,7 +331,13 @@ private:
         struct send {
             tcp_seq unacknowledged;
             tcp_seq next;
-            uint32_t window;
+            /*
+             * patch by djp
+             * assign an initial value to window, otherwise
+             * some TCP connections will not pass the assertion
+             * before queue_packet function
+             */
+            uint32_t window = 3737600;
             uint8_t window_scale;
             uint16_t mss;
             tcp_seq urgent;
@@ -787,12 +793,24 @@ auto tcp<InetTraits>::connect(socket_address sa) -> connection {
     auto dst_ip = ipv4_address(sa);
     auto dst_port = net::ntoh(sa.u.in.sin_port);
 
+    /*
+     * patch by djp.
+     * The combined boolean logic is error when the number of the hw_queues
+     * is 1. It results in port re-use.
+     */
+    // do {
+    //     src_port = _port_dist(_e);
+    //     id = connid{src_ip, dst_ip, src_port, dst_port};
+    // } while (_inet._inet.netif()->hw_queues_count() > 1 &&
+    //          (_inet._inet.netif()->hash2cpu(id.hash(_inet._inet.netif()->rss_key())) != engine().cpu_id()
+    //           || _tcbs.find(id) != _tcbs.end()));
     do {
         src_port = _port_dist(_e);
         id = connid{src_ip, dst_ip, src_port, dst_port};
-    } while (_inet._inet.netif()->hw_queues_count() > 1 &&
-             (_inet._inet.netif()->hash2cpu(id.hash(_inet._inet.netif()->rss_key())) != engine().cpu_id()
-              || _tcbs.find(id) != _tcbs.end()));
+    } while( (_tcbs.find(id) != _tcbs.end()) &&
+             (_inet._inet.netif()->hw_queues_count() == 1 ||
+              _inet._inet.netif()->hash2cpu(id.hash(_inet._inet.netif()->rss_key())) != engine().cpu_id()) );
+
 
     auto tcbp = make_lw_shared<tcb>(*this, id);
     _tcbs.insert({id, tcbp});
