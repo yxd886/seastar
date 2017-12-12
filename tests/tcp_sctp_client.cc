@@ -208,7 +208,7 @@ public:
         }
     }
 
-    future<> start_connections(ipv4_addr server_addr, std::string test, unsigned ncon) {
+    future<> start(ipv4_addr server_addr, std::string test, unsigned ncon) {
         _server_addr = server_addr;
         _concurrent_connections = ncon * smp::count;
         _total_pings = _pings_per_connection * _concurrent_connections;
@@ -247,30 +247,31 @@ public:
             }*/
             return repeat([server_addr, test, ncon, this](){
                 socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
+                printf("Creating the %zuth connections on core %d\n", _connected_connections.size()+1, engine().cpu_id());
                 return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([this, ncon](future<connected_socket> f){
                     try{
                         auto t = f.get();
                         auto conn = new connection(std::move(std::get<0>(t)));
                         _connected_connections.push_back(conn);
                         if(_connected_connections.size() == ncon){
-                            return clients.invoke_on(0, &client::report_connection_done, ncon, engine().cpu_id()).then([](){
-                                return stop_iteration::yes;
-                            });
+                            printf("%d connections are created on core %d\n", ncon, engine().cpu_id());
+                            return stop_iteration::yes;
                         }
                         else{
-                            return make_ready_future<stop_iteration>(stop_iteration::no);
+                            return stop_iteration::no;
                         }
                     }
                     catch(std::exception& e){
-                        fprint(std::cout, "Exception happen when creating the connection.\n");
-                        return make_ready_future<stop_iteration>(stop_iteration::no);
+                        std::cout<<"Exception happen when creating the "
+                                 <<_connected_connections.size()+1<<" connection, "
+                                 <<"the error message is: "<<e.what()<<std::endl;
+                        return stop_iteration::no;
                     }
                 });
             });
         });
-    }
-    void report_connection_done(int ncon, unsigned cpu_id) {
-        fprint(std::cout, "%d connections are created on core %d\n", ncon, cpu_id);
+
+        return make_ready_future();
     }
     future<> stop() {
         return make_ready_future();
@@ -313,9 +314,7 @@ int main(int ac, char ** av) {
         }
 
         clients.start().then([server, test, ncon] () {
-            clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon).then([](){
-                fprint(std::cout, "All connections are done.\n");
-            });
+            clients.invoke_on_all(&client::start, ipv4_addr{server}, test, ncon);
         });
     });
 }
@@ -325,4 +324,3 @@ const std::map<std::string, client::test_fn> client::tests = {
         {"rxrx", &client::rxrx_test},
         {"txtx", &client::txtx_test},
 };
-
