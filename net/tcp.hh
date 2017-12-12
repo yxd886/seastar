@@ -886,7 +886,6 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
                 // TODO: we need to remove the tcb and decrease the pending if
                 // it stays SYN_RECEIVED state forever.
                 listener->second->inc_pending();
-                printf("First packet: tcb with local port %d:%d is created.\n", id.local_port, id.foreign_port);
                 return tcbp->input_handle_listen_state(&h, std::move(p));
             }
             // 2.4 fourth other text or control
@@ -896,28 +895,7 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
         }
     } else {
         tcbp = tcbi->second;
-        switch(tcbp->state()){
-        case tcp_state::SYN_SENT: {
-            printf("tcb with local port %d:%d is in state SYN_SENT.\n", tcbi->first.local_port, tcbi->first.foreign_port);
-            break;
-        }
-        case tcp_state::LISTEN: {
-            printf("tcb with local port %d:%d is in state LISTEN.\n", tcbi->first.local_port, tcbi->first.foreign_port);
-            break;
-        }
-        case tcp_state::SYN_RECEIVED: {
-            printf("tcb with local port %d:%d is in state SYN_RECEIVED.\n", tcbi->first.local_port, tcbi->first.foreign_port);
-            break;
-        }
-        case tcp_state::ESTABLISHED: {
-            printf("tcb with local port %d:%d is in state ESTABLISHED.\n", tcbi->first.local_port, tcbi->first.foreign_port);
-            break;
-        }
-        default:{
-            printf("tcb with local port %d:%d is in uninterested state.\n", tcbi->first.local_port, tcbi->first.foreign_port);
-            break;
-        }
-        }
+
         if (tcbp->state() == tcp_state::SYN_SENT) {
             // 3) In SYN_SENT State
             return tcbp->input_handle_syn_sent_state(&h, std::move(p));
@@ -1207,7 +1185,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
     tcp_seq seg_seq = th->seq;
     auto seg_ack = th->ack;
     auto seg_len = p.len();
-    printf("1. seg_seq is %d, seg_len is %d\n", seg_seq.raw, seg_len);
+
     // 4.1 first check sequence number
     if (!segment_acceptable(seg_seq, seg_len)) {
         //<SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
@@ -1226,7 +1204,6 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
     // FIXME: We should trim data outside the right edge of the receive window as well
 
     if (seg_seq != _rcv.next) {
-        printf("2. seg_seq is %d, _rcv.next is %d\n", seg_seq.raw, _rcv.next.raw);
         insert_out_of_order(seg_seq, std::move(p));
         // A TCP receiver SHOULD send an immediate duplicate ACK
         // when an out-of-order segment arrives.
