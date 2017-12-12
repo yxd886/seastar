@@ -30,7 +30,7 @@ using namespace std::chrono_literals;
 
 static int rx_msg_size = 4 * 1024;
 static int tx_msg_total_size = 100 * 1024 * 1024;
-static int tx_msg_size = 4 * 1024;
+static int tx_msg_size = rx_msg_size;
 static int tx_msg_nr = tx_msg_total_size / tx_msg_size;
 static std::string str_txbuf(tx_msg_size, 'X');
 
@@ -282,16 +282,19 @@ public:
         _previous_monitored_processed_bytes = local_processed_bytes;
         _reporter.set_callback([this](){
             size_t diff = local_processed_bytes - _previous_monitored_processed_bytes;
-            float bandwidth = static_cast<double>((diff * 8)) / (1000.0 * 1000.0 * 1000.0);
+            float bandwidth = static_cast<double>((diff * 8)) / (1000.0 * 1000.0 * 1000.0) / 3.0;
             _previous_monitored_processed_bytes = local_processed_bytes;
             clients.invoke_on(0, &client::report_bandwidth_monitoring, bandwidth, engine().cpu_id());
         });
-        _reporter.arm_periodic(1s);
+        _reporter.arm_periodic(3s);
     }
     void report_bandwidth_monitoring(float bandwidth, unsigned core_id) {
-        fprint(std::cout, "TCP bandwidth on core %d: %f(Gbits/sec)\n", core_id, bandwidth);
+        fprint(std::cout, "TCP bandwidth on core %d: %f(Gbits/sec)", core_id, bandwidth);
         if(core_id == 0){
-            fprint(std::cout, "Remaining active connections: %d.\n", _concurrent_connections-_num_reported);
+            fprint(std::cout, ", remaining active connections: %d.\n", _concurrent_connections-_num_reported);
+        }
+        else{
+            fprint(std::cout,"\n");
         }
     }
     future<> stop() {
@@ -314,6 +317,7 @@ int main(int ac, char ** av) {
         ("test", bpo::value<std::string>()->default_value("ping"), "test type(ping | rxrx | txtx)")
         ("conn", bpo::value<unsigned>()->default_value(16), "nr connections per cpu")
         ("proto", bpo::value<std::string>()->default_value("tcp"), "transport protocol tcp|sctp")
+        ("time", bpo::value<unsigned>()->default_value(60), "total transmission time")
         ;
 
     return app.run_deprecated(ac, av, [&app] {
@@ -322,6 +326,12 @@ int main(int ac, char ** av) {
         auto test = config["test"].as<std::string>();
         auto ncon = config["conn"].as<unsigned>();
         auto proto = config["proto"].as<std::string>();
+        auto time = config["time"].as<unsigned>();
+
+        size_t total_transmission_bytes = 10*1024*1024*1024*time/8;
+        size_t per_connection_transmission_bytes = total_transmission_bytes/(ncon*smp::count);
+        tx_msg_nr = per_connection_transmission_bytes/tx_msg_size + 1;
+
 
         if (proto == "tcp") {
             protocol = transport::TCP;
