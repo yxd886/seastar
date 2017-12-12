@@ -217,14 +217,13 @@ public:
 
         return repeat([server_addr](){
             socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
-            printf("Try an attempted connection\n");
             return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([](auto&& future_fd){
                 try {
                     future_fd.get();
                     return make_ready_future<stop_iteration>(stop_iteration::yes);;
                 }
                 catch(...) {
-                    printf("Attempted connection fails, try again in 2s.\n");
+                    fprint(std::cout, "Attempted connection fails on core %d, try again in 2s.\n", engine().cpu_id());
                     return sleep(std::chrono::seconds(2s)).then([]{
                          return stop_iteration::no;
                     });
