@@ -632,7 +632,11 @@ private:
     std::unordered_map<uint16_t, listener*> _listening;
     std::random_device _rd;
     std::default_random_engine _e;
-    std::uniform_int_distribution<uint16_t> _port_dist{41952, 65535};
+    /*
+     * patch by djp
+     * inrease the range of _port_dist
+     */
+    std::uniform_int_distribution<uint16_t> _port_dist{/*41952*/21952, 65535};
     circular_buffer<std::pair<lw_shared_ptr<tcb>, ethernet_address>> _poll_tcbs;
     // queue for packets that do not belong to any tcb
     circular_buffer<ipv4_traits::l4packet> _packetq;
