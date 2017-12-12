@@ -72,7 +72,6 @@ public:
     void do_accepts(std::vector<server_socket>& listeners) {
         int which = listeners.size() - 1;
         listeners[which].accept().then([this, &listeners] (connected_socket fd, socket_address addr) mutable {
-            printf("Get a new connection!\n");
             auto conn = new connection(*this, std::move(fd), addr);
             conn->process().then_wrapped([conn] (auto&& f) {
                 delete conn;
