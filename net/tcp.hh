@@ -331,7 +331,7 @@ private:
         struct send {
             tcp_seq unacknowledged;
             tcp_seq next;
-            uint32_t window=3737600;
+            uint32_t window;
             uint8_t window_scale;
             uint16_t mss;
             tcp_seq urgent;
@@ -736,16 +736,11 @@ tcp<InetTraits>::tcp(inet_type& inet)
     , _e(_rd()) {
     namespace sm = metrics;
 
-    /*
-     * patch by djp
-     * temporarily remove the following metric to
-     * prevent from unexpected exception
-     */
-    /*_metrics.add_group("tcp", {
+    _metrics.add_group("tcp", {
         sm::make_derive("linearizations", [] { return tcp_packet_merger::linearizations(); },
                         sm::description("Counts a number of times a buffer linearization was invoked during the buffers merge process. "
                                         "Divide it by a total TCP receive packet rate to get an everage number of lineraizations per TCP packet."))
-    });*/
+    });
 
     _inet.register_packet_provider([this, tcb_polled = 0u] () mutable {
         std::experimental::optional<typename InetTraits::l4packet> l4p;
@@ -795,13 +790,9 @@ auto tcp<InetTraits>::connect(socket_address sa) -> connection {
     do {
         src_port = _port_dist(_e);
         id = connid{src_ip, dst_ip, src_port, dst_port};
-    } while( (_tcbs.find(id) != _tcbs.end()) &&
-             (_inet._inet.netif()->hw_queues_count() == 1 ||
-              _inet._inet.netif()->hash2cpu(id.hash(_inet._inet.netif()->rss_key())) != engine().cpu_id()) );
-
-        /*(_inet._inet.netif()->hw_queues_count() > 1 &&
+    } while (_inet._inet.netif()->hw_queues_count() > 1 &&
              (_inet._inet.netif()->hash2cpu(id.hash(_inet._inet.netif()->rss_key())) != engine().cpu_id()
-              || _tcbs.find(id) != _tcbs.end()));*/
+              || _tcbs.find(id) != _tcbs.end()));
 
     auto tcbp = make_lw_shared<tcb>(*this, id);
     _tcbs.insert({id, tcbp});
@@ -880,7 +871,7 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
                 // TODO: we need to remove the tcb and decrease the pending if
                 // it stays SYN_RECEIVED state forever.
                 listener->second->inc_pending();
-                printf("First packet: tcb with local port %d:%d is created.\n", id.local_port, id.foreign_port);
+
                 return tcbp->input_handle_listen_state(&h, std::move(p));
             }
             // 2.4 fourth other text or control
@@ -890,28 +881,6 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
         }
     } else {
         tcbp = tcbi->second;
-        switch(tcbp->state()){
-        case tcp_state::SYN_SENT: {
-            printf("tcb with local port %d:%d is in state SYN_SENT.\n", tcbi->first.local_port, tcbi->first.foreign_port);
-            break;
-        }
-        case tcp_state::LISTEN: {
-            printf("tcb with local port %d:%d is in state LISTEN.\n", tcbi->first.local_port, tcbi->first.foreign_port);
-            break;
-        }
-        case tcp_state::SYN_RECEIVED: {
-            printf("tcb with local port %d:%d is in state SYN_RECEIVED.\n", tcbi->first.local_port, tcbi->first.foreign_port);
-            break;
-        }
-        case tcp_state::ESTABLISHED: {
-            printf("tcb with local port %d:%d is in state ESTABLISHED.\n", tcbi->first.local_port, tcbi->first.foreign_port);
-            break;
-        }
-        default:{
-            printf("tcb with local port %d:%d is in uninterested state.\n", tcbi->first.local_port, tcbi->first.foreign_port);
-            break;
-        }
-        }
         if (tcbp->state() == tcp_state::SYN_SENT) {
             // 3) In SYN_SENT State
             return tcbp->input_handle_syn_sent_state(&h, std::move(p));
@@ -1201,7 +1170,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
     tcp_seq seg_seq = th->seq;
     auto seg_ack = th->ack;
     auto seg_len = p.len();
-    printf("1. seg_seq is %d, seg_len is %d\n", seg_seq.raw, seg_len);
+
     // 4.1 first check sequence number
     if (!segment_acceptable(seg_seq, seg_len)) {
         //<SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
@@ -1220,7 +1189,6 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
     // FIXME: We should trim data outside the right edge of the receive window as well
 
     if (seg_seq != _rcv.next) {
-        printf("2. seg_seq is %d, _rcv.next is %d\n", seg_seq.raw, _rcv.next.raw);
         insert_out_of_order(seg_seq, std::move(p));
         // A TCP receiver SHOULD send an immediate duplicate ACK
         // when an out-of-order segment arrives.
