@@ -270,8 +270,6 @@ public:
                 });
             });
         });
-
-        return make_ready_future();
     }
     future<> stop() {
         return make_ready_future();
@@ -314,7 +312,9 @@ int main(int ac, char ** av) {
         }
 
         clients.start().then([server, test, ncon] () {
-            clients.invoke_on_all(&client::start, ipv4_addr{server}, test, ncon);
+            clients.invoke_on_all(&client::start, ipv4_addr{server}, test, ncon).then([]{
+                    fprint(std::cout, "All connections done.\n");
+            });
         });
     });
 }
