@@ -315,6 +315,7 @@ int main(int ac, char ** av) {
         ("conn", bpo::value<unsigned>()->default_value(16), "nr connections per cpu")
         ("proto", bpo::value<std::string>()->default_value("tcp"), "transport protocol tcp|sctp")
         ("time", bpo::value<unsigned>()->default_value(60), "total transmission time")
+        ("msg-size", bpo::value<int>()->default_value(128), "size of each transmitted message in bytes")
         ;
 
     return app.run_deprecated(ac, av, [&app] {
@@ -325,6 +326,7 @@ int main(int ac, char ** av) {
         auto proto = config["proto"].as<std::string>();
         auto time = config["time"].as<unsigned>();
 
+        tx_msg_size = config["msg-size"].as<int>();
         size_t total_transmission_bytes = static_cast<size_t>(1024*1024*1024)*static_cast<size_t>(time)/static_cast<size_t>(8);
         total_transmission_bytes *= 10;
         size_t per_connection_transmission_bytes = total_transmission_bytes/static_cast<size_t>((ncon*smp::count));
