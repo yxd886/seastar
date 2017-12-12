@@ -177,9 +177,7 @@ int main(int ac, char** av) {
     app.add_options()
         ("port", bpo::value<uint16_t>()->default_value(10000), "TCP server port")
         ("tcp", bpo::value<std::string>()->default_value("yes"), "tcp listen")
-        ("sctp", bpo::value<std::string>()->default_value("no"), "sctp listen")
-        ("msg-size", bpo::value<int>()->default_value(128), "size of each transmitted message in bytes")
-        ;
+        ("sctp", bpo::value<std::string>()->default_value("no"), "sctp listen") ;
     return app.run_deprecated(ac, av, [&] {
         auto&& config = app.configuration();
         uint16_t port = config["port"].as<uint16_t>();
@@ -190,7 +188,7 @@ int main(int ac, char** av) {
             return engine().exit(1);
         }
         auto server = new distributed<tcp_server>;
-        rx_msg_size = config["msg-size"].as<int>();
+
         server->start().then([server = std::move(server), port] () mutable {
             engine().at_exit([server] {
                 return server->stop();
