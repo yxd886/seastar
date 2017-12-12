@@ -277,7 +277,7 @@ public:
         }
         _connected_connections.clear();
     }
-    void start_bandwidth_monitoring() {
+    void start_bandwidth_monitoring(int) {
         assert(!_reporter.armed());
         _previous_monitored_processed_bytes = local_processed_bytes;
         _reporter.set_callback([this](){
@@ -340,7 +340,7 @@ int main(int ac, char ** av) {
             });
         }).then([test](){
             clients.invoke_on_all(&client::start_the_test, test);
-            clients.invoke_on_all(&client::start_bandwidth_monitoring);
+            clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
         });
     });
 }
