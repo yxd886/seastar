@@ -795,13 +795,13 @@ auto tcp<InetTraits>::connect(socket_address sa) -> connection {
     do {
         src_port = _port_dist(_e);
         id = connid{src_ip, dst_ip, src_port, dst_port};
-    } while/*( (_tcbs.find(id) != _tcbs.end()) &&
+    } while( (_tcbs.find(id) != _tcbs.end()) &&
              (_inet._inet.netif()->hw_queues_count() == 1 ||
-              _inet._inet.netif()->hash2cpu(id.hash(_inet._inet.netif()->rss_key())) != engine().cpu_id()) );*/
+              _inet._inet.netif()->hash2cpu(id.hash(_inet._inet.netif()->rss_key())) != engine().cpu_id()) );
 
-              ( (_inet._inet.netif()->hw_queues_count() > 1 || _tcbs.find(id) != _tcbs.end()) &&
+              /*( (_inet._inet.netif()->hw_queues_count() > 1 || _tcbs.find(id) != _tcbs.end()) &&
                 (_inet._inet.netif()->hash2cpu(id.hash(_inet._inet.netif()->rss_key())) != engine().cpu_id()
-                || _tcbs.find(id) != _tcbs.end()) ) ;
+                || _tcbs.find(id) != _tcbs.end()) ) */ ;
 
     auto tcbp = make_lw_shared<tcb>(*this, id);
     _tcbs.insert({id, tcbp});
