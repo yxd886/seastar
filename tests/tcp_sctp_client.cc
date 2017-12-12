@@ -314,6 +314,7 @@ int main(int ac, char ** av) {
         ("test", bpo::value<std::string>()->default_value("ping"), "test type(ping | rxrx | txtx)")
         ("conn", bpo::value<unsigned>()->default_value(16), "nr connections per cpu")
         ("proto", bpo::value<std::string>()->default_value("tcp"), "transport protocol tcp|sctp")
+        ("time", bpo::value<unsigned>()->default_value(60), "total transmission time")
         ;
 
     return app.run_deprecated(ac, av, [&app] {
@@ -322,6 +323,12 @@ int main(int ac, char ** av) {
         auto test = config["test"].as<std::string>();
         auto ncon = config["conn"].as<unsigned>();
         auto proto = config["proto"].as<std::string>();
+        auto time = config["time"].as<unsigned>();
+
+        size_t total_transmission_bytes = static_cast<size_t>(1024*1024*1024)*static_cast<size_t>(time)/static_cast<size_t>(8);
+        total_transmission_bytes *= 10;
+        size_t per_connection_transmission_bytes = total_transmission_bytes/static_cast<size_t>((ncon*smp::count));
+        tx_msg_nr = per_connection_transmission_bytes/tx_msg_size + 1;
 
         if (proto == "tcp") {
             protocol = transport::TCP;
