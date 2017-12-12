@@ -313,7 +313,9 @@ int main(int ac, char ** av) {
         }
 
         clients.start().then([server, test, ncon] () {
-            clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon);
+            clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon).then([](){
+                fprint(std::cout, "All connections are done.\n");
+            });
         });
     });
 }
