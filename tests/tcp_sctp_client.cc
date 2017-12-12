@@ -230,20 +230,6 @@ public:
                 }
             });
         }).then([server_addr, test, ncon, this]{
-            /*for (unsigned i = 0; i < ncon; i++) {
-                socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
-                engine().net().connect(make_ipv4_address(server_addr), local, protocol).then([this, test] (connected_socket fd) {
-                    auto conn = new connection(std::move(fd));
-                    (this->*tests.at(test))(conn).then_wrapped([conn] (auto&& f) {
-                        delete conn;
-                        try {
-                            f.get();
-                        } catch (std::exception& ex) {
-                            fprint(std::cerr, "request error: %s\n", ex.what());
-                        }
-                    });
-                });
-            }*/
             return repeat([server_addr, test, ncon, this](){
                 socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
                 return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([this, ncon](future<connected_socket> f){
@@ -270,6 +256,19 @@ public:
     }
     void report_connection_done(int ncon, unsigned cpu_id) {
         fprint(std::cout, "%d connections are created on core %d\n", ncon, cpu_id);
+    }
+    void start_the_test(std::string test) {
+        for(auto conn : _connected_connections) {
+            (this->*tests.at(test))(conn).then_wrapped([conn] (auto&& f) {
+                delete conn;
+                try {
+                    f.get();
+                } catch (std::exception& ex) {
+                    fprint(std::cerr, "request error: %s\n", ex.what());
+                }
+            });
+        }
+        _connected_connections.clear();
     }
     future<> stop() {
         return make_ready_future();
@@ -312,9 +311,11 @@ int main(int ac, char ** av) {
         }
 
         clients.start().then([server, test, ncon] () {
-            clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon).then([](){
+            return clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon).then([](){
                 fprint(std::cout, "All connections are done.\n");
             });
+        }).then([test](){
+            clients.invoke_on_all(&client::start_the_test, test);
         });
     });
 }
