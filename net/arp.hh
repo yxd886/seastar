@@ -238,12 +238,7 @@ arp_for<L3>::lookup(const l3addr& paddr) {
             }
             res._waiters.clear();
         });
-        // res._timeout_timer.arm_periodic(std::chrono::seconds(1));
-        /*
-         * patch by djp
-         * inrease the frequency of arp time out
-         */
-        res._timeout_timer.arm_periodic(std::chrono::milliseconds(100));
+        res._timeout_timer.arm_periodic(std::chrono::seconds(1));
         send_query(paddr);
     }
 
