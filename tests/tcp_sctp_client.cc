@@ -340,6 +340,7 @@ int main(int ac, char ** av) {
             });
         }).then([test](){
             clients.invoke_on_all(&client::start_the_test, test);
+            clients.invoke_on_all(&client::start_bandwidth_monitoring);
         });
     });
 }
