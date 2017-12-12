@@ -51,6 +51,11 @@ private:
     bool _earliest_started_recorded = false;
     size_t _processed_bytes;
     unsigned _num_reported;
+
+    timer<lowres_clock> _reporter;
+    size_t _previous_monitored_processed_bytes = 0;
+public:
+    size_t local_processed_bytes=0;
 public:
     class connection {
         connected_socket _fd;
@@ -67,6 +72,7 @@ public:
         future<> do_read() {
             return _read_buf.read_exactly(rx_msg_size).then([this] (temporary_buffer<char> buf) {
                 _bytes_read += buf.size();
+                clients.local().local_processed_bytes += buf.size();
                 if (buf.size() == 0) {
                     return make_ready_future();
                 } else {
@@ -81,6 +87,7 @@ public:
             }
             return _write_buf.write(str_txbuf).then([this] {
                 _bytes_write += tx_msg_size;
+                clients.local().local_processed_bytes += tx_msg_size;
                 return _write_buf.flush();
             }).then([this, end] {
                 return do_write(end - 1);
@@ -270,7 +277,24 @@ public:
         }
         _connected_connections.clear();
     }
+    void start_bandwidth_monitoring() {
+        assert(!_reporter.armed());
+        _previous_monitored_processed_bytes = local_processed_bytes;
+        _reporter.set_callback([this](){
+            size_t diff = local_processed_bytes - _previous_monitored_processed_bytes;
+            float bandwidth = static_cast<double>((diff * 8)) / (1000.0 * 1000.0 * 1000.0);
+            _previous_monitored_processed_bytes = local_processed_bytes;
+            clients.invoke_on(0, &client::report_bandwidth_monitoring, bandwidth, engine().cpu_id());
+        });
+        _reporter.arm_periodic(1s);
+    }
+    void report_bandwidth_monitoring(float bandwidth, unsigned core_id) {
+        fprint(std::cout, "TCP bandwidth on core %d: %f(Gbits/sec)", core_id, bandwidth);
+    }
     future<> stop() {
+        if(_reporter.armed()) {
+            _reporter.cancel();
+        }
         return make_ready_future();
     }
 
