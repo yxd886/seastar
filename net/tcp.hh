@@ -331,6 +331,9 @@ private:
         struct send {
             tcp_seq unacknowledged;
             tcp_seq next;
+            /* patch by djp
+             * Assign an initial value to window.
+             */
             uint32_t window=3737600;
             uint8_t window_scale;
             uint16_t mss;
@@ -736,16 +739,11 @@ tcp<InetTraits>::tcp(inet_type& inet)
     , _e(_rd()) {
     namespace sm = metrics;
 
-    /*
-     * patch by djp
-     * temporarily remove the following metric to
-     * prevent from unexpected exception
-     */
-    /*_metrics.add_group("tcp", {
+    _metrics.add_group("tcp", {
         sm::make_derive("linearizations", [] { return tcp_packet_merger::linearizations(); },
                         sm::description("Counts a number of times a buffer linearization was invoked during the buffers merge process. "
                                         "Divide it by a total TCP receive packet rate to get an everage number of lineraizations per TCP packet."))
-    });*/
+    });
 
     _inet.register_packet_provider([this, tcb_polled = 0u] () mutable {
         std::experimental::optional<typename InetTraits::l4packet> l4p;
@@ -792,6 +790,15 @@ auto tcp<InetTraits>::connect(socket_address sa) -> connection {
     auto dst_ip = ipv4_address(sa);
     auto dst_port = net::ntoh(sa.u.in.sin_port);
 
+    /* patch by djp
+     * change the following logic.
+     */
+    /*do {
+        src_port = _port_dist(_e);
+        id = connid{src_ip, dst_ip, src_port, dst_port};
+    } while (_inet._inet.netif()->hw_queues_count() > 1 &&
+             (_inet._inet.netif()->hash2cpu(id.hash(_inet._inet.netif()->rss_key())) != engine().cpu_id()
+              || _tcbs.find(id) != _tcbs.end()));*/
     auto netif = _inet._inet.netif();
     while(true) {
         src_port = _port_dist(_e);
@@ -886,6 +893,7 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
                 // TODO: we need to remove the tcb and decrease the pending if
                 // it stays SYN_RECEIVED state forever.
                 listener->second->inc_pending();
+
                 return tcbp->input_handle_listen_state(&h, std::move(p));
             }
             // 2.4 fourth other text or control
@@ -895,7 +903,6 @@ void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
         }
     } else {
         tcbp = tcbi->second;
-
         if (tcbp->state() == tcp_state::SYN_SENT) {
             // 3) In SYN_SENT State
             return tcbp->input_handle_syn_sent_state(&h, std::move(p));
