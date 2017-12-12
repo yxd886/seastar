@@ -154,7 +154,7 @@ public:
             });
         }
         future<> do_read() {
-            return _read_buf.read_exactly(rx_msg_size).then([this] (temporary_buffer<char> buf) {
+            return _read_buf.read()/*_exactly(rx_msg_size)*/.then([this] (temporary_buffer<char> buf) {
                 if (buf.size() == 0) {
                     return make_ready_future();
                 } else {
