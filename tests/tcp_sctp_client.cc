@@ -326,10 +326,10 @@ int main(int ac, char ** av) {
         auto test = config["test"].as<std::string>();
         auto ncon = config["conn"].as<unsigned>();
         auto proto = config["proto"].as<std::string>();
-        auto time = config["time"].as<unsigned>();
+        auto time = config["time"].as<size_t>();
 
         size_t total_transmission_bytes = 10*1024*1024*1024*time/8;
-        size_t per_connection_transmission_bytes = total_transmission_bytes/(ncon*smp::count);
+        size_t per_connection_transmission_bytes = total_transmission_bytes/static_cast<size_t>((ncon*smp::count));
         tx_msg_nr = per_connection_transmission_bytes/tx_msg_size + 1;
 
 
