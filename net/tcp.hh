@@ -649,8 +649,14 @@ private:
     // measure received tcp packets
     unsigned _total_received = 0;
     unsigned _receive_snap_shot = 0;
-    lowres_clock::time_point _recv_measurement_point;
-    bool _recv_measurement_point_set=false;
+    bool _recv_measurement_timer_set=false;
+    timer<lowres_clock> _recv_measurement_timer;
+public:
+    void recv_meansure_cb(){
+        printf("TCP: receiving %d TCP packets.\n", _total_received-_receive_snap_shot);
+        _receive_snap_shot = _total_received;
+    }
+
 public:
     class connection {
         lw_shared_ptr<tcb> _tcb;
@@ -796,11 +802,26 @@ future<> tcp<InetTraits>::poll_tcb(ipaddr to, lw_shared_ptr<tcb> tcb) {
 
 template <typename InetTraits>
 auto tcp<InetTraits>::listen(uint16_t port, size_t queue_length) -> listener {
+    if(!_recv_measurement_timer_set) {
+        _recv_measurement_timer_set = true;
+        _recv_measurement_timer.set_callback([this](){
+            this->recv_meansure_cb();
+        });
+        _recv_measurement_timer.arm_periodic(1s);
+    }
     return listener(*this, port, queue_length);
 }
 
 template <typename InetTraits>
 auto tcp<InetTraits>::connect(socket_address sa) -> connection {
+    if(!_recv_measurement_timer_set) {
+        _recv_measurement_timer_set = true;
+        _recv_measurement_timer.set_callback([this](){
+            this->recv_meansure_cb();
+        });
+        _recv_measurement_timer.arm_periodic(1s);
+    }
+
     uint16_t src_port;
     connid id;
     auto src_ip = _inet._inet.host_address();
@@ -854,17 +875,7 @@ bool tcp<InetTraits>::forward(forward_hash& out_hash_data, packet& p, size_t off
 
 template <typename InetTraits>
 void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
-    if(!_recv_measurement_point_set) {
-        _recv_measurement_point = lowres_clock::now();
-        _recv_measurement_point_set = true;
-    }
-    _total_received += 1;
-    auto n = lowres_clock::now();
-    if(std::chrono::duration_cast<std::chrono::milliseconds>(n-_recv_measurement_point).count() > 1000) {
-        printf("TCP: receiving %d TCP packets.\n", _total_received-_receive_snap_shot);
-        _receive_snap_shot = _total_received;
-        _recv_measurement_point = n;
-    }
+    _total_received+=1;
 
     auto th = p.get_header(0, tcp_hdr::len);
     if (!th) {
