@@ -25,7 +25,6 @@
 #include "core/distributed.hh"
 #include <vector>
 #include <iostream>
-#include <chrono>
 
 using namespace seastar;
 
@@ -95,10 +94,6 @@ public:
         connected_socket _fd;
         input_stream<char> _read_buf;
         output_stream<char> _write_buf;
-        size_t _received_bytes = 0;
-
-        timer<lowres_clock> _reporter;
-        size_t _snap_shot = 0;
     public:
         connection(tcp_server& server, connected_socket&& fd, socket_address addr)
             : _fd(std::move(fd))
@@ -163,22 +158,11 @@ public:
                 if (buf.size() == 0) {
                     return make_ready_future();
                 } else {
-                    _received_bytes += buf.size();
                     return do_read();
                 }
             });
         }
         future<> rx_test() {
-            _snap_shot = _received_bytes;
-            _reporter.set_callback([this](){
-                if(_snap_shot == _received_bytes) {
-                    _fd.dump_tcp();
-                }
-                _snap_shot = _received_bytes;
-            });
-            using namespace std::chrono_literals;
-            // _reporter.arm_periodic(1s);
-
             return do_read().then([] {
                 return make_ready_future<>();
             });

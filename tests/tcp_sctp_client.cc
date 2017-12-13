@@ -30,7 +30,7 @@ using namespace std::chrono_literals;
 
 // To change the size of the transmitted message, change rx_msg_size!!!!
 // Otherwise it leads to stupid errors!!!!
-static int rx_msg_size = /*4 * 1024*/256;
+static int rx_msg_size = /*4 * 1024*/64;
 static int tx_msg_total_size = 100 * 1024 * 1024;
 static int tx_msg_size = rx_msg_size;
 static int tx_msg_nr = tx_msg_total_size / tx_msg_size;
@@ -65,9 +65,6 @@ public:
         output_stream<char> _write_buf;
         size_t _bytes_read = 0;
         size_t _bytes_write = 0;
-
-        timer<lowres_clock> _tcp_dumper;
-        size_t _snap_shot;
     public:
         connection(connected_socket&& fd)
             : _fd(std::move(fd))
@@ -123,15 +120,6 @@ public:
         }
 
         future<size_t> rxrx() {
-            _tcp_dumper.set_callback([this](){
-                if(_snap_shot == _bytes_write) {
-                    _fd.dump_tcp();
-                }
-                _snap_shot = _bytes_write;
-            });
-            // _tcp_dumper.arm_periodic(1s);
-            _snap_shot = _bytes_write;
-
             return _write_buf.write("rxrx").then([this] {
                 return _write_buf.flush();
             }).then([this] {
