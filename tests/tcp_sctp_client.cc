@@ -305,6 +305,81 @@ public:
 
     typedef future<> (client::*test_fn)(connection *conn);
     static const std::map<std::string, test_fn> tests;
+public:
+    class connection_tester {
+        connected_socket _fd;
+        output_stream<char> _write_buf;
+        size_t _bytes_write = 0;
+        size_t _snap_shot = 0;
+        unsigned _invoke_counter = 0;
+        timer<lowres_clock> _t;
+        bool _quit = false;
+        promise<> _pr;
+
+        connection_tester(connected_socket&& fd)
+            : _fd(std::move(fd))
+            , _write_buf(_fd.output()) {}
+
+        future<> do_write() {
+            return _write_buf.write(str_txbuf).then([this] {
+                if(_quit) {
+                    return make_ready_future();
+                }
+                else{
+                    _bytes_write += tx_msg_size;
+                    return _write_buf.flush().then([this]{
+                        if(_quit){
+                            return make_ready_future();
+                        }
+                        else{
+                            return do_write();
+                        }
+                    });
+                }
+            });
+        }
+
+        future<> rxrx() {
+            return _write_buf.write("rxrx").then([this] {
+                return _write_buf.flush();
+            }).then([this] {
+                return do_write();
+            });
+        }
+
+        future<> run() {
+            rxrx().then_wrapped([this](auto&& f){
+                try {
+                    f.get();
+                }
+                catch(...){
+                    if(_t.armed()) {
+                        _t.cancel();
+                        _pr.set_exception(std::runtime_error("wtf?"));
+                    }
+                }
+                delete this;
+            });
+            _t.set_callback([this]{
+                _invoke_counter += 1;
+                if(_snap_shot == _bytes_write)  {
+                    _quit = true;
+                    _fd.shutdown_output();
+                    _t.cancel();
+                    _pr.set_exception(std::runtime_error("wtf?"));
+                }
+                if(_invoke_counter == 10) {
+                    _quit = true;
+                    _fd.shutdown_output();
+                    _t.cancel();
+                    _pr.set_value();
+                }
+                _snap_shot = _bytes_write;
+            });
+            _t.arm_periodic(1s);
+            return _pr.get_future();
+        }
+    };
 };
 
 namespace bpo = boost::program_options;
