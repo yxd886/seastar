@@ -47,7 +47,7 @@ public:
         return;
     }
 
-    void update_packet_header(uint32_t ip, uint16_t port,net::packet* pkt){
+    void update_packet_header(uint32_t ip, uint16_t port,net::packet* rte_pkt){
         net::ip_hdr *iphdr;
         net::tcp_hdr *tcp;
         iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
@@ -57,7 +57,7 @@ public:
         return;
     }
 
-    future<> process_packet(net::packet** rte_pkt){
+    future<> process_packet(net::packet* rte_pkt){
         net::ip_hdr *iphdr;
         net::tcp_hdr *tcp;
 
