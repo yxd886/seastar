@@ -224,7 +224,7 @@ public:
         _test = test;
         _latest_finished = lowres_clock::now();
 
-        /*return repeat([server_addr](){
+        return repeat([server_addr](){
             socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
             return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([](auto&& future_fd){
                 try {
@@ -261,8 +261,8 @@ public:
                     }
                 });
             });
-        });*/
-        return repeat([server_addr, test, ncon, this](){
+        });
+        /*return repeat([server_addr, test, ncon, this](){
             socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
             return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([this, ncon](future<connected_socket> f){
                 try{
@@ -283,7 +283,7 @@ public:
                     return make_ready_future<stop_iteration>(stop_iteration::no);
                 }
             });
-        });
+        });*/
     }
     void report_connection_done(int ncon, unsigned cpu_id) {
         fprint(std::cout, "%d connections are created on core %d\n", ncon, cpu_id);
@@ -410,7 +410,7 @@ public:
                 try {
                     auto t = future_fd.get();
                     auto tester = new connection_tester(std::move(std::get<0>(t)));
-                    fprint(std::cout, "A new connection tester is created on core %d.\n", engine().cpu_id());
+                    // fprint(std::cout, "A new connection tester is created on core %d.\n", engine().cpu_id());
                     return tester->run().then_wrapped([](auto&& f){
                         try{
                             f.get();
@@ -476,15 +476,15 @@ int main(int ac, char ** av) {
             return engine().exit(1);
         }
 
-        /*clients.start().then([server, test, ncon] () {
+        clients.start().then([server, test, ncon] () {
             return clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon).then([](){
                 fprint(std::cout, "All connections are done.\n");
             });
         }).then([test](){
             clients.invoke_on_all(&client::start_the_test, test);
             clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
-        });*/
-        clients.start().then([server,sem, max]{
+        });
+        /*clients.start().then([server,sem, max]{
             for(unsigned i=0; i<max; i++) {
                 clients.invoke_on_all(&client::run_tester, ipv4_addr{server}).then([sem](){
                    fprint(std::cout, "tester finishes.\n");
@@ -499,7 +499,7 @@ int main(int ac, char ** av) {
         }).then([test](){
             clients.invoke_on_all(&client::start_the_test, test);
             clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
-        });;
+        });*/
     });
 }
 
