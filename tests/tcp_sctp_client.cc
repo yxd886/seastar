@@ -358,6 +358,7 @@ public:
                         _pr.set_exception(std::runtime_error("wtf?"));
                     }
                 }
+                fprint(std::cout, "Tester close.\n");
                 delete this;
             });
             _t.set_callback([this]{
