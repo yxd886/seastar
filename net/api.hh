@@ -200,6 +200,11 @@ public:
     /// This is useful to abort operations on a socket that is not making
     /// progress due to a peer failure.
     void shutdown_input();
+
+    // patch by djp
+    void dump_tcp() {
+        _csi->dump_tcp();
+    }
 };
 /// @}
 
