@@ -129,7 +129,7 @@ public:
                 }
                 _snap_shot = _bytes_write;
             });
-            _tcp_dumper.arm_periodic(1s);
+            // _tcp_dumper.arm_periodic(1s);
             _snap_shot = _bytes_write;
 
             return _write_buf.write("rxrx").then([this] {
