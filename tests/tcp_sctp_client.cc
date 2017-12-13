@@ -224,7 +224,7 @@ public:
         _test = test;
         _latest_finished = lowres_clock::now();
 
-        return repeat([server_addr](){
+        /*return repeat([server_addr](){
             socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
             return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([](auto&& future_fd){
                 try {
@@ -260,6 +260,28 @@ public:
                         return make_ready_future<stop_iteration>(stop_iteration::no);
                     }
                 });
+            });
+        });*/
+        return repeat([server_addr, test, ncon, this](){
+            socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
+            return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([this, ncon](future<connected_socket> f){
+                try{
+                    auto t = f.get();
+                    auto conn = new connection(std::move(std::get<0>(t)));
+                    _connected_connections.push_back(conn);
+                    if(_connected_connections.size() == ncon){
+                        return clients.invoke_on(0, &client::report_connection_done, ncon, engine().cpu_id()).then([](){
+                            return stop_iteration::yes;
+                        });
+                    }
+                    else{
+                        return make_ready_future<stop_iteration>(stop_iteration::no);
+                    }
+                }
+                catch(std::exception& e){
+                    fprint(std::cout, "Exception happen when creating the connection.\n");
+                    return make_ready_future<stop_iteration>(stop_iteration::no);
+                }
             });
         });
     }
@@ -305,6 +327,111 @@ public:
 
     typedef future<> (client::*test_fn)(connection *conn);
     static const std::map<std::string, test_fn> tests;
+public:
+    class connection_tester {
+        connected_socket _fd;
+        output_stream<char> _write_buf;
+        size_t _bytes_write = 0;
+        size_t _snap_shot = 0;
+        unsigned _invoke_counter = 0;
+        timer<lowres_clock> _t;
+        bool _quit = false;
+        promise<> _pr;
+    public:
+        connection_tester(connected_socket&& fd)
+            : _fd(std::move(fd))
+            , _write_buf(_fd.output()) {}
+
+        future<> do_write() {
+            return _write_buf.write(str_txbuf).then([this] {
+                if(_quit) {
+                    return make_ready_future();
+                }
+                else{
+                    _bytes_write += tx_msg_size;
+                    return _write_buf.flush().then([this]{
+                        if(_quit){
+                            return make_ready_future();
+                        }
+                        else{
+                            return do_write();
+                        }
+                    });
+                }
+            });
+        }
+
+        future<> rxrx() {
+            return _write_buf.write("rxrx").then([this] {
+                return _write_buf.flush();
+            }).then([this] {
+                return do_write();
+            });
+        }
+
+        future<> run() {
+            rxrx().then_wrapped([this](auto&& f){
+                try {
+                    f.get();
+                }
+                catch(...){
+                    if(_t.armed()) {
+                        _t.cancel();
+                        _pr.set_exception(std::runtime_error("wtf?"));
+                    }
+                }
+                delete this;
+            });
+            _t.set_callback([this]{
+                _invoke_counter += 1;
+                if(_snap_shot == _bytes_write)  {
+                    _quit = true;
+                    _fd.shutdown_output();
+                    _t.cancel();
+                    _pr.set_exception(std::runtime_error("wtf?"));
+                }
+                if(_invoke_counter == 20) {
+                    _quit = true;
+                    _fd.shutdown_output();
+                    _t.cancel();
+                    _pr.set_value();
+                }
+                _snap_shot = _bytes_write;
+            });
+            _t.arm_periodic(1s);
+            return _pr.get_future();
+        }
+    };
+
+    future<> run_tester(ipv4_addr server_addr){
+        return repeat([server_addr](){
+            socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
+            return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([](auto&& future_fd){
+                try {
+                    auto t = future_fd.get();
+                    auto tester = new connection_tester(std::move(std::get<0>(t)));
+                    // fprint(std::cout, "A new connection tester is created on core %d.\n", engine().cpu_id());
+                    return tester->run().then_wrapped([](auto&& f){
+                        try{
+                            f.get();
+                            fprint(std::cout, "connection tester succeeds on core %d.\n", engine().cpu_id());
+                            return stop_iteration::yes;
+                        }
+                        catch(...){
+                            fprint(std::cout, "connection tester fails on core %d.\n", engine().cpu_id());
+                            return stop_iteration::no;
+                        }
+                    });
+                }
+                catch(...) {
+                    fprint(std::cout, "Fails to create connection teste on core %d, try again in 2s.\n", engine().cpu_id());
+                    return sleep(std::chrono::seconds(2s)).then([]{
+                         return stop_iteration::no;
+                    });
+                }
+            });
+        });
+    }
 };
 
 namespace bpo = boost::program_options;
@@ -318,14 +445,17 @@ int main(int ac, char ** av) {
         ("proto", bpo::value<std::string>()->default_value("tcp"), "transport protocol tcp|sctp")
         ("time", bpo::value<unsigned>()->default_value(60), "total transmission time")
         ;
+    unsigned max = 2;
 
-    return app.run_deprecated(ac, av, [&app] {
+    return app.run_deprecated(ac, av, [&app, max] {
         auto&& config = app.configuration();
         auto server = config["server"].as<std::string>();
         auto test = config["test"].as<std::string>();
         auto ncon = config["conn"].as<unsigned>();
         auto proto = config["proto"].as<std::string>();
         auto time = config["time"].as<unsigned>();
+
+        auto sem = std::make_shared<semaphore>(0);
 
         size_t total_transmission_bytes = static_cast<size_t>(1024*1024*1024)*static_cast<size_t>(time)/static_cast<size_t>(8);
         total_transmission_bytes *= 10;
@@ -346,14 +476,30 @@ int main(int ac, char ** av) {
             return engine().exit(1);
         }
 
-        clients.start().then([server, test, ncon] () {
+        /*clients.start().then([server, test, ncon] () {
             return clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon).then([](){
                 fprint(std::cout, "All connections are done.\n");
             });
         }).then([test](){
             clients.invoke_on_all(&client::start_the_test, test);
             clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
-        });
+        });*/
+        clients.start().then([server,sem, max]{
+            for(unsigned i=0; i<max; i++) {
+                clients.invoke_on_all(&client::run_tester, ipv4_addr{server}).then([sem](){
+                   fprint(std::cout, "tester finishes.\n");
+                   sem->signal();
+                });
+            }
+            return sem->wait(max);
+        }).then([server, test, ncon] () {
+            return clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon).then([](){
+                fprint(std::cout, "All connections are done.\n");
+            });
+        }).then([test](){
+            clients.invoke_on_all(&client::start_the_test, test);
+            clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
+        });;
     });
 }
 
