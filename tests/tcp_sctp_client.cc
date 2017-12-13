@@ -315,7 +315,7 @@ public:
         timer<lowres_clock> _t;
         bool _quit = false;
         promise<> _pr;
-
+    public:
         connection_tester(connected_socket&& fd)
             : _fd(std::move(fd))
             , _write_buf(_fd.output()) {}
