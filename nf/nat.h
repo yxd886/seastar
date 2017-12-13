@@ -11,7 +11,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <time.h>
-
+using namespace seastar;
 
 std::string ip_lists[64]={"192.168.122.131","192.168.122.132","192.168.122.133","192.168.122.134",
                 "192.168.122.135","192.168.122.136","192.168.122.137","192.168.122.138",
@@ -20,8 +20,8 @@ uint16_t port_lists[64]={10012,10013,10014,10015,10016,10017,10018,10019,10020,1
 
 class NAT{
 public:
-    NAT(struct rte_ring** worker2interface,struct rte_ring** interface2worker,uint32_t cluster_id):
-        _worker2interface(worker2interface),_interface2worker(interface2worker),_cluster_id(cluster_id),_drop(false){
+    NAT(uint32_t cluster_id):
+        _cluster_id(cluster_id),_drop(false){
 
     }
 
@@ -31,7 +31,7 @@ public:
         for (uint32_t i=0;i<sizeof(backend_list_bit);i++){
             uint64_t t=backend_list_bit&0x1;
             if(t==1){
-                _ip_list.push_back(mica::network::NetworkAddress::parse_ipv4_addr(ip_lists[i].c_str()));
+                _ip_list.push_back(::net::ipv4_address(ip_lists[i].c_str()).ip);
                 _port_list.push_back(port_lists[i]);
             }
 
@@ -47,130 +47,122 @@ public:
         return;
     }
 
-    void update_packet_header(uint32_t ip, uint16_t port,struct rte_mbuf* pkt){
-        struct ipv4_hdr *iphdr;
-        struct tcp_hdr *tcp;
-        iphdr = rte_pktmbuf_mtod_offset(pkt,
-                struct ipv4_hdr *,
-                sizeof(struct ether_hdr));
-        tcp = (struct tcp_hdr *)((unsigned char *)iphdr +sizeof(struct ipv4_hdr));
-        iphdr->dst_addr=ip;
+    void update_packet_header(uint32_t ip, uint16_t port,net::packet* pkt){
+        net::ip_hdr *iphdr;
+        net::tcp_hdr *tcp;
+        iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+        tcp = ( net::tcp_hdr *)((unsigned char *)iphdr +sizeof(struct ipv4_hdr));
+        iphdr->dst_ip.ip=ip;
         tcp->dst_port=port;
         return;
     }
 
-    void process_packet(struct rte_mbuf* rte_pkt){
-        struct ipv4_hdr *iphdr;
-        struct tcp_hdr *tcp;
-        unsigned lcore_id;
-        void* rev_item;
+    future<> process_packet(net::packet** rte_pkt){
+        net::ip_hdr *iphdr;
+        net::tcp_hdr *tcp;
+
         _drop=false;
-        struct session_state* ses_state=nullptr;
+        uint64_t ip_port_list_bit=0x111111;
 
-        lcore_id = rte_lcore_id();
-        iphdr = rte_pktmbuf_mtod_offset(rte_pkt,
-                struct ipv4_hdr *,
-                sizeof(struct ether_hdr));
 
-        if (iphdr->next_proto_id!=IPPROTO_TCP){
+        iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+
+        if (iphdr->ip_proto!=(uint8_t)net::ip_protocol_num::tcp){
             //drop
             _drop=true;
-            return;
+            return make_ready_future<>();
         }else{
 
-            tcp = (struct tcp_hdr *)((unsigned char *)iphdr +sizeof(struct ipv4_hdr));
-            char* key=nullptr;
-            size_t key_length;
-            uint64_t key_hash;
-            struct fivetuple tuple(iphdr->src_addr,iphdr->dst_addr,tcp->src_port,tcp->dst_port,iphdr->next_proto_id);
-            key= reinterpret_cast<char*>(&tuple);
-            key_length= sizeof(tuple);
-            key_hash= hash(key, key_length);
-            struct rte_ring_item item(key_hash,key_length,key);
-            rte_ring_enqueue(_worker2interface[lcore_id],static_cast<void*>(&item));
-            rev_item=get_value(_interface2worker[lcore_id]);
-            if(rev_item==nullptr){
-            //ip,port is null
-                if(DEBUG) printf("can't find five tuples,\n");
-            	key= reinterpret_cast<char*>(&_cluster_id);
-                key_length= sizeof(_cluster_id);
-                key_hash= hash(key, key_length);
-                struct rte_ring_item item1(key_hash,key_length,key);
-                rte_ring_enqueue(_worker2interface[lcore_id],static_cast<void*>(&item1));
-                rev_item=nullptr;
-                uint64_t ip_port_list_bit=0x111111;
-                rev_item=get_value(_interface2worker[lcore_id]);
-                if(rev_item==nullptr){
-                    //_cluster doesn't includes any dst.
-                	if(DEBUG) printf("can't find cluster,\n");
-                	if(DEBUG) printf("try to write the cluster,\n");
-					item1._state._action=WRITE;
-					item1._state._nat_state._ip_port_list=ip_port_list_bit;
-					rte_ring_enqueue(_worker2interface[lcore_id],static_cast<void*>(&item1));
+            tcp = ( net::tcp_hdr *)((unsigned char *)iphdr +sizeof(struct ipv4_hdr));
 
-					if(DEBUG==1)  printf("try to dequeue from _interface2worker[%d]\n",lcore_id);
-					rev_item=get_value(_interface2worker[lcore_id]);
-					if(DEBUG==1)  printf("dequeue from _interface2worker[%d] completed\n",lcore_id);
+            struct fivetuple tuple(iphdr->src_ip.ip,iphdr->dst_ip.ip,tcp->src_port,tcp->dst_port,iphdr->ip_proto);
+            struct nat_state state;
+            char* key = reinterpret_cast<char*>(&tuple);
+            extendable_buffer key_buf;
+            key_buf.fill_data(key);
+            return all_objs.local_obj().query(Operation::kGet,
+                        sizeof(key), key_buf.get_temp_buffer(),
+                        0, temporary_buffer<char>()).then([&](mica_response response){
+
+                    if(response.get_result() == Result::kNotFound){
+
+                        char* cluster_key = reinterpret_cast<char*>(&_cluster_id);
+                        extendable_buffer  cluster_key_buf;
+                        cluster_key_buf.fill_data(cluster_key);
+                        all_objs.local_obj().query(Operation::kGet,
+                                    sizeof(cluster_key_buf), cluster_key_buf.get_temp_buffer(),
+                                    0, temporary_buffer<char>()).then([&](mica_response response1){
+                                if(response1.get_result() == Result::kNotFound){
 
 
+                                    extendable_buffer cluster_val_buf;
+                                    state._ip_port_list=ip_port_list_bit;
+                                    cluster_val_buf.fill_data(state);
 
 
-                	//std::cout<<"_cluster doesn't includes any dst"<<std::endl;
-                   // exit(-1);
-                }else{
+                                    all_objs.local_obj().query(Operation::kSet,
+                                            sizeof(key), cluster_key_buf.get_temp_buffer(),
+                                            sizeof(state), cluster_val_buf.get_temp_buffer()).then([&](mica_response response){
+                                        assert(response.get_key_len() == 0);
+                                        assert(response.get_val_len() == 0);
+                                        assert(response.get_result() == Result::kSuccess);
 
-                    //select proper ip and port
-                    ses_state=&(((struct rte_ring_item*)rev_item)->_state);
-                    ip_port_list_bit=ses_state->_nat_state._ip_port_list;
-                }
-
-
-				form_list(ip_port_list_bit);
-				uint32_t select_ip=0;
-				uint16_t select_port=0;
-				select_ip_port(&select_ip,&select_port);
-
-				//Write hash table(tuple, (ip,port))
-				key= reinterpret_cast<char*>(&tuple);
-				key_length= sizeof(tuple);
-				key_hash= hash(key, key_length);
-				struct rte_ring_item item2(key_hash,key_length,key);
-				item2._state._action=WRITE;
-				item2._state._nat_state._dst_ip_addr=select_ip;
-				item2._state._nat_state._dst_port=select_port;
-				rte_ring_enqueue(_worker2interface[lcore_id],static_cast<void*>(&item2));
-				if(DEBUG==1)  printf("try to dequeue from _interface2worker[%d]\n",lcore_id);
-				rev_item=get_value(_interface2worker[lcore_id]);
-				if(DEBUG==1)  printf("dequeue from _interface2worker[%d] completed\n",lcore_id);
-
-				//Write hash table(reverse_tuple, (p.ip,p.port))
-				struct fivetuple reverse_tuple(select_ip,iphdr->src_addr,select_port,tcp->src_port,iphdr->next_proto_id);
-				key= reinterpret_cast<char*>(&reverse_tuple);
-				key_length= sizeof(reverse_tuple);
-				key_hash= hash(key, key_length);
-				struct rte_ring_item item3(key_hash,key_length,key);
-				item3._state._action=WRITE;
-				item3._state._nat_state._dst_ip_addr=iphdr->src_addr;
-				item3._state._nat_state._dst_port=tcp->src_port;
-				rte_ring_enqueue(_worker2interface[lcore_id],static_cast<void*>(&item2));
-
-				if(DEBUG==1)  printf("try to dequeue from _interface2worker[%d]\n",lcore_id);
-				rev_item=get_value(_interface2worker[lcore_id]);
-				if(DEBUG==1)  printf("dequeue from _interface2worker[%d] completed\n",lcore_id);
-
-				update_packet_header(select_ip,select_port,rte_pkt);
+                                    });
 
 
-            }else{
+                                }else{
+                                    memcpy(&state,&(response1.get_value<struct nat_state>()),sizeof(state));
 
-                ses_state=&(((struct rte_ring_item*)rev_item)->_state);
-                update_packet_header(ses_state->_nat_state._dst_ip_addr,ses_state->_nat_state._dst_port,rte_pkt);
+                                    ip_port_list_bit=state._ip_port_list;
 
-            }
+                                }
+                            });
+                        form_list(ip_port_list_bit);
+                        uint32_t select_ip=0;
+                        uint16_t select_port=0;
+                        select_ip_port(&select_ip,&select_port);
+                        extendable_buffer tuple_val_buf;
+                        state._dst_ip_addr=select_ip;
+                        state._dst_port=select_port;
+                        tuple_val_buf.fill_data(state);
+
+                        all_objs.local_obj().query(Operation::kSet,
+                                sizeof(key), tuple_val_buf.get_temp_buffer(),
+                                sizeof(state), tuple_val_buf.get_temp_buffer()).then([&](mica_response response){
+                            assert(response.get_key_len() == 0);
+                            assert(response.get_val_len() == 0);
+                            assert(response.get_result() == Result::kSuccess);
+
+                        });
+                        extendable_buffer reverse_val_buf;
+                        state._dst_ip_addr=iphdr->src_ip.ip;
+                        state._dst_port=tcp->src_port;
+                        reverse_val_buf.fill_data(state);
+
+                        all_objs.local_obj().query(Operation::kSet,
+                                sizeof(key), reverse_val_buf.get_temp_buffer(),
+                                sizeof(state), reverse_val_buf.get_temp_buffer()).then([&](mica_response response){
+                            assert(response.get_key_len() == 0);
+                            assert(response.get_val_len() == 0);
+                            assert(response.get_result() == Result::kSuccess);
+
+                        });
+                        update_packet_header(select_ip,select_port,rte_pkt);
+                        return make_ready_future<>();
 
 
-            //To do: send packet.
-            return;
+
+                    }else{
+                        memcpy(&state,&(response.get_value<struct nat_state>()),sizeof(state));
+                        update_packet_header(state._dst_ip_addr,state._dst_port,rte_pkt);
+                        return make_ready_future<>();
+
+                    }
+
+
+
+                });
+
 
 
 
@@ -179,8 +171,7 @@ public:
 
 
 
-struct rte_ring** _worker2interface;
-struct rte_ring** _interface2worker;
+
 uint32_t _cluster_id;
 std::vector<uint32_t> _ip_list;
 std::vector<uint16_t> _port_list;

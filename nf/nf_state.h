@@ -59,18 +59,6 @@ struct nat_state{
     uint16_t _dst_port;
     uint64_t _ip_port_list;
 
-    nat_state():_dst_ip_addr(0),_dst_port(0),_ip_port_list(0){
-
-    }
-
-    void copy(struct nat_state* c){
-        _dst_ip_addr=c->_dst_ip_addr;
-        _dst_port=c->_dst_port;
-        _ip_port_list=c->_ip_port_list;
-
-    }
-
-
 };
 
 struct ips_state{
@@ -110,40 +98,5 @@ struct ips_state{
 };
 
 
-
-struct session_state{
-    uint8_t _action;
-    uint32_t lcore_id;
-
-    //firewall state:
-	struct load_balancer_state _load_balancer_state;
-	struct nat_state _nat_state;
-	struct firewall_state _firewall_state;
-	struct ips_state _ips_state;
-
-
-
-
-
-
-
-
-
-
-    session_state():_action(READ){
-
-    }
-    session_state( struct session_state& dst){
-        _action=dst._action;
-        lcore_id=dst.lcore_id;
-
-        _nat_state.copy(&(dst._nat_state));
-
-        memcpy(&_ips_state,&(dst._ips_state),sizeof(_ips_state));
-        memcpy(&_firewall_state,&(dst._firewall_state),sizeof(_firewall_state));
-        memcpy(&_load_balancer_state,&(dst._load_balancer_state),sizeof(_load_balancer_state));
-    }
-
-};
 
 #endif
