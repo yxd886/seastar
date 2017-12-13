@@ -393,9 +393,11 @@ public:
                     return tester->run().then_wrapped([](auto&& f){
                         try{
                             f.get();
+                            fprint(std::cout, "connection tester succeeds on core %d.\n", engine().cpu_id());
                             return stop_iteration::yes;
                         }
                         catch(...){
+                            fprint(std::cout, "connection tester fails on core %d.\n", engine().cpu_id());
                             return stop_iteration::no;
                         }
                     });
