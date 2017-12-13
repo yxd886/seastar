@@ -465,6 +465,7 @@ private:
         void trim_receive_data_after_window();
         bool should_send_ack(uint16_t seg_len);
         void clear_delayed_ack();
+        packet get_retransmit_packet();
         packet get_transmit_packet();
         void retransmit_one() {
             bool data_retransmit = true;
@@ -1582,6 +1583,26 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
 }
 
 template <typename InetTraits>
+packet tcp<InetTraits>::tcb::get_retransmit_packet(){
+    assert(!_snd.data.empty());
+    auto can_send = this->can_send();
+    uint32_t len;
+    if (_tcp.hw_features().tx_tso) {
+        // FIXME: Info tap device the size of the splitted packet
+        len = _tcp.hw_features().max_packet_len - net::tcp_hdr_len_min - InetTraits::ip_hdr_len_min;
+    } else {
+        len = std::min(uint16_t(_tcp.hw_features().mtu - net::tcp_hdr_len_min - InetTraits::ip_hdr_len_min), _snd.mss);
+    }
+    can_send = std::min(can_send, len);
+    if(_snd.data.front().data_len <= can_send){
+        return _snd.data.front().p.share();
+    }
+    else{
+        return _snd.data.front().p.share(0, can_send);
+    }
+}
+
+template <typename InetTraits>
 packet tcp<InetTraits>::tcb::get_transmit_packet() {
     // easy case: empty queue
     if (_snd.unsent.empty()) {
@@ -1636,7 +1657,7 @@ void tcp<InetTraits>::tcb::output_one(bool data_retransmit) {
         return;
     }
 
-    packet p = data_retransmit ? _snd.data.front().p.share() : get_transmit_packet();
+    packet p = data_retransmit ? get_retransmit_packet() : get_transmit_packet();
     packet clone = p.share();  // early clone to prevent share() from calling packet::unuse_internal_data() on header.
     uint16_t len = p.len();
     bool syn_on = syn_needs_on();
