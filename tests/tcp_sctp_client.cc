@@ -408,9 +408,9 @@ public:
             socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
             return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([](auto&& future_fd){
                 try {
-                    fprint(std::cout, "A new connection tester is created on core %d.\n", engine().cpu_id());
                     auto t = future_fd.get();
                     auto tester = new connection_tester(std::move(std::get<0>(t)));
+                    fprint(std::cout, "A new connection tester is created on core %d.\n", engine().cpu_id());
                     return tester->run().then_wrapped([](auto&& f){
                         try{
                             f.get();
