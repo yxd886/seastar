@@ -649,7 +649,8 @@ private:
     // measure received tcp packets
     unsigned _total_received = 0;
     unsigned _receive_snap_shot = 0;
-    lowres_clock::time_point _recv_measurement_point={std::chrono::duration::min()};
+    lowres_clock::time_point _recv_measurement_point;
+    bool _recv_measurement_point_set=false;
 public:
     class connection {
         lw_shared_ptr<tcb> _tcb;
@@ -853,6 +854,10 @@ bool tcp<InetTraits>::forward(forward_hash& out_hash_data, packet& p, size_t off
 
 template <typename InetTraits>
 void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
+    if(!_recv_measurement_point_set) {
+        _recv_measurement_point = lowres_clock::now();
+        _recv_measurement_point_set = true;
+    }
     _total_received += 1;
     auto n = lowres_clock::now();
     if(std::chrono::duration_cast<std::chrono::milliseconds>(n-_recv_measurement_point).count() > 1000) {
