@@ -445,17 +445,17 @@ int main(int ac, char ** av) {
         ("proto", bpo::value<std::string>()->default_value("tcp"), "transport protocol tcp|sctp")
         ("time", bpo::value<unsigned>()->default_value(60), "total transmission time")
         ;
-    promise<> pr;
-    unsigned counter;
     unsigned max = 5;
 
-    return app.run_deprecated(ac, av, [&app, &pr, &counter, max] {
+    return app.run_deprecated(ac, av, [&app, max] {
         auto&& config = app.configuration();
         auto server = config["server"].as<std::string>();
         auto test = config["test"].as<std::string>();
         auto ncon = config["conn"].as<unsigned>();
         auto proto = config["proto"].as<std::string>();
         auto time = config["time"].as<unsigned>();
+
+        auto sem = std::make_shared<semaphore>(0);
 
         size_t total_transmission_bytes = static_cast<size_t>(1024*1024*1024)*static_cast<size_t>(time)/static_cast<size_t>(8);
         total_transmission_bytes *= 10;
@@ -484,18 +484,14 @@ int main(int ac, char ** av) {
             clients.invoke_on_all(&client::start_the_test, test);
             clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
         });*/
-        clients.start().then([server,&pr, &counter, max]{
+        clients.start().then([server,sem]{
             for(unsigned i=0; i<max; i++) {
-                clients.invoke_on_all(&client::run_tester, ipv4_addr{server}).then([](){
+                clients.invoke_on_all(&client::run_tester, ipv4_addr{server}).then([sem](){
                    fprint(std::cout, "tester finishes.\n");
-                }).then([&pr, &counter]{
-                    counter += 1;
-                    if(counter == max) {
-                        pr.set_value();
-                    }
+                   sem->signal();
                 });
             }
-            return pr.get_future();
+            return sem->wait(max);
         }).then([server, test, ncon] () {
             return clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon).then([](){
                 fprint(std::cout, "All connections are done.\n");
