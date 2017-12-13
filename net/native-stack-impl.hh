@@ -234,7 +234,7 @@ keepalive_params native_connected_socket_impl<Protocol>::get_keepalive_parameter
 // patch by djp
 template <typename Protocol>
 void native_connected_socket_impl<Protocol>::dump_tcp() {
-    _conn->dump_tcp();
+    _conn->dump_tcb();
 }
 
 }
