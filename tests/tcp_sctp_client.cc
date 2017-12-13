@@ -390,7 +390,7 @@ public:
                 try {
                     auto t = future_fd.get();
                     auto tester = new connection_tester(std::move(std::get<0>(t)));
-                    return tester.run().then_wrapped([](auto&& f){
+                    return tester->run().then_wrapped([](auto&& f){
                         try{
                             f.get();
                             return stop_iteration::yes;
