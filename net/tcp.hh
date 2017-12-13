@@ -1593,7 +1593,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
 template <typename InetTraits>
 packet tcp<InetTraits>::tcb::get_retransmit_packet(){
     assert(!_snd.data.empty());
-    auto can_send = this->can_send();
+    auto can_send = _snd.cwnd;
     uint32_t len;
     if (_tcp.hw_features().tx_tso) {
         // FIXME: Info tap device the size of the splitted packet
