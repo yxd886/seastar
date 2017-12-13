@@ -626,6 +626,9 @@ private:
         bool segment_acceptable(tcp_seq seg_seq, unsigned seg_len);
         void init_from_options(tcp_hdr* th, uint8_t* opt_start, uint8_t* opt_end);
         friend class connection;
+        // patch by djp
+    public:
+        void dump_tcb();
     };
     inet_type& _inet;
     std::unordered_map<connid, lw_shared_ptr<tcb>, connid_hash> _tcbs;
@@ -681,6 +684,10 @@ public:
         void shutdown_connect();
         void close_read();
         void close_write();
+        // patch by djp
+        void dump_tcb(){
+            _tcb->dump_tcb();
+        }
     };
     class listener {
         tcp& _tcp;
@@ -2113,6 +2120,15 @@ constexpr std::chrono::milliseconds tcp<InetTraits>::tcb::_rto_clk_granularity;
 
 template <typename InetTraits>
 typename tcp<InetTraits>::tcb::isn_secret tcp<InetTraits>::tcb::_isn_secret;
+
+// patch by djp
+template <typename InetTraits>
+void tcp<InetTraits>::tcb::dump_tcb() {
+    fprint(std::cout, "===== Dump tcb with local_port %d and remote port %d ===== \n", _local_port, _foreign_port);
+    fprint(std::cout, "Send: unacknowledged=%d, next=%d, window=%d, cwnd=%d, ssthresh=%d, dupacks=%d, window_probe=%d, zero_window_probing_out=%d \n",
+            _snd.unacknowledged, _snd.next, _snd.window, _snd.cwnd, _snd.ssthresh, _snd.dupacks, static_cast<int>(_snd.window_probe), _snd.zero_window_probing_out);
+    fprint(std::cout, "Recv: next=%d, window=%d\n", _rcv.next, _rcv.window);
+}
 
 }
 
