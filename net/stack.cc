@@ -107,6 +107,7 @@ void connected_socket::shutdown_input() {
     _csi->shutdown_input();
 }
 
+// patch by djp
 void connected_socket::dump_tcp() {
     _csi->dump_tcp();
 }
