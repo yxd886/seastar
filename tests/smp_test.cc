@@ -18,7 +18,7 @@
 /*
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
-#include "nf/ips.h"
+#include "nf/nat.h"
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
