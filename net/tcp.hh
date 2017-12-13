@@ -1213,6 +1213,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
     // In the following it is assumed that the segment is the idealized
     // segment that begins at RCV.NXT and does not exceed the window.
     if (seg_seq < _rcv.next) {
+        fprint(std::cout, "%d->%d, recv ooo, seg_seq=%d, _rcv.next=%d\n", seg_seq, _rcv.next);
         // ignore already acknowledged data
         auto dup = std::min(uint32_t(_rcv.next - seg_seq), seg_len);
         p.trim_front(dup);
@@ -1222,7 +1223,6 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
     // FIXME: We should trim data outside the right edge of the receive window as well
 
     if (seg_seq != _rcv.next) {
-        fprint(std::cout, "%d->%d, recv ooo, seg_seq=%d, _rcv.next=%d\n", seg_seq, _rcv.next);
         insert_out_of_order(seg_seq, std::move(p));
         // A TCP receiver SHOULD send an immediate duplicate ACK
         // when an out-of-order segment arrives.
