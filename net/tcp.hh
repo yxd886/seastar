@@ -1691,8 +1691,8 @@ void tcp<InetTraits>::tcb::output_one(bool data_retransmit) {
         seq = _snd.unacknowledged;
         fprint(std::cout, "%d->%d, retran, seq=%d, len=%d, _rcv.next=%d, _snd.cwnd=%d, nr_retransmit=%d, can_send=%d, last_seg_len=%d, last_seg_data_len=%d\n",
                 _local_port, _foreign_port, seq, len, _rcv.next, _snd.cwnd, _snd.data.front().nr_transmits, can_send(), _snd.data.front().p.len(), _snd.data.front().data_len);
-        fprintf(std::cout, "_snd.unacknowledged=%d, _snd.window=%d, _snd.next=%d, _snd.unsent_len=%d, _snd.cwnd=%d, flight=%d, max=%d\n",
-                _snd.unacknowledged, _snd.window, _snd.next, _snd.unsent_len, _snd.cwnd, flight_size(), _snd.cwnd + 2 * _snd.mss);
+        fprint(std::cout, "_snd.unacknowledged=%d, _snd.window=%d, _snd.next=%d, _snd.unsent_len=%d, _snd.cwnd=%d, flight=%d, max=%d\n",
+                _snd.unacknowledged, _snd.window, _snd.next, _snd.unsent_len, _snd.cwnd, flight_size(), (_snd.cwnd + 2 * _snd.mss));
     } else {
         seq = syn_on ? _snd.initial : _snd.next;
         _snd.next += len;
