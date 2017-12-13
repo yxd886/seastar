@@ -358,20 +358,17 @@ public:
                         _pr.set_exception(std::runtime_error("wtf?"));
                     }
                 }
-                fprint(std::cout, "Tester close.\n");
                 delete this;
             });
             _t.set_callback([this]{
                 _invoke_counter += 1;
                 if(_snap_shot == _bytes_write)  {
-                    fprint(std::cout, "Fail to send data.\n");
                     _quit = true;
                     _fd.shutdown_output();
                     _t.cancel();
                     _pr.set_exception(std::runtime_error("wtf?"));
                 }
                 if(_invoke_counter == 10) {
-                    fprint(std::cout, "Keep sending data for 10 seconds.\n");
                     _quit = true;
                     _fd.shutdown_output();
                     _t.cancel();
@@ -389,6 +386,7 @@ public:
             socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
             return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([](auto&& future_fd){
                 try {
+                    fprint(std::cout, "A new connection tester is created on core %d.\n", engine().cpu_id());
                     auto t = future_fd.get();
                     auto tester = new connection_tester(std::move(std::get<0>(t)));
                     return tester->run().then_wrapped([](auto&& f){
@@ -404,7 +402,7 @@ public:
                     });
                 }
                 catch(...) {
-                    fprint(std::cout, "Attempted connection fails on core %d, try again in 2s.\n", engine().cpu_id());
+                    fprint(std::cout, "Fails to create connection teste on core %d, try again in 2s.\n", engine().cpu_id());
                     return sleep(std::chrono::seconds(2s)).then([]{
                          return stop_iteration::no;
                     });
@@ -462,7 +460,7 @@ int main(int ac, char ** av) {
             clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
         });*/
         clients.start().then([server]{
-            return clients.invoke_on(0, &client::run_tester, ipv4_addr{server}).then([](){
+            return clients.invoke_on_all(&client::run_tester, ipv4_addr{server}).then([](){
                fprint(std::cout, "tester finishes.\n");
             });
         });
