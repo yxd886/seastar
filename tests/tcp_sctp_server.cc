@@ -25,6 +25,7 @@
 #include "core/distributed.hh"
 #include <vector>
 #include <iostream>
+#include <chrono>
 
 using namespace seastar;
 
@@ -175,6 +176,8 @@ public:
                 }
                 _snap_shot = _received_bytes;
             });
+            using namespace std::chrono_literals;
+            _reporter.arm_periodic(1s);
 
             return do_read().then([] {
                 return make_ready_future<>();
