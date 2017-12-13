@@ -57,7 +57,7 @@ public:
         return;
     }
 
-    future<> process_packet(net::packet* rte_pkt){
+    future<> process_packet(net::packet* rte_pkt,per_core_objs<mica_client> all_objs){
         net::ip_hdr *iphdr;
         net::tcp_hdr *tcp;
 
