@@ -1594,7 +1594,7 @@ packet tcp<InetTraits>::tcb::get_retransmit_packet(){
         len = std::min(uint16_t(_tcp.hw_features().mtu - net::tcp_hdr_len_min - InetTraits::ip_hdr_len_min), _snd.mss);
     }
     can_send = std::min(can_send, len);
-    if(_snd.data.front().data_len <= can_send){
+    if(_snd.data.front().p.len() <= can_send){
         return _snd.data.front().p.share();
     }
     else{
