@@ -224,7 +224,7 @@ public:
         _test = test;
         _latest_finished = lowres_clock::now();
 
-        return repeat([server_addr](){
+        /*return repeat([server_addr](){
             socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
             return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([](auto&& future_fd){
                 try {
@@ -260,6 +260,28 @@ public:
                         return make_ready_future<stop_iteration>(stop_iteration::no);
                     }
                 });
+            });
+        });*/
+        return repeat([server_addr, test, ncon, this](){
+            socket_address local = socket_address(::sockaddr_in{AF_INET, INADDR_ANY, {0}});
+            return engine().net().connect(make_ipv4_address(server_addr), local, protocol).then_wrapped([this, ncon](future<connected_socket> f){
+                try{
+                    auto t = f.get();
+                    auto conn = new connection(std::move(std::get<0>(t)));
+                    _connected_connections.push_back(conn);
+                    if(_connected_connections.size() == ncon){
+                        return clients.invoke_on(0, &client::report_connection_done, ncon, engine().cpu_id()).then([](){
+                            return stop_iteration::yes;
+                        });
+                    }
+                    else{
+                        return make_ready_future<stop_iteration>(stop_iteration::no);
+                    }
+                }
+                catch(std::exception& e){
+                    fprint(std::cout, "Exception happen when creating the connection.\n");
+                    return make_ready_future<stop_iteration>(stop_iteration::no);
+                }
             });
         });
     }
@@ -463,7 +485,14 @@ int main(int ac, char ** av) {
             return clients.invoke_on_all(&client::run_tester, ipv4_addr{server}).then([](){
                fprint(std::cout, "tester finishes.\n");
             });
-        });
+        }).then([server, test, ncon] () {
+            return clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon).then([](){
+                fprint(std::cout, "All connections are done.\n");
+            });
+        }).then([test](){
+            clients.invoke_on_all(&client::start_the_test, test);
+            clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
+        });;
     });
 }
 
