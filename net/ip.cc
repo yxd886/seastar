@@ -463,8 +463,6 @@ packet ipv4::frag::get_assembled_packet(ethernet_address from, ethernet_address 
 }
 
 void icmp::received(packet p, ipaddr from, ipaddr to) {
-    _counter += 1;
-    printf("Receive %dth icmp request.\n", _counter);
     auto hdr = p.get_header<icmp_hdr>(0);
     if (!hdr || hdr->type != icmp_hdr::msg_type::echo_request) {
         return;
@@ -477,8 +475,7 @@ void icmp::received(packet p, ipaddr from, ipaddr to) {
     hdr->csum = csum.get();
 
     if (_queue_space.try_wait(p.len())) { // drop packets that do not fit the queue
-        _inet.get_l2_dst_address(from).then([this, from, p = std::move(p), counter=_counter] (ethernet_address e_dst) mutable {
-            printf("Send %dth icmp reply.\n", counter);
+        _inet.get_l2_dst_address(from).then([this, from, p = std::move(p)] (ethernet_address e_dst) mutable {
             _packetq.emplace_back(ipv4_traits::l4packet{from, std::move(p), e_dst, ip_protocol_num::icmp});
         });
     }

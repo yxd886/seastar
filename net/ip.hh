@@ -236,7 +236,6 @@ private:
     inet_type& _inet;
     circular_buffer<ipv4_traits::l4packet> _packetq;
     semaphore _queue_space = {212992};
-    unsigned _counter = 0;
 };
 
 class ipv4_icmp final : public ip_protocol {

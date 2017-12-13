@@ -465,7 +465,6 @@ private:
         void trim_receive_data_after_window();
         bool should_send_ack(uint16_t seg_len);
         void clear_delayed_ack();
-        packet get_retransmit_packet();
         packet get_transmit_packet();
         void retransmit_one() {
             bool data_retransmit = true;
@@ -627,9 +626,6 @@ private:
         bool segment_acceptable(tcp_seq seg_seq, unsigned seg_len);
         void init_from_options(tcp_hdr* th, uint8_t* opt_start, uint8_t* opt_end);
         friend class connection;
-        // patch by djp
-    public:
-        void dump_tcb();
     };
     inet_type& _inet;
     std::unordered_map<connid, lw_shared_ptr<tcb>, connid_hash> _tcbs;
@@ -646,23 +642,6 @@ private:
     circular_buffer<ipv4_traits::l4packet> _packetq;
     semaphore _queue_space = {212992};
     metrics::metric_groups _metrics;
-
-    // measure received tcp packets
-    unsigned _total_received = 0;
-    unsigned _receive_snap_shot = 0;
-    unsigned _total_send = 0;
-    unsigned _send_snap_shot = 0;
-    bool _recv_measurement_timer_set=false;
-    timer<lowres_clock> _recv_measurement_timer;
-public:
-    void recv_meansure_cb(){
-        printf("TCP: receiving %d TCP packets, sending %d TCP packets.\n",
-                _total_received-_receive_snap_shot,
-                _total_send - _send_snap_shot);
-        _receive_snap_shot = _total_received;
-        _send_snap_shot = _total_send;
-    }
-
 public:
     class connection {
         lw_shared_ptr<tcb> _tcb;
@@ -702,10 +681,6 @@ public:
         void shutdown_connect();
         void close_read();
         void close_write();
-        // patch by djp
-        void dump_tcb(){
-            _tcb->dump_tcb();
-        }
     };
     class listener {
         tcp& _tcp;
@@ -795,9 +770,6 @@ tcp<InetTraits>::tcp(inet_type& inet)
                 }
             }
         }
-        if(l4p) {
-            _total_send+=1;
-        }
         return l4p;
     });
 }
@@ -811,26 +783,11 @@ future<> tcp<InetTraits>::poll_tcb(ipaddr to, lw_shared_ptr<tcb> tcb) {
 
 template <typename InetTraits>
 auto tcp<InetTraits>::listen(uint16_t port, size_t queue_length) -> listener {
-    if(!_recv_measurement_timer_set) {
-        _recv_measurement_timer_set = true;
-        _recv_measurement_timer.set_callback([this](){
-            this->recv_meansure_cb();
-        });
-        _recv_measurement_timer.arm_periodic(1s);
-    }
     return listener(*this, port, queue_length);
 }
 
 template <typename InetTraits>
 auto tcp<InetTraits>::connect(socket_address sa) -> connection {
-    if(!_recv_measurement_timer_set) {
-        _recv_measurement_timer_set = true;
-        _recv_measurement_timer.set_callback([this](){
-            this->recv_meansure_cb();
-        });
-        _recv_measurement_timer.arm_periodic(1s);
-    }
-
     uint16_t src_port;
     connid id;
     auto src_ip = _inet._inet.host_address();
@@ -884,8 +841,6 @@ bool tcp<InetTraits>::forward(forward_hash& out_hash_data, packet& p, size_t off
 
 template <typename InetTraits>
 void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
-    _total_received+=1;
-
     auto th = p.get_header(0, tcp_hdr::len);
     if (!th) {
         return;
@@ -1591,26 +1546,6 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
 }
 
 template <typename InetTraits>
-packet tcp<InetTraits>::tcb::get_retransmit_packet(){
-    assert(!_snd.data.empty());
-    auto can_send = _snd.cwnd;
-    uint32_t len;
-    if (_tcp.hw_features().tx_tso) {
-        // FIXME: Info tap device the size of the splitted packet
-        len = _tcp.hw_features().max_packet_len - net::tcp_hdr_len_min - InetTraits::ip_hdr_len_min;
-    } else {
-        len = std::min(uint16_t(_tcp.hw_features().mtu - net::tcp_hdr_len_min - InetTraits::ip_hdr_len_min), _snd.mss);
-    }
-    can_send = std::min(can_send, len);
-    if(_snd.data.front().p.len() <= can_send){
-        return _snd.data.front().p.share();
-    }
-    else{
-        return _snd.data.front().p.share(0, can_send);
-    }
-}
-
-template <typename InetTraits>
 packet tcp<InetTraits>::tcb::get_transmit_packet() {
     // easy case: empty queue
     if (_snd.unsent.empty()) {
@@ -1665,7 +1600,7 @@ void tcp<InetTraits>::tcb::output_one(bool data_retransmit) {
         return;
     }
 
-    packet p = data_retransmit ? get_retransmit_packet() : get_transmit_packet();
+    packet p = data_retransmit ? _snd.data.front().p.share() : get_transmit_packet();
     packet clone = p.share();  // early clone to prevent share() from calling packet::unuse_internal_data() on header.
     uint16_t len = p.len();
     bool syn_on = syn_needs_on();
@@ -1689,10 +1624,6 @@ void tcp<InetTraits>::tcb::output_one(bool data_retransmit) {
     tcp_seq seq;
     if (data_retransmit) {
         seq = _snd.unacknowledged;
-        fprint(std::cout, "%d->%d, retran, seq=%d, len=%d, _rcv.next=%d, _snd.cwnd=%d, nr_retransmit=%d, can_send=%d, last_seg_len=%d, last_seg_data_len=%d\n",
-                _local_port, _foreign_port, seq, len, _rcv.next, _snd.cwnd, _snd.data.front().nr_transmits, can_send(), _snd.data.front().p.len(), _snd.data.front().data_len);
-        fprint(std::cout, "_snd.unacknowledged=%d, _snd.window=%d, _snd.next=%d, _snd.unsent_len=%d, _snd.cwnd=%d, flight=%d, max=%d, _snd.dupacks=%d, _snd.mss=%d\n",
-                _snd.unacknowledged, _snd.window, _snd.next, _snd.unsent_len, _snd.cwnd, flight_size(), (_snd.cwnd + 2 * _snd.mss), _snd.dupacks, _snd.mss);
     } else {
         seq = syn_on ? _snd.initial : _snd.next;
         _snd.next += len;
@@ -2182,15 +2113,6 @@ constexpr std::chrono::milliseconds tcp<InetTraits>::tcb::_rto_clk_granularity;
 
 template <typename InetTraits>
 typename tcp<InetTraits>::tcb::isn_secret tcp<InetTraits>::tcb::_isn_secret;
-
-// patch by djp
-template <typename InetTraits>
-void tcp<InetTraits>::tcb::dump_tcb() {
-    fprint(std::cout, "===== Dump tcb with local_port %d and remote port %d ===== \n", _local_port, _foreign_port);
-    fprint(std::cout, "Send: unacknowledged=%d, next=%d, window=%d, cwnd=%d, ssthresh=%d, dupacks=%d, window_probe=%d, zero_window_probing_out=%d \n",
-            _snd.unacknowledged, _snd.next, _snd.window, _snd.cwnd, _snd.ssthresh, _snd.dupacks, static_cast<int>(_snd.window_probe), _snd.zero_window_probing_out);
-    fprint(std::cout, "Recv: next=%d, window=%d\n", _rcv.next, _rcv.window);
-}
 
 }
 

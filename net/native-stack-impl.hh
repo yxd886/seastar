@@ -89,8 +89,6 @@ public:
     bool get_keepalive() const override;
     void set_keepalive_parameters(const keepalive_params&) override;
     keepalive_params get_keepalive_parameters() const override;
-    // patch by djp
-    virtual void dump_tcp() override;
 };
 
 template <typename Protocol>
@@ -229,12 +227,6 @@ template <typename Protocol>
 keepalive_params native_connected_socket_impl<Protocol>::get_keepalive_parameters() const {
     // FIXME: implement
     return tcp_keepalive_params {std::chrono::seconds(0), std::chrono::seconds(0), 0};
-}
-
-// patch by djp
-template <typename Protocol>
-void native_connected_socket_impl<Protocol>::dump_tcp() {
-    _conn->dump_tcb();
 }
 
 }
