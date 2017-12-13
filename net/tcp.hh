@@ -1689,7 +1689,8 @@ void tcp<InetTraits>::tcb::output_one(bool data_retransmit) {
     tcp_seq seq;
     if (data_retransmit) {
         seq = _snd.unacknowledged;
-        fprint(std::cout, "%d->%d, retran, seq=%d, len=%d, _rcv.next=%d, _snd.cwnd=%d, nr_retransmit=%d\n", _local_port, _foreign_port, seq, len, _rcv.next, _snd.cwnd, _snd.data.front().nr_transmits);
+        fprint(std::cout, "%d->%d, retran, seq=%d, len=%d, _rcv.next=%d, _snd.cwnd=%d, nr_retransmit=%d, can_send=%d, last_seg_len=%d, last_seg_data_len=%d\n",
+                _local_port, _foreign_port, seq, len, _rcv.next, _snd.cwnd, _snd.data.front().nr_transmits, can_send(), _snd.data.front().p.len(), _snd.data.front().data_len);
     } else {
         seq = syn_on ? _snd.initial : _snd.next;
         _snd.next += len;
