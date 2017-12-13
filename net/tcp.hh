@@ -645,6 +645,11 @@ private:
     circular_buffer<ipv4_traits::l4packet> _packetq;
     semaphore _queue_space = {212992};
     metrics::metric_groups _metrics;
+
+    // measure received tcp packets
+    unsigned _total_received = 0;
+    unsigned _receive_snap_shot = 0;
+    lowres_clock::time_point _recv_measurement_point={std::chrono::duration::min()};
 public:
     class connection {
         lw_shared_ptr<tcb> _tcb;
@@ -848,6 +853,14 @@ bool tcp<InetTraits>::forward(forward_hash& out_hash_data, packet& p, size_t off
 
 template <typename InetTraits>
 void tcp<InetTraits>::received(packet p, ipaddr from, ipaddr to) {
+    _total_received += 1;
+    auto n = lowres_clock::now();
+    if(std::chrono::duration_cast<std::chrono::milliseconds>(n-_recv_measurement_point).count() > 1000) {
+        printf("TCP: receiving %d TCP packets.\n", _total_received-_receive_snap_shot);
+        _receive_snap_shot = _total_received;
+        _recv_measurement_point = n;
+    }
+
     auto th = p.get_header(0, tcp_hdr::len);
     if (!th) {
         return;
