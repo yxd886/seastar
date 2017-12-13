@@ -390,7 +390,7 @@ public:
                     _t.cancel();
                     _pr.set_exception(std::runtime_error("wtf?"));
                 }
-                if(_invoke_counter == 10) {
+                if(_invoke_counter == 20) {
                     _quit = true;
                     _fd.shutdown_output();
                     _t.cancel();
@@ -445,8 +445,11 @@ int main(int ac, char ** av) {
         ("proto", bpo::value<std::string>()->default_value("tcp"), "transport protocol tcp|sctp")
         ("time", bpo::value<unsigned>()->default_value(60), "total transmission time")
         ;
+    promise<> pr;
+    unsigned counter;
+    unsigned max = 5;
 
-    return app.run_deprecated(ac, av, [&app] {
+    return app.run_deprecated(ac, av, [&app, &pr, &counter, max] {
         auto&& config = app.configuration();
         auto server = config["server"].as<std::string>();
         auto test = config["test"].as<std::string>();
@@ -481,10 +484,18 @@ int main(int ac, char ** av) {
             clients.invoke_on_all(&client::start_the_test, test);
             clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
         });*/
-        clients.start().then([server]{
-            return clients.invoke_on_all(&client::run_tester, ipv4_addr{server}).then([](){
-               fprint(std::cout, "tester finishes.\n");
-            });
+        clients.start().then([server,&pr, &counter, max]{
+            for(unsigned i=0; i<max; i++) {
+                clients.invoke_on_all(&client::run_tester, ipv4_addr{server}).then([](){
+                   fprint(std::cout, "tester finishes.\n");
+                }).then([&pr, &counter]{
+                    counter += 1;
+                    if(counter == max) {
+                        pr.set_value();
+                    }
+                });
+            }
+            return pr.get_future();
         }).then([server, test, ncon] () {
             return clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon).then([](){
                 fprint(std::cout, "All connections are done.\n");
