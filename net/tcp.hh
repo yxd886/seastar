@@ -1222,6 +1222,7 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
     // FIXME: We should trim data outside the right edge of the receive window as well
 
     if (seg_seq != _rcv.next) {
+        fprint(std::cout, "%d->%d, recv ooo, seg_seq=%d, _rcv.next=%d\n", seg_seq, _rcv.next);
         insert_out_of_order(seg_seq, std::move(p));
         // A TCP receiver SHOULD send an immediate duplicate ACK
         // when an out-of-order segment arrives.
@@ -1632,7 +1633,7 @@ void tcp<InetTraits>::tcb::output_one(bool data_retransmit) {
     tcp_seq seq;
     if (data_retransmit) {
         seq = _snd.unacknowledged;
-        fprint(std::cout, "%d->%d, retran, seq=%d\n", _local_port, _foreign_port, seq);
+        fprint(std::cout, "%d->%d, retran, seq=%d, len=%d\n", _local_port, _foreign_port, seq, len);
     } else {
         seq = syn_on ? _snd.initial : _snd.next;
         _snd.next += len;
