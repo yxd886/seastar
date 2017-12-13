@@ -650,12 +650,17 @@ private:
     // measure received tcp packets
     unsigned _total_received = 0;
     unsigned _receive_snap_shot = 0;
+    unsigned _total_send = 0;
+    unsigned _send_snap_shot = 0;
     bool _recv_measurement_timer_set=false;
     timer<lowres_clock> _recv_measurement_timer;
 public:
     void recv_meansure_cb(){
-        printf("TCP: receiving %d TCP packets.\n", _total_received-_receive_snap_shot);
+        printf("TCP: receiving %d TCP packets, sending %d TCP packets.\n",
+                _total_received-_receive_snap_shot,
+                _total_send - _send_snap_shot);
         _receive_snap_shot = _total_received;
+        _send_snap_shot = _total_send;
     }
 
 public:
@@ -789,6 +794,9 @@ tcp<InetTraits>::tcp(inet_type& inet)
                     break;
                 }
             }
+        }
+        if(l4p) {
+            _total_send+=1;
         }
         return l4p;
     });
