@@ -89,6 +89,10 @@ public:
     bool get_keepalive() const override;
     void set_keepalive_parameters(const keepalive_params&) override;
     keepalive_params get_keepalive_parameters() const override;
+    // patch by djp
+    virtual void dump_tcp() override {
+        _conn->dump_tcp();
+    }
 };
 
 template <typename Protocol>
