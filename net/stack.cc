@@ -107,6 +107,10 @@ void connected_socket::shutdown_input() {
     _csi->shutdown_input();
 }
 
+void connected_socket::dump_tcp() {
+    _csi->dump_tcp();
+}
+
 socket::~socket()
 {}
 

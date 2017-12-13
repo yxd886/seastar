@@ -202,9 +202,7 @@ public:
     void shutdown_input();
 
     // patch by djp
-    void dump_tcp() {
-        _csi->dump_tcp();
-    }
+    void dump_tcp();
 };
 /// @}
 
