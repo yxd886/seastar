@@ -1393,8 +1393,8 @@ void tcp<InetTraits>::tcb::input_handle_other_state(tcp_hdr* th, packet p) {
                 // The TCP sender SHOULD use the "fast retransmit" algorithm to detect
                 // and repair loss, based on incoming duplicate ACKs.
                 // Here, We follow RFC5681.
-                fprint(std::cout, "%d->%d, dupack received, ack=%d\n", _local_port, _foreign_port, th->ack);
                 _snd.dupacks++;
+                fprint(std::cout, "%d->%d, dupack received, _snd.dupacks=%d, ack=%d\n", _local_port, _foreign_port, _snd.dupacks, th->ack);
                 uint32_t smss = _snd.mss;
                 // 3 duplicated ACKs trigger a fast retransmit
                 if (_snd.dupacks == 1 || _snd.dupacks == 2) {
