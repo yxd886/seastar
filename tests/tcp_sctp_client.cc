@@ -484,7 +484,7 @@ int main(int ac, char ** av) {
             clients.invoke_on_all(&client::start_the_test, test);
             clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
         });*/
-        clients.start().then([server,sem]{
+        clients.start().then([server,sem, max]{
             for(unsigned i=0; i<max; i++) {
                 clients.invoke_on_all(&client::run_tester, ipv4_addr{server}).then([sem](){
                    fprint(std::cout, "tester finishes.\n");
