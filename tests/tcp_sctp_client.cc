@@ -291,9 +291,9 @@ public:
         _reporter.arm_periodic(1s);
     }
     void report_bandwidth_monitoring(float bandwidth, unsigned core_id) {
-        fprint(std::cout, "TCP bandwidth on core %d: %f(Gbits/sec)\n", core_id, bandwidth);
+        // fprint(std::cout, "TCP bandwidth on core %d: %f(Gbits/sec)\n", core_id, bandwidth);
         if(core_id == 0){
-            fprint(std::cout, "Remaining active connections: %d.\n", _concurrent_connections-_num_reported);
+            // fprint(std::cout, "Remaining active connections: %d.\n", _concurrent_connections-_num_reported);
         }
     }
     future<> stop() {
