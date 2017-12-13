@@ -30,7 +30,7 @@ using namespace std::chrono_literals;
 
 // To change the size of the transmitted message, change rx_msg_size!!!!
 // Otherwise it leads to stupid errors!!!!
-static int rx_msg_size = /*4 * 1024*/64;
+static int rx_msg_size = /*4 * 1024*/128;
 static int tx_msg_total_size = 100 * 1024 * 1024;
 static int tx_msg_size = rx_msg_size;
 static int tx_msg_nr = tx_msg_total_size / tx_msg_size;
@@ -410,7 +410,7 @@ public:
                 try {
                     auto t = future_fd.get();
                     auto tester = new connection_tester(std::move(std::get<0>(t)));
-                    // fprint(std::cout, "A new connection tester is created on core %d.\n", engine().cpu_id());
+                    fprint(std::cout, "A new connection tester is created on core %d.\n", engine().cpu_id());
                     return tester->run().then_wrapped([](auto&& f){
                         try{
                             f.get();
