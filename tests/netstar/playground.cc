@@ -68,27 +68,12 @@ public:
                 return make_ready_future<>();
             }
 
-            if(net::ntoh(eth_h->eth_proto) == static_cast<uint16_t>(net::eth_protocol_num::arp)) {
-                auto ah = pkt.get_header(sizeof(net::eth_hdr), net::arp_for<net::ipv4>::arp_hdr::size());
-                if (!ah) {
-                    return make_ready_future<>();
-                }
-                auto h = net::arp_for<net::ipv4>::arp_hdr::read(ah);
-                switch (h.oper) {
-                    case 1: {
-                        std::cout<<"Receive arp request, send_hwaddr="<<h.sender_hwaddr<<", send_paddr="<<h.sender_paddr
-                                 <<", target_hwaddr="<<h.target_hwaddr<<", target_paddr="<<h.target_paddr<<std::endl;
-                        std::cout<<"Src eth addr "<<eth_h->src_mac<<", Dst eth addr "<<eth_h->dst_mac<<std::endl;
-                        break;
-                    }
-                    case 2: {
-                        std::cout<<"Receive arp reply, send_hwaddr="<<h.sender_hwaddr<<", send_paddr="<<h.sender_paddr
-                                 <<", target_hwaddr="<<h.target_hwaddr<<", target_paddr="<<h.target_paddr<<std::endl;
-                        break;
-                    }
-                    default:
-                        break;
-                 }
+            if(net::ntoh(eth_h->eth_proto) == static_cast<uint16_t>(net::eth_protocol_num::ipv4)) {
+                // Perform the address translation.
+                // For IP/TCP packets received from port 0, it should replace the
+                // source mac to 3c:fd:fe:06:09:62 and destination mac to 3c:fd:fe:06:07:82
+                eth_h->src_mac = net::ethernet_address(0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62);
+                eth_h->dst_mac = net::ethernet_address(0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82);
             }
 
             egress_port.send(std::move(pkt));
@@ -102,28 +87,14 @@ public:
                 return make_ready_future<>();
             }
 
-            if(net::ntoh(eth_h->eth_proto) == static_cast<uint16_t>(net::eth_protocol_num::arp)) {
-                auto ah = pkt.get_header(sizeof(net::eth_hdr), net::arp_for<net::ipv4>::arp_hdr::size());
-                if (!ah) {
-                    return make_ready_future<>();
-                }
-                auto h = net::arp_for<net::ipv4>::arp_hdr::read(ah);
-                switch (h.oper) {
-                    case 1: {
-                        std::cout<<"Receive arp request, send_hwaddr="<<h.sender_hwaddr<<", send_paddr="<<h.sender_paddr
-                                 <<", target_hwaddr="<<h.target_hwaddr<<", target_paddr="<<h.target_paddr<<std::endl;
-                        std::cout<<"Src eth addr "<<eth_h->src_mac<<", Dst eth addr "<<eth_h->dst_mac<<std::endl;
-                        break;
-                    }
-                    case 2: {
-                        std::cout<<"Receive arp reply, send_hwaddr="<<h.sender_hwaddr<<", send_paddr="<<h.sender_paddr
-                                 <<", target_hwaddr="<<h.target_hwaddr<<", target_paddr="<<h.target_paddr<<std::endl;
-                        break;
-                    }
-                    default:
-                        break;
-                 }
+            if(net::ntoh(eth_h->eth_proto) == static_cast<uint16_t>(net::eth_protocol_num::ipv4)) {
+                // Perform the address translation.
+                // For IP/TCP packets received from port 1, it should replace the
+                // source mac to 3c:fd:fe:06:09:60 and destination mac to 3c:fd:fe:06:08:00
+                eth_h->src_mac = net::ethernet_address(0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60);
+                eth_h->dst_mac = net::ethernet_address(0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00);
             }
+
             ingress_port.send(std::move(pkt));
             return make_ready_future<>();
         }));
