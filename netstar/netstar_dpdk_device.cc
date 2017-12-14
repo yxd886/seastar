@@ -1525,10 +1525,11 @@ int dpdk_device::init_port_start()
         _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOVLANOFFL;
     }
 
-    if (!(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO) &&
+    // Disable TSO.
+    /*if (!(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO) &&
         !(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TSO)) {
         _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
-    }
+    }*/
 
     /* for port configuration all features are off by default */
     rte_eth_conf port_conf = { 0 };
@@ -1594,6 +1595,8 @@ int dpdk_device::init_port_start()
     // Enable HW CRC stripping
     port_conf.rxmode.hw_strip_crc = 1;
 
+    // Remove LRO.
+/*
 #ifdef RTE_ETHDEV_HAS_LRO_SUPPORT
     // Enable LRO
     if (_use_lro && (_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_LRO)) {
@@ -1603,7 +1606,7 @@ int dpdk_device::init_port_start()
     } else
 #endif
         printf("LRO is off\n");
-
+*/
     // Check that all CSUM features are either all set all together or not set
     // all together. If this assumption breaks we need to rework the below logic
     // by splitting the csum offload feature bit into separate bits for IPv4,
@@ -1629,11 +1632,12 @@ int dpdk_device::init_port_start()
         _hw_features.tx_csum_ip_offload = 1;
     }
 
+    // Disable TSO
     // TSO is supported starting from DPDK v1.8
-    if (_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO) {
+    /* if (_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO) {
         printf("TSO is supported\n");
         _hw_features.tx_tso = 1;
-    }
+    }*/
 
     // There is no UFO support in the PMDs yet.
 #if 0
