@@ -384,6 +384,7 @@ public:
             });
             _t.set_callback([this]{
                 _invoke_counter += 1;
+                fprint(std::cout,"snap_shot=%d, bytes_write=%d.\n");
                 if(_snap_shot == _bytes_write)  {
                     _quit = true;
                     _fd.shutdown_output();
@@ -445,7 +446,7 @@ int main(int ac, char ** av) {
         ("proto", bpo::value<std::string>()->default_value("tcp"), "transport protocol tcp|sctp")
         ("time", bpo::value<unsigned>()->default_value(60), "total transmission time")
         ;
-    unsigned max = 2;
+    unsigned max = 1;
 
     return app.run_deprecated(ac, av, [&app, max] {
         auto&& config = app.configuration();
