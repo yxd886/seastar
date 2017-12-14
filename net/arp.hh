@@ -253,7 +253,6 @@ arp_for<L3>::lookup(const l3addr& paddr) {
 template <typename L3>
 void
 arp_for<L3>::learn(l2addr hwaddr, l3addr paddr) {
-    // std::cout<<"Receive arp response, hwaddr:"<<hwaddr<<", paddr:"<<paddr<<std::endl;
     _table[paddr] = hwaddr;
     auto i = _in_progress.find(paddr);
     if (i != _in_progress.end()) {
@@ -281,6 +280,8 @@ arp_for<L3>::received(packet p) {
     case op_request:
         return handle_request(&h);
     case op_reply: {
+        std::cout<<"Receive arp reply, send_hwaddr="<<h.sender_hwaddr<<", send_paddr="<<h.sender_paddr
+                 <<", target_hwaddr="<<h.target_hwaddr<<", target_paddr="<<h.target_paddr<<std::endl;;
         /*
          * patch by djp
          * hijack arp
