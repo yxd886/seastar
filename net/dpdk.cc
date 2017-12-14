@@ -56,6 +56,8 @@
 #include <rte_cycles.h>
 #include <rte_memzone.h>
 
+#include "core/print.hh"
+
 #if RTE_VERSION <= RTE_VERSION_NUM(2,0,0,16)
 
 static
@@ -416,6 +418,10 @@ public:
                 _xstats.get_value(dpdk_xstats::xstat_id::tx_xoff_packets);
 
             _stats.tx.bad.total       = rte_stats.oerrors;
+
+            fprint(std::cout, "rx.mcast=%d, rx.pause_xon=%d, rx.pause_xoff=%d, tx.pause_xon=%d, tx.pause_xoff=%d, tx.bad.total=%d.\n",
+                            _stats.rx.good.mcast, _stats.rx.good.pause_xon, _stats.rx.good.pause_xoff,
+                            _stats.tx.good.pause_xon, _stats.tx.good.pause_xoff, _stats.tx.bad.total);
         });
 
         // Register port statistics pollers
