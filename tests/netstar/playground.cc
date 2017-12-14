@@ -68,7 +68,7 @@ public:
                 return make_ready_future<>();
             }
 
-            if(eth_h->eth_proto == net::eth_protocol_num::arp) {
+            if(net::ntoh(eth_h->eth_proto) == static_cast<uint16_t>(net::eth_protocol_num::arp)) {
                 auto ah = pkt.get_header(sizeof(net::eth_hdr), net::arp_for<net::ipv4>::arp_hdr::size());
                 if (!ah) {
                     return make_ready_future<>();
