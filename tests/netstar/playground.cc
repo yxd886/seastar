@@ -73,7 +73,7 @@ public:
                 if (!ah) {
                     return make_ready_future<>();
                 }
-                auto h = net::arp_for::arp_hdr::read(ah);
+                auto h = net::arp_for<net::ipv4>::arp_hdr::read(ah);
                 switch (h.oper) {
                     case 1: {
                         std::cout<<"Receive arp request, send_hwaddr="<<h.sender_hwaddr<<", send_paddr="<<h.sender_paddr
