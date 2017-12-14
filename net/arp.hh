@@ -325,6 +325,7 @@ arp_for<L3>::handle_request(arp_hdr* ah) {
         ah->sender_paddr = _l3self;
         auto p = packet();
         ah->write(p.prepend_uninitialized_header(ah->size()));
+        std::cout<<"Send arp response to "<<ah->target_hwaddr<<std::endl;
         send(ah->target_hwaddr, std::move(p));
     }
     return make_ready_future<>();
