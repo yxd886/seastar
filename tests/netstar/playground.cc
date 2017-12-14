@@ -78,6 +78,7 @@ public:
                     case 1: {
                         std::cout<<"Receive arp request, send_hwaddr="<<h.sender_hwaddr<<", send_paddr="<<h.sender_paddr
                                  <<", target_hwaddr="<<h.target_hwaddr<<", target_paddr="<<h.target_paddr<<std::endl;
+                        std::cout<<"Src eth addr "<<eth_h->src_mac<<", Dst eth addr "<<eth_h->dst_mac<<std::endl;
                         break;
                     }
                     case 2: {
