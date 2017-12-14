@@ -168,6 +168,10 @@ public:
         _safe.run_async_loop([this](sd_async_flow<dummy_udp_ppr>& client){
             printf("client async loop runs!\n");
             return af_action::close_forward;
+            // return mica_query.then([](){
+            //     return af_action::close_forward;
+            //    })
+
         });
         return _safe.on_quit();
     }

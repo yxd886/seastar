@@ -61,7 +61,7 @@ public:
         auto& egress_port = *_all_ports[1];
 
         _ingress_sub.emplace(ingress_port.receive([&egress_port](net::packet pkt){
-            fprint(std::cout, "ingress receives packet.\n");
+            // fprint(std::cout, "ingress receives packet.\n");
 
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
             if(!eth_h) {
@@ -81,7 +81,7 @@ public:
         }));
 
         _egress_sub.emplace(egress_port.receive([&ingress_port](net::packet pkt){
-            fprint(std::cout, "egress receives packet.\n");
+            // fprint(std::cout, "egress receives packet.\n");
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
             if(!eth_h) {
                 return make_ready_future<>();
