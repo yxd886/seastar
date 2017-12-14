@@ -65,6 +65,7 @@ int main(int ac, char** av) {
         }).then([&all_ports]{
             return forwarders.start(std::ref(all_ports));
         }).then([]{
+            forwarders.stop();
             engine().exit(0);
         });
     });
