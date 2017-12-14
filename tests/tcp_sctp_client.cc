@@ -384,7 +384,7 @@ public:
             });
             _t.set_callback([this]{
                 _invoke_counter += 1;
-                fprint(std::cout,"snap_shot=%d, bytes_write=%d.\n");
+                fprint(std::cout,"snap_shot=%d, bytes_write=%d.\n", _snap_shot, _bytes_write);
                 if(_snap_shot == _bytes_write)  {
                     _quit = true;
                     _fd.shutdown_output();
