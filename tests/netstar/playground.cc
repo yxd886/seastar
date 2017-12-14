@@ -46,6 +46,12 @@ class forwarder {
     std::vector<port*> _all_ports;
     std::experimental::optional<subscription<net::packet>> _ingress_sub;
     std::experimental::optional<subscription<net::packet>> _egress_sub;
+
+    unsigned ingress_received = 0;
+    unsigned ingress_snapshot = 0;
+    unsigned egress_received = 0;
+    unsigned egress_snapshot = 0;
+    timer<lowres_clock> reporter;
 public:
     forwarder (ports_env& all_ports) {
         _all_ports.push_back(&(all_ports.local_port(0)));
@@ -59,10 +65,17 @@ public:
     void configure(int ) {
         auto& ingress_port = *_all_ports[0];
         auto& egress_port = *_all_ports[1];
+        reporter.set_callback([this]{
+            fprint(std::cout, "ingress_receive=%d, egress_receive=%d",
+                   ingress_received-ingress_snapshot, egress_received-egress_snapshot);
+            ingress_snapshot = ingress_received;
+            egress_snapshot = egress_received;
+        });
+        reporter.arm_periodic(1s);
 
         _ingress_sub.emplace(ingress_port.receive([&egress_port](net::packet pkt){
             // fprint(std::cout, "ingress receives packet.\n");
-
+            ingress_received += 1;
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
             if(!eth_h) {
                 return make_ready_future<>();
@@ -82,6 +95,7 @@ public:
 
         _egress_sub.emplace(egress_port.receive([&ingress_port](net::packet pkt){
             // fprint(std::cout, "egress receives packet.\n");
+            egress_received += 1;
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
             if(!eth_h) {
                 return make_ready_future<>();
