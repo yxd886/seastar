@@ -493,14 +493,14 @@ int main(int ac, char ** av) {
                 });
             }
             return sem->wait(max);
-        })/*.then([server, test, ncon] () {
+        }).then([server, test, ncon] () {
             return clients.invoke_on_all(&client::start_connections, ipv4_addr{server}, test, ncon).then([](){
                 fprint(std::cout, "All connections are done.\n");
             });
         }).then([test](){
             clients.invoke_on_all(&client::start_the_test, test);
             clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
-        })*/;
+        });
     });
 }
 
