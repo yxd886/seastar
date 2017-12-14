@@ -97,6 +97,33 @@ public:
 
         _egress_sub.emplace(egress_port.receive([&ingress_port](net::packet pkt){
             fprint(std::cout, "egress receives packet.\n");
+            auto eth_h = pkt.get_header<net::eth_hdr>(0);
+            if(!eth_h) {
+                return make_ready_future<>();
+            }
+
+            if(net::ntoh(eth_h->eth_proto) == static_cast<uint16_t>(net::eth_protocol_num::arp)) {
+                auto ah = pkt.get_header(sizeof(net::eth_hdr), net::arp_for<net::ipv4>::arp_hdr::size());
+                if (!ah) {
+                    return make_ready_future<>();
+                }
+                auto h = net::arp_for<net::ipv4>::arp_hdr::read(ah);
+                switch (h.oper) {
+                    case 1: {
+                        std::cout<<"Receive arp request, send_hwaddr="<<h.sender_hwaddr<<", send_paddr="<<h.sender_paddr
+                                 <<", target_hwaddr="<<h.target_hwaddr<<", target_paddr="<<h.target_paddr<<std::endl;
+                        std::cout<<"Src eth addr "<<eth_h->src_mac<<", Dst eth addr "<<eth_h->dst_mac<<std::endl;
+                        break;
+                    }
+                    case 2: {
+                        std::cout<<"Receive arp reply, send_hwaddr="<<h.sender_hwaddr<<", send_paddr="<<h.sender_paddr
+                                 <<", target_hwaddr="<<h.target_hwaddr<<", target_paddr="<<h.target_paddr<<std::endl;
+                        break;
+                    }
+                    default:
+                        break;
+                 }
+            }
             ingress_port.send(std::move(pkt));
             return make_ready_future<>();
         }));
