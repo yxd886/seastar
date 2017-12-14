@@ -65,12 +65,14 @@ public:
     void configure(int ) {
         auto& ingress_port = *_all_ports[0];
         auto& egress_port = *_all_ports[1];
-        reporter.set_callback([this](){
+
+        reporter.set_callback([this]() {
             fprint(std::cout, "ingress_receive=%d, egress_receive=%d",
                    this->ingress_received-this->ingress_snapshot, this->egress_received-this->egress_snapshot);
             this->ingress_snapshot = this->ingress_received;
             this->egress_snapshot = this->egress_received;
         });
+
         reporter.arm_periodic(1s);
 
         _ingress_sub.emplace(ingress_port.receive([&egress_port](net::packet pkt){
