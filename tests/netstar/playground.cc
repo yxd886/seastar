@@ -75,18 +75,19 @@ public:
                 }
                 auto h = net::arp_for::arp_hdr::read(ah);
                 switch (h.oper) {
-                    case 1:
+                    case 1: {
                         std::cout<<"Receive arp request, send_hwaddr="<<h.sender_hwaddr<<", send_paddr="<<h.sender_paddr
                                  <<", target_hwaddr="<<h.target_hwaddr<<", target_paddr="<<h.target_paddr<<std::endl;
-                        return handle_request(&h);
+                        break;
+                    }
                     case 2: {
                         std::cout<<"Receive arp reply, send_hwaddr="<<h.sender_hwaddr<<", send_paddr="<<h.sender_paddr
                                  <<", target_hwaddr="<<h.target_hwaddr<<", target_paddr="<<h.target_paddr<<std::endl;
-                        return make_ready_future<>();
+                        break;
                     }
                     default:
-                        return make_ready_future<>();
-                    }
+                        break;
+                 }
             }
 
             egress_port.send(std::move(pkt));
