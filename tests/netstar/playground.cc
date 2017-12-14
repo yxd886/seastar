@@ -69,7 +69,7 @@ public:
             }
 
             if(eth_h->eth_proto == net::eth_protocol_num::arp) {
-                auto ah = pkt.get_header(sizeof(net::eth_hdr), net::arp_for::arp_hdr::size());
+                auto ah = pkt.get_header(sizeof(net::eth_hdr), net::arp_for<net::ipv4>::arp_hdr::size());
                 if (!ah) {
                     return make_ready_future<>();
                 }
