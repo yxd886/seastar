@@ -180,6 +180,7 @@ public:
 template <typename L3>
 packet
 arp_for<L3>::make_query_packet(l3addr paddr) {
+    std::cout<<"The queried ip address is "<<paddr<<std::endl;
     arp_hdr hdr;
     hdr.htype = ethernet::arp_hardware_type();
     hdr.ptype = L3::arp_protocol_type();
