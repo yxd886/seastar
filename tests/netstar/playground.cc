@@ -23,6 +23,7 @@
 #include "core/app-template.hh"
 #include "core/print.hh"
 #include "core/distributed.hh"
+#include "core/print.hh"
 
 #include "net/udp.hh"
 #include "net/ip_checksum.hh"
@@ -81,6 +82,8 @@ int main(int ac, char** av) {
             return forwarders.start(std::ref(all_ports));
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::configure, 1);
+        }).then([]{
+            fprint(std::cout, "forwarder runs!\n");
         });
     });
 }
