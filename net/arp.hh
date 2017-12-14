@@ -93,6 +93,9 @@ private:
         op_request = 1,
         op_reply = 2,
     };
+    // patch by djp
+    // expose arp_hdr.
+public:
     struct arp_hdr {
         uint16_t htype;
         uint16_t ptype;
@@ -132,6 +135,7 @@ private:
             return 8 + 2 * (l2addr::size() + l3addr::size());
         }
     };
+private:
     struct resolution {
         std::vector<promise<l2addr>> _waiters;
         timer<> _timeout_timer;
