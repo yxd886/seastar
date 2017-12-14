@@ -72,8 +72,8 @@ public:
                 // Perform the address translation.
                 // For IP/TCP packets received from port 0, it should replace the
                 // source mac to 3c:fd:fe:06:09:62 and destination mac to 3c:fd:fe:06:07:82
-                eth_h->src_mac = net::ethernet_address(0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62);
-                eth_h->dst_mac = net::ethernet_address(0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82);
+                eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62};
+                eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
             }
 
             egress_port.send(std::move(pkt));
@@ -91,8 +91,8 @@ public:
                 // Perform the address translation.
                 // For IP/TCP packets received from port 1, it should replace the
                 // source mac to 3c:fd:fe:06:09:60 and destination mac to 3c:fd:fe:06:08:00
-                eth_h->src_mac = net::ethernet_address(0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60);
-                eth_h->dst_mac = net::ethernet_address(0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00);
+                eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
+                eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
             }
 
             ingress_port.send(std::move(pkt));
