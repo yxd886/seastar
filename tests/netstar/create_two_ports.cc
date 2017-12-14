@@ -35,7 +35,7 @@ int main(int ac, char** av) {
         return all_ports.add_port(opts, 0, smp::count,
                                   port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count,
-                                      port_type::fdir);
+                                      port_type::netstar_dpdk);
         }).then([]{
             printf("All the devices are successfully created\n");
             engine().exit(0);
