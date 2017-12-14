@@ -48,6 +48,10 @@ public:
         _all_ports.push_back(&(all_ports.local_port(0)));
         _all_ports.push_back(&(all_ports.local_port(1)));
     }
+
+    future<> stop(){
+
+    }
 };
 
 int main(int ac, char** av) {
@@ -59,9 +63,9 @@ int main(int ac, char** av) {
         return all_ports.add_port(opts, 0, smp::count, port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count, port_type::netstar_dpdk);
         }).then([&all_ports]{
-            return forwarders.start(all_ports);
+            return forwarders.start(std::ref(all_ports));
         }).then([]{
-                engine().exit(0);
+            engine().exit(0);
         });
     });
 }
