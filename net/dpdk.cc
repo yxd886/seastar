@@ -56,8 +56,6 @@
 #include <rte_cycles.h>
 #include <rte_memzone.h>
 
-#include "core/print.hh"
-
 #if RTE_VERSION <= RTE_VERSION_NUM(2,0,0,16)
 
 static
@@ -418,10 +416,6 @@ public:
                 _xstats.get_value(dpdk_xstats::xstat_id::tx_xoff_packets);
 
             _stats.tx.bad.total       = rte_stats.oerrors;
-
-            fprint(std::cout, "rx.mcast=%d, rx.pause_xon=%d, rx.pause_xoff=%d, tx.pause_xon=%d, tx.pause_xoff=%d, tx.bad.total=%d.\n",
-                            _stats.rx.good.mcast, _stats.rx.good.pause_xon, _stats.rx.good.pause_xoff,
-                            _stats.tx.good.pause_xon, _stats.tx.good.pause_xoff, _stats.tx.bad.total);
         });
 
         // Register port statistics pollers
@@ -1143,10 +1137,21 @@ build_mbuf_cluster:
         //
         static constexpr int gc_count = 1;
     public:
-        tx_buf_factory(uint8_t qid) {
+        /*
+         * patch by djp
+         * add uint8_t port_idx to tx_buf_factory
+         */
+        tx_buf_factory(uint8_t qid, uint8_t port_idx) {
             using namespace memory;
 
-            sstring name = sstring(pktmbuf_pool_name) + to_sstring(qid) + "_tx";
+            /*
+             * patch by djp
+             * modify the name of the pktmbuf_pool.
+             */
+            sstring name = sstring(pktmbuf_pool_name) + sstring("_") +
+                           sstring("p") + to_sstring(port_idx) + sstring("q") + to_sstring(qid) +
+                           "_tx";
+
             printf("Creating Tx mbuf pool '%s' [%u mbufs] ...\n",
                    name.c_str(), mbufs_per_queue_tx);
            
@@ -1804,7 +1809,14 @@ template <bool HugetlbfsMemBackend>
 bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
 {
     using namespace memory;
-    sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + "_rx";
+
+    /*
+     * patch by djp
+     * modify the name of the pktmbuf_pool.
+     */
+    sstring name = sstring(pktmbuf_pool_name) + sstring("_") +
+                   sstring("p") + to_sstring(_dev->port_idx()) + sstring("q") + to_sstring(_qid) +
+                   "_rx";
 
     printf("Creating Rx mbuf pool '%s' [%u mbufs] ...\n",
            name.c_str(), mbufs_per_queue_rx);
@@ -1928,7 +1940,11 @@ dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
      : qp(true, stats_plugin_name, qid), _dev(dev), _qid(qid),
        _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
-       _tx_buf_factory(qid),
+       /*
+        * patch by djp
+        * pass the dev->port_idx() to construct _tx_buf_factory.
+        */
+       _tx_buf_factory(qid, dev->port_idx()),
        _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))
 {
     if (!init_rx_mbuf_pool()) {
@@ -2267,12 +2283,17 @@ std::unique_ptr<net::device> create_dpdk_net_device(
                                     bool use_lro,
                                     bool enable_fc)
 {
-    static bool called = false;
+    /*
+     * patch by djp
+     * remove the called assertion check, so that
+     * we can create multiple dpdk_net_device
+     */
+    // static bool called = false;
 
-    assert(!called);
+    // assert(!called);
     assert(dpdk::eal::initialized);
 
-    called = true;
+    // called = true;
 
     // Check that we have at least one DPDK-able port
     if (rte_eth_dev_count() == 0) {
@@ -2294,7 +2315,26 @@ get_dpdk_net_options_description()
     opts.add_options()
         ("hw-fc",
                 boost::program_options::value<std::string>()->default_value("on"),
-                "Enable HW Flow Control (on / off)");
+                "Enable HW Flow Control (on / off)")
+        /*
+         * patch by djp
+         * add several command line parameters for mica clients
+         */
+        ("mica-sever-smp-count",
+                boost::program_options::value<uint16_t>()->default_value(10),
+                "The number of the cores used by the mica server.")
+        ("mica-server-mac",
+                boost::program_options::value<std::string>()->default_value("3c:fd:fe:06:09:62"),
+                "The MAC address of the port on the mica server.")
+        ("mica-server-ip",
+                boost::program_options::value<std::string>()->default_value("10.0.0.2"),
+                "The IP address of the port on the mica server.")
+        ("mica-server-port-id",
+                boost::program_options::value<uint16_t>()->default_value(1),
+                "The port id of the port on the mica server.")
+        ("mica-client-ip",
+                boost::program_options::value<std::string>()->default_value("10.0.1.2"),
+                "The IP address of the port for contacting mica server.");
 #if 0
     opts.add_options()
         ("csum-offload",
