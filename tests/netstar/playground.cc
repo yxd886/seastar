@@ -62,7 +62,7 @@ public:
         return make_ready_future<>();
     }
 
-    void configure(int ) {
+    void configure(int i) {
         auto& ingress_port = *_all_ports[0];
         auto& egress_port = *_all_ports[1];
 
