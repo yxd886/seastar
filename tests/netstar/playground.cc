@@ -44,6 +44,8 @@ distributed<forwarder> forwarders;
 
 class forwarder {
     std::vector<port*> _all_ports;
+    std::experimental::optional<subscription<net::packet>> _ingress_sub;
+    std::experimental::optional<subscription<net::packet>> _egress_sub;
 public:
     forwarder (ports_env& all_ports) {
         _all_ports.push_back(&(all_ports.local_port(0)));
@@ -58,17 +60,17 @@ public:
         auto& ingress_port = *_all_ports[0];
         auto& egress_port = *_all_ports[1];
 
-        ingress_port.receive([&egress_port](net::packet pkt){
+        _ingress_sub.emplace(ingress_port.receive([&egress_port](net::packet pkt){
             fprint(std::cout, "ingress receives packet.\n");
             egress_port.send(std::move(pkt));
             return make_ready_future<>();
-        });
+        }));
 
-        egress_port.receive([&ingress_port](net::packet pkt){
+        _egress_sub.emplace(egress_port.receive([&ingress_port](net::packet pkt){
             fprint(std::cout, "egress receives packet.\n");
             ingress_port.send(std::move(pkt));
             return make_ready_future<>();
-        });
+        }));
     }
 };
 
