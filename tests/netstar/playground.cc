@@ -52,6 +52,21 @@ public:
     future<> stop(){
         return make_ready_future<>();
     }
+
+    void configure(int ) {
+        auto& ingress_port = *_all_ports[0];
+        auto& egress_port = *_all_ports[1];
+
+        ingress_port.receive([&egress_port](net::packet pkt){
+            egress_port.send(std::move(pkt));
+            return make_ready_future<>();
+        });
+
+        egress_port.receive([&ingress_port](net::packet pkt){
+            ingress_port.send(std::move(pkt));
+            return make_ready_future<>();
+        });
+    }
 };
 
 int main(int ac, char** av) {
@@ -65,8 +80,7 @@ int main(int ac, char** av) {
         }).then([&all_ports]{
             return forwarders.start(std::ref(all_ports));
         }).then([]{
-            forwarders.stop();
-            engine().exit(0);
+            return forwarders.invoke_on_all(&forwarder::configure, 1);
         });
     });
 }
