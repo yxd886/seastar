@@ -59,11 +59,13 @@ public:
         auto& egress_port = *_all_ports[1];
 
         ingress_port.receive([&egress_port](net::packet pkt){
+            fprint(std::cout, "ingress receives packet.\n");
             egress_port.send(std::move(pkt));
             return make_ready_future<>();
         });
 
         egress_port.receive([&ingress_port](net::packet pkt){
+            fprint(std::cout, "egress receives packet.\n");
             ingress_port.send(std::move(pkt));
             return make_ready_future<>();
         });
