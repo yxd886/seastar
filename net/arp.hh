@@ -193,15 +193,15 @@ public:
         // For IP/TCP packets received from port 1, it should replace the
         // source mac to 3c:fd:fe:06:09:60 and destination mac to 3c:fd:fe:06:08:00
 
-        if(addr == net::ipv4_address("10.10.0.1")) {
-            auto receiver_ip = net::ipv4_address("10.10.0.3");
-            auto receiver_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
+        if(addr == l3addr("10.10.0.1")) {
+            auto receiver_ip = l3addr("10.10.0.3");
+            auto receiver_mac = l2addr{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
             _table[receiver_ip] = receiver_mac;
         }
 
-        if(addr == net::ipv4_address("10.10.0.3")) {
-            auto sender_ip = net::ipv4_address("10.10.0.1");
-            auto sender_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62};
+        if(addr == l3addr("10.10.0.3")) {
+            auto sender_ip = l3addr("10.10.0.1");
+            auto sender_mac = l2addr{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62};
             _table[sender_ip] = sender_mac;
         }
 
