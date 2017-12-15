@@ -83,6 +83,19 @@ public:
     uint16_t get_hw_queues_count(){
         return _dev->hw_queues_count();
     }
+    // Obtain the stats of the qp.
+    uint64_t rx_bytes() {
+        return _qp->rx_bytes();
+    }
+    uint64_t rx_pkts() {
+        return _qp->rx_pkts();
+    }
+    uint64_t tx_bytes() {
+        return _qp->tx_bytes();
+    }
+    uint64_t tx_pkts() {
+        return _qp->tx_pkts();
+    }
 };
 
 } // namespace netstar
