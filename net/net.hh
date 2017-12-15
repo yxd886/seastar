@@ -267,6 +267,20 @@ public:
     }
     bool poll_tx();
     friend class device;
+    // patch by djp
+    // expose several fields of _stats;
+    uint64_t rx_bytes() {
+        return _stats.rx.good.bytes;
+    }
+    uint64_t rx_pkts() {
+        return _stats.rx.good.packets;
+    }
+    uint64_t tx_bytes() {
+        return _stats.tx.good.bytes;
+    }
+    uint64_t tx_pkts() {
+        return _stats.tx.good.packets;
+    }
 };
 
 class device {
