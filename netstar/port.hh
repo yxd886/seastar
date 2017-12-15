@@ -135,13 +135,6 @@ public:
     future<net::packet> on_new_pkt(){
         return _receiveq.pop_eventually();
     }
-public:
-    size_t total_bytes_sent() {
-        return _queue_space->nr_signal_called_num();
-    }
-    size_t total_pkts_sent() {
-        return _queue_space->nr_signal_called();
-    }
 };
 
 } // namespace netstar
