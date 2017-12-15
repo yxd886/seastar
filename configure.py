@@ -349,7 +349,8 @@ libnetstar = [
     'netstar/mica_client.cc',
     'mica/util/cityhash/city_mod.cc',
     'netstar/fdir_device.cc',
-    'netstar/mica_def.cc'
+    'netstar/mica_def.cc',
+    'bess/time.cc',
     ]
 
 core = [
