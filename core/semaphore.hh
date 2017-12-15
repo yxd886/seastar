@@ -31,6 +31,9 @@
 
 namespace seastar {
 
+// patch by djp
+#define MEASURE_SEMAPHORE 1
+
 /// \addtogroup fiber-module
 /// @{
 
@@ -96,6 +99,11 @@ public:
 private:
     ssize_t _count;
     std::exception_ptr _ex;
+    // patch by djp
+#if MEASURE_SEMAPHORE
+    size_t _nr_signal_called = 0;
+    size_t _nr_signal_called_num = 0;
+#endif
     struct entry {
         promise<> pr;
         size_t nr;
@@ -201,7 +209,21 @@ public:
             x.pr.set_value();
             _wait_list.pop_front();
         }
+        // patch by djp
+#if MEASURE_SEMAPHORE
+        _nr_signal_called += 1;
+        _nr_signal_called_num += nr;
+#endif
     }
+    // patch by djp
+#if MEASURE_SEMAPHORE
+    size_t nr_signal_called() {
+        return _nr_signal_called;
+    }
+    size_t nr_signal_called_num() {
+        return _nr_signal_called_num;
+    }
+#endif
 
     /// Consume the specific number of units without blocking
     //

@@ -39,98 +39,39 @@ using namespace seastar;
 using namespace netstar;
 using namespace std::chrono_literals;
 
-class forwarder;
-distributed<forwarder> forwarders;
+// A description of udp_traffic_gen.
+// Generate udp packet from p0 and receive the generated udp packet from p1.
+// Each generated udp packet has a fixed destination IP address 10.10.0.3.
+// Each generated udp packet may contain a different source IP address,
+// starting from a specified value. For simplicity, we will use the same
+// source port and destination port for all generated udp flows.
 
-class forwarder {
-    std::vector<port*> _all_ports;
-    std::experimental::optional<subscription<net::packet>> _ingress_sub;
-    std::experimental::optional<subscription<net::packet>> _egress_sub;
+// We will define a class called udp_generator. udp_generator generates
+// flow packetes of a single flow, as fast as possible. Since there is a
+// semaphore protecting the send port, we can simulate fair sharing.
+//
 
-    unsigned ingress_received = 0;
-    unsigned ingress_snapshot = 0;
-    unsigned egress_received = 0;
-    unsigned egress_snapshot = 0;
-    timer<lowres_clock> reporter;
-public:
-    forwarder (ports_env& all_ports) {
-        _all_ports.push_back(&(all_ports.local_port(0)));
-        _all_ports.push_back(&(all_ports.local_port(1)));
-    }
+class traffic_gen;
+distributed<traffic_gen> traffic_gens;
 
-    future<> stop(){
-        return make_ready_future<>();
-    }
+class traffic_gen {
 
-    void configure(int i) {
-        auto& ingress_port = *_all_ports[0];
-        auto& egress_port = *_all_ports[1];
-
-        reporter.set_callback([this]() {
-            fprint(std::cout, "ingress_receive=%d, egress_receive=%d.\n",
-                   this->ingress_received-this->ingress_snapshot, this->egress_received-this->egress_snapshot);
-            this->ingress_snapshot = this->ingress_received;
-            this->egress_snapshot = this->egress_received;
-        });
-
-        // reporter.arm_periodic(1s);
-
-        _ingress_sub.emplace(ingress_port.receive([&egress_port, this](net::packet pkt){
-            // fprint(std::cout, "ingress receives packet.\n");
-            ingress_received += 1;
-            auto eth_h = pkt.get_header<net::eth_hdr>(0);
-            if(!eth_h) {
-                return make_ready_future<>();
-            }
-
-            if(net::ntoh(eth_h->eth_proto) == static_cast<uint16_t>(net::eth_protocol_num::ipv4)) {
-                // Perform the address translation.
-                // For IP/TCP packets received from port 0, it should replace the
-                // source mac to 3c:fd:fe:06:09:62 and destination mac to 3c:fd:fe:06:07:82
-                eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62};
-                eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
-            }
-
-            egress_port.send(std::move(pkt));
-            return make_ready_future<>();
-        }));
-
-        _egress_sub.emplace(egress_port.receive([&ingress_port, this](net::packet pkt){
-            // fprint(std::cout, "egress receives packet.\n");
-            egress_received += 1;
-            auto eth_h = pkt.get_header<net::eth_hdr>(0);
-            if(!eth_h) {
-                return make_ready_future<>();
-            }
-
-            if(net::ntoh(eth_h->eth_proto) == static_cast<uint16_t>(net::eth_protocol_num::ipv4)) {
-                // Perform the address translation.
-                // For IP/TCP packets received from port 1, it should replace the
-                // source mac to 3c:fd:fe:06:09:60 and destination mac to 3c:fd:fe:06:08:00
-                eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
-                eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
-            }
-
-            ingress_port.send(std::move(pkt));
-            return make_ready_future<>();
-        }));
-    }
 };
+
+namespace bpo = boost::program_options;
 
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
+    app.add_options()
+            ("conn", bpo::value<unsigned>()->default_value(16), "nr connections per cpu")
+            ("time", bpo::value<unsigned>()->default_value(60), "total transmission time")
+            ;
 
     return app.run_deprecated(ac, av, [&app, &all_ports] {
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 0, smp::count, port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count, port_type::netstar_dpdk);
-        }).then([&all_ports]{
-            return forwarders.start(std::ref(all_ports));
-        }).then([]{
-            return forwarders.invoke_on_all(&forwarder::configure, 1);
-        }).then([]{
-            fprint(std::cout, "forwarder runs!\n");
         });
     });
 }
