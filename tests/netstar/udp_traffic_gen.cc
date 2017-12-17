@@ -94,7 +94,7 @@ public:
                 });
             }
             else {
-                return later().then([]{
+                return later().then([this]{
                     if(_n == 1000) {
                         return stop_iteration::yes;
                     }
@@ -102,8 +102,6 @@ public:
                         return stop_iteration::no;
                     }
                 });
-
-
             }
         });
     }
