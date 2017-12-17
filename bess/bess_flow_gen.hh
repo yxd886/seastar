@@ -87,7 +87,7 @@ public:
                          int pkt_len, net::ethernet_address eth_src, net::ethernet_address eth_dst)
         : _ip_src_base(ipv4_src_addr.ip)
         , _ip_dst_base(ipv4_dst_addr.ip)
-        , _port_src_base(ipv4_src_addr.port)
+        , _port_src_base(ipv4_src_addr.port + engine().cpu_id())
         , _port_dst_base(ipv4_dst_addr.port)
         , _ip_src_range(0)
         , _total_pps(total_pps)
