@@ -94,7 +94,7 @@ public:
                 }
             }
 
-            /*auto next_ns = _pkt_gen.get_next_active_time();
+            auto next_ns = _pkt_gen.get_next_active_time();
 
             while(next_ns <= now_ns) {
                 auto pkt = _pkt_gen.get_next_pkt(now_ns);
@@ -109,18 +109,7 @@ public:
 
             return later().then([]{
                  return stop_iteration::no;
-            });*/
-            auto pkt = _pkt_gen.get_next_pkt(now_ns);
-            if(!pkt) {
-                return later().then([]{
-                     return stop_iteration::no;
-                });
-            }
-            else {
-                return _p->send(std::move(pkt)).then([]{
-                     return stop_iteration::no;
-                });
-            }
+            });
         });
     }
 
