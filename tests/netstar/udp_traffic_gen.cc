@@ -94,12 +94,15 @@ public:
                 });
             }
             else {
-                if(_n == 10) {
-                    return make_ready_future<stop_iteration>(stop_iteration::yes);
-                }
-                else{
-                    return make_ready_future<stop_iteration>(stop_iteration::no);
-                }
+                return later().then([]{
+                    if(_n == 1000) {
+                        return stop_iteration::yes;
+                    }
+                    else{
+                        return stop_iteration::no;
+                    }
+                });
+
 
             }
         });
