@@ -10,6 +10,7 @@
 #include <queue>
 #include <vector>
 #include <memory>
+#include <random>
 
 
 // A port of BESS flow gen module.
@@ -63,6 +64,12 @@ class dynamic_udp_flow_gen {
     net::packet _pkt_template;
     event_heap_t _heap;
     flow_queue_t _q;
+
+    // random device
+    std::random_device _rd;
+    std::default_random_engine _e;
+    int _rand_max = 1000000;
+    std::uniform_int_distribution<int> _dist{0, 1000000};
 
 public:
     ~dynamic_udp_flow_gen () {
@@ -167,7 +174,7 @@ public:
             double flow_pkts = _flow_pkts;
 
             if (flow_pkts > pre_consumed_pkts) {
-                uint64_t jitter = static_cast<uint64_t>((static_cast<double>(1e9) / _flow_pps));
+                uint64_t jitter = static_cast<uint64_t>((static_cast<double>(1e9) * get_rand_num() / _flow_pps));
 
                 // struct flow *f = ScheduleFlow(now_ns + jitter);
                 auto new_fptr = build_new_flow ();
@@ -176,8 +183,13 @@ public:
                 _heap.push(
                     std::pair<uint64_t, flow_ptr_t>(
                         now_ns + jitter, new_fptr));
-          }
+            }
         }
+    }
+
+    double get_rand_num () {
+        int val = _dist(_e);
+        return static_cast<double>(val) / static_cast<double>(_rand_max);
     }
 
 };
