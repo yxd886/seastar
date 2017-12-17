@@ -57,6 +57,8 @@ class traffic_gen;
 distributed<traffic_gen> traffic_gens;
 
 class traffic_gen {
+    bess::dynamic_udp_flow_gen _pkt_gen;
+
 
 };
 
