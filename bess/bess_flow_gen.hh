@@ -88,7 +88,7 @@ public:
     flow_ptr_t build_new_flow () {
         if(_q.empty()) {
             auto new_fptr =
-            std::make_unique<flow>({static_cast<unsigned>(_flow_pkts), true, (_ip_src_base+_ip_src_range), _ip_dst_base, _port_src_base, _port_dst_base});
+            std::make_unique<flow>(flow{static_cast<unsigned>(_flow_pkts), true, (_ip_src_base+_ip_src_range), _ip_dst_base, _port_src_base, _port_dst_base});
             _ip_src_range += 1;
             return new_fptr;
         }
