@@ -17,7 +17,7 @@
 
 // A port of BESS flow gen module.
 
-namespace besss {
+namespace bess {
 
 using namespace seastar;
 
