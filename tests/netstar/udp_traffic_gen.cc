@@ -88,13 +88,14 @@ public:
             auto pkt = _pkt_gen.get_next_pkt(tsc_to_ns(rdtsc()));
             if(pkt) {
                 _n += 1;
+                fprint(std::cout, "sending %dth packet out.\n", _n);
                 return _p->send(std::move(pkt)).then([]{
                      return stop_iteration::no;
                 });
             }
             else {
                 if(_n == 10) {
-                    return stop_iteration::yes;
+                    return make_ready_future<stop_iteration>(stop_iteration::yes);
                 }
             }
         });
