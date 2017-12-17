@@ -122,7 +122,7 @@ public:
                  // schedule a new flow to run.
                  auto new_fptr = build_new_flow();
                  _heap.push(
-                     std::pair<uint64_t, struct flow *>(
+                     std::pair<uint64_t, flow_ptr_t>(
                          now_ns + static_cast<uint64_t>(_flow_gap_ns), std::move(new_fptr)));
 
              }
@@ -132,7 +132,7 @@ public:
              }
              else {
                  _heap.push(
-                     std::pair<uint64_t, struct flow *>(
+                     std::pair<uint64_t, flow_ptr_t>(
                          now_ns + static_cast<uint64_t>(_flow_pkt_gap), std::move(fptr)));
              }
              return new_pkt;
