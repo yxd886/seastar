@@ -45,8 +45,8 @@ using namespace std::chrono_literals;
 class traffic_gen;
 distributed<traffic_gen> traffic_gens;
 
-ipv4_addr ipv4_src_addr("10.10.0.1:1000");
-ipv4_addr ipv4_dst_addr("10.10.0.3:2000");
+ipv4_addr ipv4_src_addr("10.10.0.1:10240");
+ipv4_addr ipv4_dst_addr("10.10.0.3:10241");
 net::ethernet_address eth_src{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
 net::ethernet_address eth_dst{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
 
@@ -79,12 +79,15 @@ public:
 
             if(next_ns>now_ns) {
                 // sleep at least 100ns.
-                uint64_t sleeptime = next_ns-now_ns;
+                /*uint64_t sleeptime = next_ns-now_ns;
                 if(sleeptime < 100) {
                     sleeptime = 100;
                 }
 
                 return seastar::sleep(std::chrono::nanoseconds(sleeptime)).then([]{
+                     return stop_iteration::no;
+                });*/
+                return later().then([]{
                      return stop_iteration::no;
                 });
             }

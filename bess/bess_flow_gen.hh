@@ -110,6 +110,7 @@ public:
 
         auto hdr = pkt.prepend_header<net::udp_hdr>();
         hdr->len = pkt.len();
+        hdr->cksum = 0;
         *hdr = net::hton(*hdr);
         oi.needs_csum = true;
         oi.protocol = net::ip_protocol_num::udp;
