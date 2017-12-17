@@ -50,6 +50,16 @@ ipv4_addr ipv4_dst_addr("10.10.0.3:10241");
 net::ethernet_address eth_src{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
 net::ethernet_address eth_dst{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
 
+struct rx_tx_stats {
+    uint64_t rx_pkts;
+    uint64_t tx_pkts;
+
+    void operator+=(const rx_tx_stats& o) {
+        rx_pkts += o.rx_pkts;
+        tx_pkts += o.tx_pkts;
+    }
+};
+
 class traffic_gen {
     bess::dynamic_udp_flow_gen _pkt_gen;
     netstar::port* _p;
@@ -58,6 +68,7 @@ class traffic_gen {
     uint64_t _prev_checkpoint;
 
     uint64_t _tx_pkts;
+    uint64_t _rx_pkts;
 public:
     traffic_gen(double total_pps, double flow_rate, double flow_duration, int pkt_len, int duration,
                 netstar::ports_env& all_ports)
@@ -68,7 +79,8 @@ public:
         , _n(0)
         , _duration(duration)
         , _prev_checkpoint(0)
-        , _tx_pkts(0){
+        , _tx_pkts(0)
+        , _rx_pkts(0){
 
     }
 
@@ -87,9 +99,6 @@ public:
 
             if(now_ns - _prev_checkpoint > 1e9) {
                 _prev_checkpoint = now_ns;
-                if(engine().cpu_id()==0){
-                    fprint(std::cout, "1s has passed.\n");
-                }
                 _n += 1;
                 if(_n == _duration) {
                     return make_ready_future<stop_iteration>(stop_iteration::yes);
@@ -117,9 +126,9 @@ public:
 
     void collect_stats(int) {
         repeat([this]{
-            return traffic_gens.map_reduce(adder<uint64_t>(), &traffic_gen::tx_pkts).then([this](uint64_t new_tx_pkts){
-                fprint(std::cout, "Tx pkts: %d pkts/s.\n", new_tx_pkts-_tx_pkts);
-                _tx_pkts = new_tx_pkts;
+            return traffic_gens.map_reduce(adder<rx_tx_stats>(), &traffic_gen::tx_pkts).then([this](rx_tx_stats s){
+                fprint(std::cout, "Tx pkts: %d pkts/s.\n", s.tx_pkts-_tx_pkts);
+                _tx_pkts = s.tx_pkts;
             }).then([]{
                 return sleep(1s).then([]{
                     return stop_iteration::no;
@@ -128,8 +137,8 @@ public:
         });
     }
 
-    future<uint64_t> tx_pkts() {
-        return make_ready_future<uint64_t>(_p->get_qp_wrapper().tx_pkts());
+    future<rx_tx_stats> tx_pkts() {
+        return make_ready_future<rx_tx_stats>(rx_tx_stats{_p->get_qp_wrapper().tx_pkts(), 0});
     }
 
 };
