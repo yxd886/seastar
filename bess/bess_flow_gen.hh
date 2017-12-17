@@ -6,7 +6,7 @@
 #include "net/ip.hh"
 #include "net/packet.hh"
 
-#include "core/temporary_buffer.h"
+#include "core/temporary_buffer.hh"
 
 #include <deque>
 #include <queue>
