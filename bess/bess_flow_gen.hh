@@ -7,6 +7,7 @@
 #include "net/packet.hh"
 
 #include "core/temporary_buffer.hh"
+#include "core/print.hh"
 
 #include <deque>
 #include <queue>
@@ -66,6 +67,9 @@ class dynamic_udp_flow_gen {
     double _flow_gap_ns;      /* == 10^9 / flow_rate */
     double _flow_pkt_gap;  /* = 10^9 / _flow_pps */
 
+    int _active_flows;
+    int _total_generated_flows;
+
     net::packet _pkt_template;
     event_heap_t _heap;
     flow_queue_t _q;
@@ -93,6 +97,8 @@ public:
         , _flow_pkts(_flow_pps*flow_duration)
         , _flow_gap_ns(static_cast<double>(1e9)/flow_rate)
         , _flow_pkt_gap(static_cast<double>(1e9)/_flow_pps)
+        , _active_flows(0)
+        , _total_generated_flows(0)
         , _heap([](const pkt_event_t &a, const pkt_event_t &b){ return a.first < b.first;})
         , _e(_rd()) {
         int pay_load_len = pkt_len - sizeof(net::eth_hdr) - sizeof(net::ip_hdr) - sizeof(net::udp_hdr);
@@ -147,8 +153,8 @@ public:
         }
     }
 
-    void launch() {
-        fill_in_initial_flows(tsc_to_ns(rdtsc()));
+    void launch(uint64_t now_ns) {
+        fill_in_initial_flows(now_ns);
     }
 
     net::packet get_next_pkt (uint64_t now_ns) {
@@ -173,6 +179,7 @@ public:
 
              if(fptr->remaining_pkts == 0) {
                  _q.push_back(fptr);
+                 _active_flows -= 1;
              }
              else {
                  _heap.push(
@@ -203,6 +210,8 @@ private:
     }
 
     flow_ptr_t build_new_flow () {
+        _active_flows += 1;
+        _total_generated_flows += 1;
         if(_q.empty()) {
             auto new_fptr =
                  new flow{static_cast<unsigned>(_flow_pkts),

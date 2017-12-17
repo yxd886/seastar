@@ -76,6 +76,10 @@ public:
         return make_ready_future<>();
     }
 
+    void prepare_initial_flows(int) {
+        _pkt_gen.launch(1);
+    }
+
 };
 
 namespace bpo = boost::program_options;
@@ -102,8 +106,13 @@ int main(int ac, char** av) {
         }).then([total_pps, flow_rate, flow_duration, pkt_len]{
             return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len);
         }).then([]{
+            return traffic_gens.invoke_on_all(&traffic_gen::prepare_initial_flows, 1);
+        })
+        /*.then([]{
             printf("udp traffic gen is launched.\n");
             return traffic_gens.stop();
-        });
+        }).then([]{
+            engine().exit(0);
+        })*/;
     });
 }
