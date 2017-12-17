@@ -104,6 +104,7 @@ int main(int ac, char** av) {
             return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len);
         }).then([]{
             printf("udp traffic gen is launched.\n");
+            return traffic_gens.stop();
         });
     });
 }
