@@ -74,6 +74,7 @@ public:
     }
 
     void run(int) {
+        fprint(std::cout, "tsc_hz=%d.\n", tsc_hz);
         _prev_checkpoint = tsc_to_ns(rdtsc());
 
         repeat([this](){
