@@ -57,6 +57,7 @@ class traffic_gen {
     int _duration;
     uint64_t _prev_checkpoint;
 
+    uint64_t _tx_pkts;
 public:
     traffic_gen(double total_pps, double flow_rate, double flow_duration, int pkt_len, int duration,
                 netstar::ports_env& all_ports)
@@ -66,7 +67,8 @@ public:
         , _p(&(all_ports.local_port(0)))
         , _n(0)
         , _duration(duration)
-        , _prev_checkpoint(0){
+        , _prev_checkpoint(0)
+        , _tx_pkts(0){
 
     }
 
@@ -111,6 +113,23 @@ public:
                  return stop_iteration::no;
             });
         });
+    }
+
+    void collect_stats() {
+        repeat([this]{
+            return traffic_gens.map_reduce(adder<uint64_t>, &traffic_gen::tx_pkts()).then([](uint64_t new_tx_pkts){
+                fprint(std::cout, "Tx pkts: %d pkts/s.\n", new_tx_pkts-tx_pkts);
+                tx_pkts = new_tx_pkts;
+            }).then([]{
+                return sleep(1s).then([]{
+                    return stop_iteration::no;
+                });
+            });
+        });
+    }
+
+    future<uint64_t> tx_pkts() {
+        return make_ready_future<uint64_t>(_p->get_qp_wrapper().tx_pkts());
     }
 
 };
