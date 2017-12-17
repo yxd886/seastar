@@ -87,14 +87,21 @@ int main(int ac, char** av) {
             ("total-pps", bpo::value<double>()->default_value(1000000.0), "total-pps")
             ("flow-rate", bpo::value<double>()->default_value(10000.0), "flow-rate")
             ("flow-duration", bpo::value<double>()->default_value(10.0), "flow-duration")
-            ("pkt-len", bpo::value<double>()->default_value(64), "pkt-len")
+            ("pkt-len", bpo::value<int>()->default_value(64), "pkt-len")
             ;
-
 
     return app.run_deprecated(ac, av, [&app, &all_ports] {
         auto& opts = app.configuration();
+        auto total_pps = opts["total-pps"].as<double>();
+        auto flow_rate = opts["flow-rate"].as<double>();
+        auto flow_duration = opts["flow-duration"].as<double>();
+        auto pkt_len = opts["pkt-len"].as<int>();
+
+
         return all_ports.add_port(opts, 0, smp::count, port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count, port_type::netstar_dpdk);
+        }).then([total_pps, flow_rate, flow_duration, pkt_len]{
+            return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len);
         });
     });
 }
