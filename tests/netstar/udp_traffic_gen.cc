@@ -24,6 +24,7 @@
 #include "core/print.hh"
 #include "core/distributed.hh"
 #include "core/print.hh"
+#include "core/sleep.hh"
 
 #include "net/udp.hh"
 #include "net/ip_checksum.hh"
