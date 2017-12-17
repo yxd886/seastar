@@ -99,10 +99,11 @@ public:
             if(next_ns <= now_ns) {
                 auto pkt = _pkt_gen.get_next_pkt(now_ns);
                 _p->send(std::move(pkt));
-                return later().then([]{
-                     return stop_iteration::no;
-                });
             }
+
+            return later().then([]{
+                 return stop_iteration::no;
+            });
         });
     }
 
