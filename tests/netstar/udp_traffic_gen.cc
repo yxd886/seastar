@@ -85,24 +85,15 @@ public:
 
     void run(int) {
         repeat([this](){
-            auto pkt = _pkt_gen.get_next_pkt(tsc_to_ns(rdtsc()));
-            if(pkt) {
+            uint64_t now_ns = tsc_to_ns(rdtsc());
+            auto pkt = _pkt_gen.get_next_pkt(now_ns);
+            while(pkt) {
                 _n += 1;
-                fprint(std::cout, "sending %dth packet out.\n", _n);
-                return _p->send(std::move(pkt)).then([]{
-                     return stop_iteration::no;
-                });
+                pkt = _pkt_gen.get_next_pkt(now_ns);
             }
-            else {
-                return later().then([this]{
-                    if(_n == 1000) {
-                        return stop_iteration::yes;
-                    }
-                    else{
-                        return stop_iteration::no;
-                    }
-                });
-            }
+            fprint(std::cout, "%d packets are generated.\n", _n);
+            return stop_iteration::no;
+
         });
     }
 
