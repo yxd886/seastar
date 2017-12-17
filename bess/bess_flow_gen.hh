@@ -73,12 +73,12 @@ public:
         // This is a udp packet, with pre-initialized header,
         // we only need to fill in ip and port field.
         auto ip_h = new_pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-        ip_h->src_ip = net::hton(f.src_ip);
-        ip_h->dst_ip = net::hton(f.dst_ip);
+        ip_h->src_ip.ip.raw = net::hton(f.src_ip);
+        ip_h->dst_ip.ip.raw = net::hton(f.dst_ip);
 
         auto udp_h = new_pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
-        udp_h->src_port = net::hton(f.src_port);
-        udp_h->dst_port = net::hton(f.dst_port);
+        udp_h->src_port.raw = net::hton(f.src_port);
+        udp_h->dst_port.raw = net::hton(f.dst_port);
 
         f.remaining_pkts -= 1;
 
