@@ -49,9 +49,9 @@ class dynamic_udp_flow_gen {
     uint32_t _ip_src_range;
 
     /* load parameters */
-    double _total_pps_;
-    double _flow_rate_;     /* in flows/s */
-    double _flow_duration_; /* in seconds */
+    double _total_pps;
+    double _flow_rate;     /* in flows/s */
+    double _flow_duration; /* in seconds */
 
     /* derived variables */
     double _concurrent_flows; /* expected # of flows */
@@ -147,6 +147,36 @@ public:
                          now_ns + static_cast<uint64_t>(_flow_pkt_gap), fptr));
              }
              return new_pkt;
+        }
+    }
+
+    void fill_in_initial_flows(uint64_t now_ns) {
+
+        auto new_fptr = build_new_flow ();
+        _heap.push(
+             std::pair<uint64_t, flow_ptr_t>(
+                 now_ns + static_cast<uint64_t>(_flow_gap_ns), new_fptr));
+
+
+        /* emulate pre-existing flows at the beginning */
+        double past_origin = _flow_pkts / _flow_pps; /* in secs */
+        double step = 1.0 / _flow_rate;
+
+        for (double past = step; past < past_origin; past += step) {
+            double pre_consumed_pkts = _flow_pps * past;
+            double flow_pkts = _flow_pkts;
+
+            if (flow_pkts > pre_consumed_pkts) {
+                uint64_t jitter = static_cast<uint64_t>((static_cast<double>(1e9) / _flow_pps));
+
+                // struct flow *f = ScheduleFlow(now_ns + jitter);
+                auto new_fptr = build_new_flow ();
+                new_fptr->first_pkt = false;
+                new_fptr->remaining_pkts = static_cast<unsigned>(flow_pkts - pre_consumed_pkts);
+                _heap.push(
+                    std::pair<uint64_t, flow_ptr_t>(
+                        now_ns + jitter, new_fptr));
+          }
         }
     }
 
