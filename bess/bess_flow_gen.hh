@@ -71,6 +71,7 @@ class dynamic_udp_flow_gen {
     int _total_generated_flows;
 
     net::packet _pkt_template;
+    int _pay_load_len;
     event_heap_t _heap;
     flow_queue_t _q;
 
@@ -99,21 +100,18 @@ public:
         , _flow_pkt_gap(static_cast<double>(1e9)/_flow_pps)
         , _active_flows(0)
         , _total_generated_flows(0)
+        , _pay_load_len(pkt_len - sizeof(net::eth_hdr) - sizeof(net::ip_hdr) - sizeof(net::udp_hdr))
         , _heap([](const pkt_event_t &a, const pkt_event_t &b){ return a.first > b.first;})
         , _e(_rd()) {
-        int pay_load_len = pkt_len - sizeof(net::eth_hdr) - sizeof(net::ip_hdr) - sizeof(net::udp_hdr);
-        assert(pay_load_len >= 0);
+        assert(_pay_load_len >= 0);
 
-        temporary_buffer<char> buf(pay_load_len);
+        temporary_buffer<char> buf(_pay_load_len);
         net::offload_info oi;
         net::packet pkt(std::move(buf));
 
         auto hdr = pkt.prepend_header<net::udp_hdr>();
         hdr->len = pkt.len();
-        hdr->cksum = 0;
         *hdr = net::hton(*hdr);
-        oi.needs_csum = true;
-        oi.protocol = net::ip_protocol_num::udp;
 
         auto iph = pkt.prepend_header<net::ip_hdr>();
         iph->ihl = sizeof(*iph) / 4;
@@ -127,15 +125,12 @@ public:
         iph->ip_proto = (uint8_t)net::ip_protocol_num::udp;
         iph->csum = 0;
         *iph = net::hton(*iph);
-        oi.needs_ip_csum = true;
 
         auto eh = pkt.prepend_header<net::eth_hdr>();
         eh->dst_mac = eth_dst;
         eh->src_mac = eth_src;
         eh->eth_proto = uint16_t(net::eth_protocol_num::ipv4);
         *eh = net::hton(*eh);
-
-        pkt.set_offload_info(oi);
 
         pkt.linearize();
         _pkt_template = std::move(pkt);
@@ -198,16 +193,25 @@ public:
 private:
     net::packet build_packet_for_flow(flow& f) {
         net::packet new_pkt(_pkt_template.frag(0));
-
-        // This is a udp packet, with pre-initialized header,
-        // we only need to fill in ip and port field.
-        auto ip_h = new_pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-        ip_h->src_ip.ip.raw = net::hton(f.src_ip);
-        ip_h->dst_ip.ip.raw = net::hton(f.dst_ip);
+        net::offload_info oi;
 
         auto udp_h = new_pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
         udp_h->src_port.raw = net::hton(f.src_port);
         udp_h->dst_port.raw = net::hton(f.dst_port);
+        net::checksummer csum;
+        net::ipv4_traits::udp_pseudo_header_checksum(
+                csum, net::ipv4_address(f.src_ip), net::ipv4_address(f.dst_ip), _pay_load_len+sizeof(net::udp_hdr));
+        udp_h->cksum = ~csum.get();
+        oi.needs_csum = true;
+        oi.protocol = net::ip_protocol_num::udp;
+
+        auto ip_h = new_pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+        ip_h->src_ip.ip.raw = net::hton(f.src_ip);
+        ip_h->dst_ip.ip.raw = net::hton(f.dst_ip);
+        ip_h->csum = 0;
+        oi.needs_ip_csum = true;
+
+        new_pkt.set_offload_info(oi);
 
         f.remaining_pkts -= 1;
 
