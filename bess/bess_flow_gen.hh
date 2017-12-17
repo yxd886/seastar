@@ -263,6 +263,13 @@ private:
             }
         }
 
+        while(!_heap.empty()) {
+            uint64_t next = _heap.top().first;
+            delete _heap.top().second;
+            _heap.pop();
+            fprint(std::cout, "next packet will be send out in %d ns.\n", next);
+        }
+
         fprint(std::cout, "active_flows=%d, total_generaetd_flows=%d\n", _active_flows, _total_generated_flows);
     }
 
