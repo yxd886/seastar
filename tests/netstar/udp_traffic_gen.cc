@@ -138,7 +138,7 @@ public:
     }
 
     future<rx_tx_stats> tx_pkts() {
-        return make_ready_future<rx_tx_stats>(rx_tx_stats{_p->get_qp_wrapper().tx_pkts(), 0});
+        return make_ready_future<rx_tx_stats>(rx_tx_stats{0, _p->get_qp_wrapper().tx_pkts()});
     }
 
 };
