@@ -77,7 +77,7 @@ public:
     }
 
     void prepare_initial_flows(int) {
-        _pkt_gen.launch(1);
+        _pkt_gen.launch(tsc_to_ns(rdtsc()));
     }
 
 };
@@ -108,11 +108,11 @@ int main(int ac, char** av) {
         }).then([]{
             return traffic_gens.invoke_on_all(&traffic_gen::prepare_initial_flows, 1);
         })
-        /*.then([]{
+        .then([]{
             printf("udp traffic gen is launched.\n");
             return traffic_gens.stop();
         }).then([]{
             engine().exit(0);
-        })*/;
+        });
     });
 }
