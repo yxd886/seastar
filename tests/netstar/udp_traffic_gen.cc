@@ -88,6 +88,9 @@ public:
             if(pkt) {
                 return _p->send(std::move(pkt));
             }
+            else{
+                return make_ready_future<>();
+            }
         });
     }
 
@@ -118,12 +121,9 @@ int main(int ac, char** av) {
             return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len, std::ref(all_ports));
         }).then([]{
             return traffic_gens.invoke_on_all(&traffic_gen::prepare_initial_flows, 1);
-        })
-        .then([]{
-            printf("udp traffic gen is launched.\n");
-            return traffic_gens.stop();
         }).then([]{
-            engine().exit(0);
-        });
+            return traffic_gens.invoke_on_all(&traffic_gen::run, 1);
+        })
+        ;
     });
 }
