@@ -91,7 +91,7 @@ namespace bpo = boost::program_options;
 
 int main(int ac, char** av) {
     app_template app;
-    ports_env all_ports;
+    netstar::ports_env all_ports;
     app.add_options()
             ("total-pps", bpo::value<double>()->default_value(1000000.0), "total-pps")
             ("flow-rate", bpo::value<double>()->default_value(10000.0), "flow-rate")
@@ -108,8 +108,8 @@ int main(int ac, char** av) {
 
         return all_ports.add_port(opts, 0, smp::count, port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count, port_type::netstar_dpdk);
-        }).then([total_pps, flow_rate, flow_duration, pkt_len]{
-            return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len);
+        }).then([total_pps, flow_rate, flow_duration, pkt_len, &all_ports]{
+            return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len, all_ports);
         }).then([]{
             return traffic_gens.invoke_on_all(&traffic_gen::prepare_initial_flows, 1);
         })
