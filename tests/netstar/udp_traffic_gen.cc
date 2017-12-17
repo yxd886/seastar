@@ -54,7 +54,7 @@ class traffic_gen {
     bess::dynamic_udp_flow_gen _pkt_gen;
     netstar::port* _p;
     int _n;
-    int _duration
+    int _duration;
     uint64_t _prev_checkpoint;
 
 public:
