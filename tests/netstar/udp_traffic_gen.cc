@@ -53,15 +53,20 @@ net::ethernet_address eth_dst{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
 class traffic_gen {
     bess::dynamic_udp_flow_gen _pkt_gen;
     netstar::port* _p;
+    int _n;
+    int _duration
+    uint64_t _prev_checkpoint;
 
-    int _n = 0;
-    uint64_t _prev_checkpoint = 0;
 public:
-    traffic_gen(double total_pps, double flow_rate, double flow_duration, int pkt_len, netstar::ports_env& all_ports)
+    traffic_gen(double total_pps, double flow_rate, double flow_duration, int pkt_len, int duration,
+                netstar::ports_env& all_ports)
         : _pkt_gen(ipv4_src_addr, ipv4_dst_addr,
                    total_pps, flow_rate, flow_duration,
                    pkt_len, eth_src, eth_dst)
-        , _p(&(all_ports.local_port(0))){
+        , _p(&(all_ports.local_port(0)))
+        , _n(0)
+        , _duration(duration)
+        , _prev_checkpoint(0){
 
     }
 
@@ -74,30 +79,27 @@ public:
     }
 
     void run(int) {
-        fprint(std::cout, "tsc_hz=%d.\n", tsc_hz);
         _prev_checkpoint = tsc_to_ns(rdtsc());
-
         repeat([this](){
             uint64_t now_ns = tsc_to_ns(rdtsc());
+
             if(now_ns - _prev_checkpoint > 1e9) {
                 _prev_checkpoint = now_ns;
-                fprint(std::cout, "1s has passed.\n");
+                if(engine().cpu_id()==0){
+                    fprint(std::cout, "1s has passed.\n");
+                }
                 _n += 1;
-                if(_n == 10) {
+                if(_n == _duration) {
                     return make_ready_future<stop_iteration>(stop_iteration::yes);
                 }
             }
 
             auto next_ns = _pkt_gen.get_next_active_time();
 
-            if(next_ns>now_ns) {
-                return later().then([]{
-                     return stop_iteration::no;
-                });
-            }
-            else{
+            if(next_ns <= now_ns) {
                 auto pkt = _pkt_gen.get_next_pkt(now_ns);
-                return _p->send(std::move(pkt)).then([]{
+                _p->send(std::move(pkt));
+                return later().then([]{
                      return stop_iteration::no;
                 });
             }
@@ -116,6 +118,7 @@ int main(int ac, char** av) {
             ("flow-rate", bpo::value<double>()->default_value(10000.0), "flow-rate")
             ("flow-duration", bpo::value<double>()->default_value(10.0), "flow-duration")
             ("pkt-len", bpo::value<int>()->default_value(64), "pkt-len")
+            ("duration", bpo::value<int>()->default_value(10), "duration")
             ;
 
     return app.run_deprecated(ac, av, [&app, &all_ports] {
@@ -124,11 +127,12 @@ int main(int ac, char** av) {
         auto flow_rate = opts["flow-rate"].as<double>();
         auto flow_duration = opts["flow-duration"].as<double>();
         auto pkt_len = opts["pkt-len"].as<int>();
+        auto duration = opts["duration"].as<int>();
 
         return all_ports.add_port(opts, 0, smp::count, port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count, port_type::netstar_dpdk);
-        }).then([total_pps, flow_rate, flow_duration, pkt_len, &all_ports]{
-            return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len, std::ref(all_ports));
+        }).then([total_pps, flow_rate, flow_duration, pkt_len, duration, &all_ports]{
+            return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len, duration, std::ref(all_ports));
         }).then([]{
             return traffic_gens.invoke_on_all(&traffic_gen::prepare_initial_flows, 1);
         }).then([]{
