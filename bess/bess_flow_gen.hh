@@ -27,7 +27,7 @@ struct flow {
     uint16_t dst_port;
 };
 
-using flow_ptr_t = std::unique_ptr<flow>;
+using flow_ptr_t = flow*;
 
 using pkt_event_t = std::pair<uint64_t, flow_ptr_t>;
 
@@ -65,6 +65,18 @@ class dynamic_udp_flow_gen {
     flow_queue_t _q;
 
 public:
+    ~dynamic_udp_flow_gen () {
+        while(!_q.empty()) {
+            delete _q.front();
+            _q.pop_front();
+        }
+        while(!_heap.empty()) {
+            flow_ptr_t fptr = _heap.top().second;
+            delete fptr;
+            _heap.pop();
+        }
+    }
+
     net::packet build_packet_for_flow(flow& f) {
         net::packet new_pkt(_pkt_template.frag(0));
 
@@ -86,13 +98,12 @@ public:
     flow_ptr_t build_new_flow () {
         if(_q.empty()) {
             auto new_fptr =
-            std::make_unique<flow>(
-                    flow{static_cast<unsigned>(_flow_pkts),
+                 new flow{static_cast<unsigned>(_flow_pkts),
                          true,
                          (_ip_src_base+_ip_src_range),
                          _ip_dst_base,
                          _port_src_base,
-                         _port_dst_base});
+                         _port_dst_base};
             _ip_src_range += 1;
             return new_fptr;
         }
@@ -101,7 +112,7 @@ public:
             _q.front()->first_pkt = true;
             _q.front()->src_ip = (_ip_src_base+_ip_src_range);
             _ip_src_range += 1;
-            auto new_fptr = std::move(_q.front());
+            auto new_fptr = _q.front();
             _q.pop_front();
             return new_fptr;
         }
@@ -112,7 +123,7 @@ public:
             return net::packet::make_null_packet();
         }
         else {
-             flow_ptr_t fptr(_heap.top().second.release());
+             flow_ptr_t fptr = _heap.top().second;
              _heap.pop();
              net::packet new_pkt = build_packet_for_flow(*fptr);
 
@@ -123,17 +134,17 @@ public:
                  auto new_fptr = build_new_flow();
                  _heap.push(
                      std::pair<uint64_t, flow_ptr_t>(
-                         now_ns + static_cast<uint64_t>(_flow_gap_ns), std::move(new_fptr)));
+                         now_ns + static_cast<uint64_t>(_flow_gap_ns), new_fptr));
 
              }
 
              if(fptr->remaining_pkts == 0) {
-                 _q.push_back(std::move(fptr));
+                 _q.push_back(fptr);
              }
              else {
                  _heap.push(
                      std::pair<uint64_t, flow_ptr_t>(
-                         now_ns + static_cast<uint64_t>(_flow_pkt_gap), std::move(fptr)));
+                         now_ns + static_cast<uint64_t>(_flow_pkt_gap), fptr));
              }
              return new_pkt;
         }
