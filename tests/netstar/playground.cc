@@ -35,8 +35,6 @@
 #include "netstar/work_unit.hh"
 #include "netstar/port_env.hh"
 
-#include "bess/bess_flow_gen.hh"
-
 using namespace seastar;
 using namespace netstar;
 using namespace std::chrono_literals;
