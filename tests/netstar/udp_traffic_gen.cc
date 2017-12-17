@@ -65,6 +65,7 @@ class traffic_gen {
     bess::dynamic_udp_flow_gen _pkt_gen;
     netstar::port* _p;
 
+    int _n = 0;
 public:
     traffic_gen(double total_pps, double flow_rate, double flow_duration, int pkt_len, netstar::ports_env& all_ports)
         : _pkt_gen(ipv4_src_addr, ipv4_dst_addr,
@@ -83,13 +84,18 @@ public:
     }
 
     void run(int) {
-        keep_doing([this](){
+        repeat([this](){
             auto pkt = _pkt_gen.get_next_pkt(tsc_to_ns(rdtsc()));
             if(pkt) {
-                return _p->send(std::move(pkt));
+                _n += 1;
+                return _p->send(std::move(pkt)).then([]{
+                     return stop_iteration::no;
+                });
             }
-            else{
-                return later();
+            else {
+                if(_n == 10) {
+                    return stop_iteration::yes;
+                }
             }
         });
     }
