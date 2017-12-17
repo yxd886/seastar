@@ -38,7 +38,6 @@
 #include "bess/bess_flow_gen.hh"
 
 using namespace seastar;
-using namespace netstar;
 using namespace std::chrono_literals;
 
 // A description of udp_traffic_gen.
@@ -63,12 +62,14 @@ net::ethernet_address eth_dst{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
 
 class traffic_gen {
     bess::dynamic_udp_flow_gen _pkt_gen;
+    netstar::port* _p;
 
 public:
-    traffic_gen(double total_pps, double flow_rate, double flow_duration, int pkt_len)
+    traffic_gen(double total_pps, double flow_rate, double flow_duration, int pkt_len, netstar::ports_env& all_ports)
         : _pkt_gen(ipv4_src_addr, ipv4_dst_addr,
                    total_pps, flow_rate, flow_duration,
-                   pkt_len, eth_src, eth_dst) {
+                   pkt_len, eth_src, eth_dst)
+        , _p(&(all_ports.local_port(0))){
 
     }
 
@@ -78,6 +79,10 @@ public:
 
     void prepare_initial_flows(int) {
         _pkt_gen.launch(tsc_to_ns(rdtsc()));
+    }
+
+    void run(int) {
+        keep_doing();
     }
 
 };
