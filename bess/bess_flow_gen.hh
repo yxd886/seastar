@@ -112,7 +112,7 @@ public:
             return net::packet::make_null_packet();
         }
         else {
-             flow_ptr_t fptr(_heap.top().second.release);
+             flow_ptr_t fptr(_heap.top().second.release());
              _heap.pop();
              net::packet new_pkt = build_packet_for_flow(*fptr);
 
