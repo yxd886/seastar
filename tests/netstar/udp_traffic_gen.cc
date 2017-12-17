@@ -79,6 +79,7 @@ public:
         repeat([this](){
             uint64_t now_ns = tsc_to_ns(rdtsc());
             if(now_ns - _prev_checkpoint > 1e9) {
+                _prev_checkpoint = now_ns;
                 fprint(std::cout, "1s has passed.\n");
                 _n += 1;
                 if(_n == 10) {
