@@ -56,14 +56,24 @@ using namespace std::chrono_literals;
 class traffic_gen;
 distributed<traffic_gen> traffic_gens;
 
+ipv4_addr ipv4_src_addr("10.10.0.1:1000");
+ipv4_addr ipv4_dst_addr("10.10.0.3:2000");
+net::ethernet_address eth_src{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
+net::ethernet_address eth_dst{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
+
 class traffic_gen {
     bess::dynamic_udp_flow_gen _pkt_gen;
 
 public:
-    template<typename... Args>
-    traffic_gen(Args&&... args)
-        : _pkt_gen(std::forward<Args>(args)...) {
+    traffic_gen(double total_pps, double flow_rate, double flow_duration, int pkt_len)
+        : _pkt_gen(ipv4_src_addr, ipv4_dst_addr,
+                   total_pps, flow_rate, flow_duration,
+                   pkt_len, eth_src, eth_dst) {
 
+    }
+
+    future<> stop(){
+        return make_ready_future<>();
     }
 
 };
@@ -74,9 +84,12 @@ int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
     app.add_options()
-            ("conn", bpo::value<unsigned>()->default_value(16), "nr connections per cpu")
-            ("time", bpo::value<unsigned>()->default_value(60), "total transmission time")
+            ("total-pps", bpo::value<double>()->default_value(1000000.0), "total-pps")
+            ("flow-rate", bpo::value<double>()->default_value(10000.0), "flow-rate")
+            ("flow-duration", bpo::value<double>()->default_value(10.0), "flow-duration")
+            ("pkt-len", bpo::value<double>()->default_value(64), "pkt-len")
             ;
+
 
     return app.run_deprecated(ac, av, [&app, &all_ports] {
         auto& opts = app.configuration();
