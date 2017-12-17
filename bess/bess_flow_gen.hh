@@ -99,7 +99,7 @@ public:
         , _flow_pkt_gap(static_cast<double>(1e9)/_flow_pps)
         , _active_flows(0)
         , _total_generated_flows(0)
-        , _heap([](const pkt_event_t &a, const pkt_event_t &b){ return a.first < b.first;})
+        , _heap([](const pkt_event_t &a, const pkt_event_t &b){ return a.first > b.first;})
         , _e(_rd()) {
         int pay_load_len = pkt_len - sizeof(net::eth_hdr) - sizeof(net::ip_hdr) - sizeof(net::udp_hdr);
         assert(pay_load_len >= 0);
