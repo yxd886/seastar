@@ -42,18 +42,6 @@ using namespace seastar;
 using namespace netstar;
 using namespace std::chrono_literals;
 
-// A description of udp_traffic_gen.
-// Generate udp packet from p0 and receive the generated udp packet from p1.
-// Each generated udp packet has a fixed destination IP address 10.10.0.3.
-// Each generated udp packet may contain a different source IP address,
-// starting from a specified value. For simplicity, we will use the same
-// source port and destination port for all generated udp flows.
-
-// We will define a class called udp_generator. udp_generator generates
-// flow packetes of a single flow, as fast as possible. Since there is a
-// semaphore protecting the send port, we can simulate fair sharing.
-//
-
 class traffic_gen;
 distributed<traffic_gen> traffic_gens;
 
