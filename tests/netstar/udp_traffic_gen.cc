@@ -110,7 +110,7 @@ int main(int ac, char** av) {
         return all_ports.add_port(opts, 0, smp::count, port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count, port_type::netstar_dpdk);
         }).then([total_pps, flow_rate, flow_duration, pkt_len, &all_ports]{
-            return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len, all_ports);
+            return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len, std::ref(all_ports));
         }).then([]{
             return traffic_gens.invoke_on_all(&traffic_gen::prepare_initial_flows, 1);
         })
