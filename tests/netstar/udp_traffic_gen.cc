@@ -84,7 +84,7 @@ public:
     }
 
     void run(int) {
-        repeat([this](){
+        /*repeat([this](){
             uint64_t now_ns = tsc_to_ns(rdtsc());
             auto pkt = _pkt_gen.get_next_pkt(now_ns);
             while(pkt) {
@@ -94,7 +94,7 @@ public:
             fprint(std::cout, "%d packets are generated.\n", _n);
             return stop_iteration::no;
 
-        });
+        });*/
     }
 
 };
