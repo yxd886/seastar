@@ -102,6 +102,8 @@ int main(int ac, char** av) {
             return all_ports.add_port(opts, 1, smp::count, port_type::netstar_dpdk);
         }).then([total_pps, flow_rate, flow_duration, pkt_len]{
             return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len);
+        }).then([]{
+            printf("udp traffic gen is launched.\n");
         });
     });
 }
