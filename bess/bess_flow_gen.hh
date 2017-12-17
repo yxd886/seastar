@@ -123,7 +123,7 @@ public:
         iph->frag = 0;
         iph->ttl = 64;
         iph->ip_proto = (uint8_t)net::ip_protocol_num::udp;
-        iph->csum = 0;
+        // iph->csum = 0;
         *iph = net::hton(*iph);
 
         auto eh = pkt.prepend_header<net::eth_hdr>();
