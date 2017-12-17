@@ -97,7 +97,6 @@ int main(int ac, char** av) {
         auto flow_duration = opts["flow-duration"].as<double>();
         auto pkt_len = opts["pkt-len"].as<int>();
 
-
         return all_ports.add_port(opts, 0, smp::count, port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count, port_type::netstar_dpdk);
         }).then([total_pps, flow_rate, flow_duration, pkt_len]{
