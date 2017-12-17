@@ -190,6 +190,10 @@ public:
         }
     }
 
+    uint64_t get_next_active_time() {
+        return _heap.top().first;
+    }
+
 private:
     net::packet build_packet_for_flow(flow& f) {
         net::packet new_pkt(_pkt_template.frag(0));
@@ -261,13 +265,6 @@ private:
                     std::pair<uint64_t, flow_ptr_t>(
                         now_ns + jitter, new_fptr));
             }
-        }
-
-        while(!_heap.empty()) {
-            uint64_t next = _heap.top().first;
-            delete _heap.top().second;
-            _heap.pop();
-            fprint(std::cout, "next packet will be send out in %d ns.\n", next);
         }
 
         fprint(std::cout, "active_flows=%d, total_generaetd_flows=%d\n", _active_flows, _total_generated_flows);

@@ -85,24 +85,29 @@ public:
 
     void run(int) {
         uint64_t now_ns = tsc_to_ns(rdtsc());
-        fprint(std::cout, "%d.\n", now_ns);
-        now_ns = tsc_to_ns(rdtsc());
-                fprint(std::cout, "%d.\n", now_ns);
-                now_ns = tsc_to_ns(rdtsc());
-                        fprint(std::cout, "%d.\n", now_ns);
-                        now_ns = tsc_to_ns(rdtsc());
-                                fprint(std::cout, "%d.\n", now_ns);
-        /*repeat([this](){
-            uint64_t now_ns = tsc_to_ns(rdtsc());
-            auto pkt = _pkt_gen.get_next_pkt(now_ns);
-            while(pkt) {
-                _n += 1;
-                pkt = _pkt_gen.get_next_pkt(now_ns);
-            }
-            fprint(std::cout, "%d packets are generated.\n", _n);
-            return stop_iteration::no;
 
-        });*/
+        repeat([this](){
+            uint64_t now_ns = tsc_to_ns(rdtsc());
+            auto next_ns = _pkt_gen.get_next_active_time();
+
+            if(next_ns>now_ns) {
+                // sleep at least 100ns.
+                uint64_t sleeptime = next_ns-now_ns;
+                if(sleeptime < 100) {
+                    sleeptime = 100;
+                }
+
+                return seastar::sleep(std::chrono::nanoseconds(sleeptime)).then([]{
+                     return stop_iteration::no;
+                });
+            }
+            else{
+                auto pkt = _pkt_gen.get_next_pkt(now_ns);
+                return _p->send(std::move(pkt)).then([]{
+                     return stop_iteration::no;
+                });
+            }
+        });
     }
 
 };
