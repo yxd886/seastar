@@ -94,7 +94,9 @@ public:
             else{
                 auto pkt = _pkt_gen.get_next_pkt(now_ns);
                 return _p->send(std::move(pkt)).then([]{
-                     return stop_iteration::no;
+                     return later().then([]{
+                         stop_iteration::no;
+                     });
                 });
             }
         });
