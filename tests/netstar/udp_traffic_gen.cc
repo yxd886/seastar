@@ -117,7 +117,7 @@ public:
 
     void collect_stats() {
         repeat([this]{
-            return traffic_gens.map_reduce(adder<uint64_t>, &traffic_gen::tx_pkts()).then([](uint64_t new_tx_pkts){
+            return traffic_gens.map_reduce(adder<uint64_t>, &traffic_gen::tx_pkts).then([](uint64_t new_tx_pkts){
                 fprint(std::cout, "Tx pkts: %d pkts/s.\n", new_tx_pkts-tx_pkts);
                 tx_pkts = new_tx_pkts;
             }).then([]{
