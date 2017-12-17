@@ -55,6 +55,7 @@ class traffic_gen {
     netstar::port* _p;
 
     int _n = 0;
+    uint64_t _prev_checkpoint = 0;
 public:
     traffic_gen(double total_pps, double flow_rate, double flow_duration, int pkt_len, netstar::ports_env& all_ports)
         : _pkt_gen(ipv4_src_addr, ipv4_dst_addr,
@@ -73,20 +74,21 @@ public:
     }
 
     void run(int) {
+        _prev_checkpoint = tsc_to_ns(rdtsc());
+
         repeat([this](){
             uint64_t now_ns = tsc_to_ns(rdtsc());
+            if(now_ns - _prev_checkpoint > 1e9) {
+                fprint(std::cout, "1s has passed.\n");
+                _n += 1;
+                if(_n == 10) {
+                    return make_ready_future<stop_iteration>(stop_iteration::yes);
+                }
+            }
+
             auto next_ns = _pkt_gen.get_next_active_time();
 
             if(next_ns>now_ns) {
-                // sleep at least 100ns.
-                /*uint64_t sleeptime = next_ns-now_ns;
-                if(sleeptime < 100) {
-                    sleeptime = 100;
-                }
-
-                return seastar::sleep(std::chrono::nanoseconds(sleeptime)).then([]{
-                     return stop_iteration::no;
-                });*/
                 return later().then([]{
                      return stop_iteration::no;
                 });
@@ -94,9 +96,7 @@ public:
             else{
                 auto pkt = _pkt_gen.get_next_pkt(now_ns);
                 return _p->send(std::move(pkt)).then([]{
-                     return later().then([]{
-                         return stop_iteration::no;
-                     });
+                     return stop_iteration::no;
                 });
             }
         });
