@@ -84,8 +84,6 @@ public:
     }
 
     void run(int) {
-        uint64_t now_ns = tsc_to_ns(rdtsc());
-
         repeat([this](){
             uint64_t now_ns = tsc_to_ns(rdtsc());
             auto next_ns = _pkt_gen.get_next_active_time();
