@@ -86,6 +86,12 @@ public:
     void run(int) {
         uint64_t now_ns = tsc_to_ns(rdtsc());
         fprint(std::cout, "%d.\n", now_ns);
+        now_ns = tsc_to_ns(rdtsc());
+                fprint(std::cout, "%d.\n", now_ns);
+                now_ns = tsc_to_ns(rdtsc());
+                        fprint(std::cout, "%d.\n", now_ns);
+                        now_ns = tsc_to_ns(rdtsc());
+                                fprint(std::cout, "%d.\n", now_ns);
         /*repeat([this](){
             uint64_t now_ns = tsc_to_ns(rdtsc());
             auto pkt = _pkt_gen.get_next_pkt(now_ns);
