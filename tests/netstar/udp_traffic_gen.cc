@@ -117,7 +117,7 @@ public:
 
     void collect_stats() {
         repeat([this]{
-            return traffic_gens.map_reduce(adder<uint64_t>(), &traffic_gen::tx_pkts).then([](uint64_t new_tx_pkts){
+            return traffic_gens.map_reduce(adder<uint64_t>(), &traffic_gen::tx_pkts).then([this](uint64_t new_tx_pkts){
                 fprint(std::cout, "Tx pkts: %d pkts/s.\n", new_tx_pkts-_tx_pkts);
                 _tx_pkts = new_tx_pkts;
             }).then([]{
@@ -163,6 +163,8 @@ int main(int ac, char** av) {
             return traffic_gens.invoke_on_all(&traffic_gen::prepare_initial_flows, 1);
         }).then([]{
             return traffic_gens.invoke_on_all(&traffic_gen::run, 1);
+        }).then([]{
+
         })
         ;
     });
