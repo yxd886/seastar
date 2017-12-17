@@ -6,6 +6,8 @@
 #include "net/ip.hh"
 #include "net/packet.hh"
 
+#include "core/temporary_buffer.h"
+
 #include <deque>
 #include <queue>
 #include <vector>
@@ -75,6 +77,63 @@ class dynamic_udp_flow_gen {
     std::uniform_int_distribution<int> _dist{0, 1000000};
 
 public:
+    dynamic_udp_flow_gen(ipv4_addr ipv4_src_addr,  ipv4_addr ipv4_dst_addr,
+                         double total_pps, double flow_rate, double flow_duration,
+                         int pkt_len, net::ethernet_address eth_src, net::ethernet_address eth_dst)
+        : _ip_src_base(ipv4_src_addr.ip)
+        , _ip_dst_base(ipv4_dst_addr.ip)
+        , _port_src_base(ipv4_src_addr.port)
+        , _port_dst_base(ipv4_dst_addr.port)
+        , _ip_src_range(0)
+        , _total_pps(total_pps)
+        , _flow_rate(flow_rate)
+        , _flow_duration(flow_duration)
+        , _concurrent_flows(flow_duration*flow_rate)
+        , _flow_pps(_total_pps/_concurrent_flows)
+        , _flow_pkts(_flow_pps*flow_duration)
+        , _flow_gap_ns(static_cast<double>(1e9)/flow_rate)
+        , _flow_pkt_gap(static_cast<double>(1e9)/_flow_pps)
+        , _heap([](const pkt_event_t &a, const pkt_event_t &b){ return a.first < b.first;})
+        , _e(_rd()) {
+        int pay_load_len = pkt_len - sizeof(net::eth_hdr) - sizeof(net::ip_hdr) - sizeof(net::udp_hdr);
+        assert(pay_load_len >= 0);
+        temporary_buffer<char> buf(pay_load_len);
+        net::offload_info oi;
+        net::packet pkt(std::move(buf));
+
+        auto hdr = pkt.prepend_header<net::udp_hdr>();
+        hdr->len = pkt.len();
+        *hdr = net::hton(*hdr);
+        oi.needs_csum = true;
+        oi.protocol = net::ip_protocol_num::udp;
+
+        auto iph = pkt.prepend_header<net::ip_hdr>();
+        iph->ihl = sizeof(*iph) / 4;
+        iph->ver = 4;
+        iph->dscp = 0;
+        iph->ecn = 0;
+        iph->len = pkt.len();
+        iph->id = 0;
+        iph->frag = 0;
+        iph->ttl = 64;
+        iph->ip_proto = (uint8_t)net::ip_protocol_num::udp;
+        iph->csum = 0;
+        *iph = net::hton(*iph);
+        oi.needs_ip_csum = true;
+
+        auto eh = pkt.prepend_header<net::eth_hdr>();
+        eh->dst_mac = eth_dst;
+        eh->src_mac = eth_src;
+        eh->eth_proto = uint16_t(net::eth_protocol_num::ipv4);
+        *eh = net::hton(*eh);
+
+        pkt.set_offload_info(oi);
+
+        pkt.linearize();
+        _pkt_template = std::move(pkt);
+        assert(_pkt_template.nr_frags() == 1);
+    }
+
     ~dynamic_udp_flow_gen () {
         while(!_q.empty()) {
             delete _q.front();
