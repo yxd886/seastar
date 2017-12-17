@@ -38,6 +38,7 @@
 #include "bess/bess_flow_gen.hh"
 
 using namespace seastar;
+using namespace netstar;
 using namespace std::chrono_literals;
 
 // A description of udp_traffic_gen.
