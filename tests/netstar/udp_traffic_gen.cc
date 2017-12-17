@@ -165,7 +165,8 @@ int main(int ac, char** av) {
         auto duration = opts["duration"].as<int>();
 
         return all_ports.add_port(opts, 0, smp::count, port_type::netstar_dpdk).then([&opts, &all_ports]{
-            return all_ports.add_port(opts, 1, smp::count, port_type::netstar_dpdk);
+           //  return all_ports.add_port(opts, 1, smp::count, port_type::netstar_dpdk);
+            return make_ready_future<>();
         }).then([total_pps, flow_rate, flow_duration, pkt_len, duration, &all_ports]{
             return traffic_gens.start(total_pps, flow_rate, flow_duration, pkt_len, duration, std::ref(all_ports));
         }).then([]{
