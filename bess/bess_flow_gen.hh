@@ -97,6 +97,7 @@ public:
         , _e(_rd()) {
         int pay_load_len = pkt_len - sizeof(net::eth_hdr) - sizeof(net::ip_hdr) - sizeof(net::udp_hdr);
         assert(pay_load_len >= 0);
+
         temporary_buffer<char> buf(pay_load_len);
         net::offload_info oi;
         net::packet pkt(std::move(buf));
