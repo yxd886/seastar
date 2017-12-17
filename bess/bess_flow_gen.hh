@@ -147,6 +147,43 @@ public:
         }
     }
 
+    void launch() {
+        fill_in_initial_flows(tsc_to_ns(rdtsc()));
+    }
+
+    net::packet get_next_pkt (uint64_t now_ns) {
+        if(now_ns < _heap.top().first) {
+            return net::packet::make_null_packet();
+        }
+        else {
+             flow_ptr_t fptr = _heap.top().second;
+             _heap.pop();
+             net::packet new_pkt = build_packet_for_flow(*fptr);
+
+             if(fptr->first_pkt) {
+                 fptr->first_pkt = false;
+
+                 // schedule a new flow to run.
+                 auto new_fptr = build_new_flow();
+                 _heap.push(
+                     std::pair<uint64_t, flow_ptr_t>(
+                         now_ns + static_cast<uint64_t>(_flow_gap_ns), new_fptr));
+
+             }
+
+             if(fptr->remaining_pkts == 0) {
+                 _q.push_back(fptr);
+             }
+             else {
+                 _heap.push(
+                     std::pair<uint64_t, flow_ptr_t>(
+                         now_ns + static_cast<uint64_t>(_flow_pkt_gap), fptr));
+             }
+             return new_pkt;
+        }
+    }
+
+private:
     net::packet build_packet_for_flow(flow& f) {
         net::packet new_pkt(_pkt_template.frag(0));
 
@@ -185,38 +222,6 @@ public:
             auto new_fptr = _q.front();
             _q.pop_front();
             return new_fptr;
-        }
-    }
-
-    net::packet get_next_pkt (uint64_t now_ns) {
-        if(now_ns < _heap.top().first) {
-            return net::packet::make_null_packet();
-        }
-        else {
-             flow_ptr_t fptr = _heap.top().second;
-             _heap.pop();
-             net::packet new_pkt = build_packet_for_flow(*fptr);
-
-             if(fptr->first_pkt) {
-                 fptr->first_pkt = false;
-
-                 // schedule a new flow to run.
-                 auto new_fptr = build_new_flow();
-                 _heap.push(
-                     std::pair<uint64_t, flow_ptr_t>(
-                         now_ns + static_cast<uint64_t>(_flow_gap_ns), new_fptr));
-
-             }
-
-             if(fptr->remaining_pkts == 0) {
-                 _q.push_back(fptr);
-             }
-             else {
-                 _heap.push(
-                     std::pair<uint64_t, flow_ptr_t>(
-                         now_ns + static_cast<uint64_t>(_flow_pkt_gap), fptr));
-             }
-             return new_pkt;
         }
     }
 
