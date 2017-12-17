@@ -83,7 +83,12 @@ public:
     }
 
     void run(int) {
-        // keep_doing();
+        keep_doing([this](){
+            auto pkt = _pkt_gen.get_next_pkt(tsc_to_ns(rdtsc()));
+            if(pkt) {
+                return _p->send(std::move(pkt));
+            }
+        });
     }
 
 };
