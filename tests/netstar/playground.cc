@@ -73,7 +73,7 @@ public:
             this->egress_snapshot = this->egress_received;
         });
 
-        // reporter.arm_periodic(1s);
+        reporter.arm_periodic(1s);
 
         _ingress_sub.emplace(ingress_port.receive([&egress_port, this](net::packet pkt){
             // fprint(std::cout, "ingress receives packet.\n");
@@ -91,7 +91,7 @@ public:
                 eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
             }
 
-            egress_port.send(std::move(pkt));
+            // egress_port.send(std::move(pkt));
             return make_ready_future<>();
         }));
 
