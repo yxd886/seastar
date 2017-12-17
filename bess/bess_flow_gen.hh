@@ -262,6 +262,8 @@ private:
                         now_ns + jitter, new_fptr));
             }
         }
+
+        fprint(std::cout, "active_flows=%d, total_generaetd_flows=%d\n", _active_flows, _total_generated_flows);
     }
 
     double get_rand_num () {
