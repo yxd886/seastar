@@ -32,13 +32,9 @@ using flow_ptr_t = flow*;
 
 using pkt_event_t = std::pair<uint64_t, flow_ptr_t>;
 
-auto comp_func = [](const pkt_event_t &a, const pkt_event_t &b) {
-    return a.first < b.first;
-};
-
 using event_heap_t = std::priority_queue<pkt_event_t,
                                          std::vector<pkt_event_t>,
-                                         decltype(comp_func)>;
+                                         std::function<bool(const pkt_event_t&, const pkt_event_t&)>>;
 
 using flow_queue_t = std::deque<flow_ptr_t>;
 
