@@ -35,6 +35,8 @@
 #include "netstar/work_unit.hh"
 #include "netstar/port_env.hh"
 
+#include "bess/bess_flow_gen.hh"
+
 using namespace seastar;
 using namespace netstar;
 using namespace std::chrono_literals;
@@ -67,13 +69,13 @@ public:
         auto& egress_port = *_all_ports[1];
 
         reporter.set_callback([this]() {
-            fprint(std::cout, "ingress_receive=%d, egress_receive=%d on core %d.\n",
-                   this->ingress_received-this->ingress_snapshot, this->egress_received-this->egress_snapshot, engine().cpu_id());
+            fprint(std::cout, "ingress_receive=%d, egress_receive=%d.\n",
+                   this->ingress_received-this->ingress_snapshot, this->egress_received-this->egress_snapshot);
             this->ingress_snapshot = this->ingress_received;
             this->egress_snapshot = this->egress_received;
         });
 
-        reporter.arm_periodic(1s);
+        // reporter.arm_periodic(1s);
 
         _ingress_sub.emplace(ingress_port.receive([&egress_port, this](net::packet pkt){
             // fprint(std::cout, "ingress receives packet.\n");
