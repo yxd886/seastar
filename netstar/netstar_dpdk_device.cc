@@ -1197,6 +1197,9 @@ build_mbuf_cluster:
 
                 return pkt;
             }
+            else{
+                return nullptr;
+            }
 
             //
             // If there are no completed at the moment - take from the
@@ -1242,9 +1245,9 @@ build_mbuf_cluster:
          *   all the buffers from the freed mbufs.
          */
         void init_factory() {
-            while (rte_mbuf* mbuf = rte_pktmbuf_alloc(_pool)) {
+            /*while (rte_mbuf* mbuf = rte_pktmbuf_alloc(_pool)) {
                 _ring.push_back(new(tx_buf::me(mbuf)) tx_buf{*this});
-            }
+            }*/
         }
 
         /**
@@ -1298,15 +1301,47 @@ private:
     uint32_t _send(circular_buffer<packet>& pb, Func packet_to_tx_buf_p) {
         if (_tx_burst.size() == 0) {
             for (auto&& p : pb) {
-                // TODO: assert() in a fast path! Remove me ASAP!
-                assert(p.len());
+                if(unlikely(p.nr_frags()>1)) {
+                    p.linearize();
+                }
+                fragment frag = p.frag(0);
+                assert(frag.size>0 && frag.size < inline_mbuf_data_size);
 
-                tx_buf* buf = packet_to_tx_buf_p(std::move(p));
+                tx_buf* buf = get_tx_buf();
                 if (!buf) {
                     break;
                 }
 
-                _tx_burst.push_back(buf->rte_mbuf_p());
+                rte_mbuf* head = buf->rte_mbuf_p();
+                head->pkt_len = frag.size;
+                head->nb_segs = 1;
+
+                rte_memcpy(rte_pktmbuf_mtod_offset(head, void*, 0),
+                           static_cast<void*>(frag.base), frag.size);
+                head->data_len = frag.size;
+
+                auto oi = p.offload_info();
+                if (oi.needs_ip_csum) {
+                    head->ol_flags |= PKT_TX_IP_CKSUM;
+                    // TODO: Take a VLAN header into an account here
+                    head->l2_len = sizeof(struct ether_hdr);
+                    head->l3_len = oi.ip_hdr_len;
+                }
+                if (hw_features().tx_csum_l4_offload) {
+                    if (oi.protocol == ip_protocol_num::tcp) {
+                        head->ol_flags |= PKT_TX_TCP_CKSUM;
+                        // TODO: Take a VLAN header into an account here
+                        head->l2_len = sizeof(struct ether_hdr);
+                        head->l3_len = oi.ip_hdr_len;
+                    } else if (oi.protocol == ip_protocol_num::udp) {
+                        head->ol_flags |= PKT_TX_UDP_CKSUM;
+                        // TODO: Take a VLAN header into an account here
+                        head->l2_len = sizeof(struct ether_hdr);
+                        head->l3_len = oi.ip_hdr_len;
+                    }
+                }
+
+                _tx_burst.push_back(head);
             }
         }
 
@@ -1448,11 +1483,11 @@ private:
     std::vector<fragment> _frags;
     std::vector<char*> _bufs;
     size_t _num_rx_free_segs = 0;
-    reactor::poller _rx_gc_poller;
+    // reactor::poller _rx_gc_poller;
     std::unique_ptr<void, free_deleter> _rx_xmem;
     tx_buf_factory _tx_buf_factory;
     std::experimental::optional<reactor::poller> _rx_poller;
-    reactor::poller _tx_gc_poller;
+    // reactor::poller _tx_gc_poller;
     std::vector<rte_mbuf*> _tx_burst;
     uint16_t _tx_burst_idx = 0;
     static constexpr phys_addr_t page_mask = ~(memory::page_size - 1);
@@ -1915,9 +1950,9 @@ template <bool HugetlbfsMemBackend>
 dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
      : qp(true, stats_plugin_name, qid), _dev(dev), _qid(qid),
-       _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
-       _tx_buf_factory(qid, dev->port_idx()),
-       _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))
+       // _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
+       _tx_buf_factory(qid, dev->port_idx())/*,
+       _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))*/
 {
     if (!init_rx_mbuf_pool()) {
         rte_exit(EXIT_FAILURE, "Cannot initialize mbuf pools\n");
@@ -2024,6 +2059,8 @@ dpdk_qp<false>::from_mbuf(rte_mbuf* m)
 
             return packet(fragment{buf, len}, make_free_deleter(buf));
         }
+        /*auto len = rte_pktmbuf_data_len(m);
+        return packet(fragment{reinterpret_cast<char*>(m), len}, deleter());*/
     } else {
         return from_mbuf_lro(m);
     }
