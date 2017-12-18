@@ -94,6 +94,9 @@ public:
             _sendq.push_back(std::move(p));
             _sendq_size += 1;
         }
+        else{
+            _failed_send_count += 1;
+        }
         return make_ready_future<>();
     }
 
@@ -110,6 +113,9 @@ public:
             p.linearize();
             _sendq.push_back(std::move(p));
             _sendq_size += 1;
+        }
+        else{
+            _failed_send_count += 1;
         }
         return make_ready_future<>();
     }
