@@ -276,6 +276,7 @@ tests = [
     'tests/netstar/mica_client_get_set_del',
     'tests/netstar/two_stack_ports',
     'tests/netstar/test_af_event',
+    'tests/netstar/udp_traffic_gen',
     ]
 
 apps = [
@@ -348,7 +349,8 @@ libnetstar = [
     'netstar/mica_client.cc',
     'mica/util/cityhash/city_mod.cc',
     'netstar/fdir_device.cc',
-    'netstar/mica_def.cc'
+    'netstar/mica_def.cc',
+    'bess/time.cc',
     ]
 
 core = [
@@ -519,6 +521,7 @@ deps = {
     'tests/netstar/mica_client_get_set_del': ['tests/netstar/mica_client_get_set_del.cc'] + core + libnet + libnetstar,
     'tests/netstar/two_stack_ports': ['tests/netstar/two_stack_ports.cc'] + core + libnet + libnetstar,
     'tests/netstar/test_af_event': ['tests/netstar/test_af_event.cc'] + core + libnet + libnetstar,
+    'tests/netstar/udp_traffic_gen': ['tests/netstar/udp_traffic_gen.cc'] + core + libnet + libnetstar,
 }
 
 boost_tests = [

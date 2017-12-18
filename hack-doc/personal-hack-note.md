@@ -455,3 +455,11 @@ tcp<InetTraits>::tcp(inet_type& inet)
 * To run seastar on bare-metal server, we better set intel_iommu=off, otherwise there might be a wired bug.
 
 * It seems that the so-called hack performed by seastar will not bring any performance gain, so we'll never use it.
+
+# About some strange behaviors and how to circumvent them.
+
+* After seastar is booted up, we have to wait for a small amount of time, sometimes as long as 10s, before the client and the server can successfully exchange traffic. When the traffic exchange succeeds, it will not exihibit any other strange behaviors.
+
+* If the communication is immediately available after the seastar program is booted up, it is highly possible that the seastar will halt for a small amount of time without sending out any traffic. This may be due to hardware reason, but I haven't been able to figure out the reason.
+
+* To circumvent the previous problem, I add a connection tester, which will do some communication for 10s, detecting whether the traffic is correctly sent out. If not, retry the entire process. Then we can succeed.

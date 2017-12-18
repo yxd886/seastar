@@ -68,16 +68,14 @@ public:
         auto& ingress_port = *_all_ports[0];
         auto& egress_port = *_all_ports[1];
 
-        reporter.set_callback([this, &ingress_port]() {
-            /*fprint(std::cout, "ingress_receive=%d, egress_receive=%d.\n",
+        reporter.set_callback([this]() {
+            fprint(std::cout, "ingress_receive=%d, egress_receive=%d.\n",
                    this->ingress_received-this->ingress_snapshot, this->egress_received-this->egress_snapshot);
             this->ingress_snapshot = this->ingress_received;
-            this->egress_snapshot = this->egress_received;*/
-            fprint(std::cout, "ingress_receive=%d.\n", ingress_port.get_qp_wrapper().rx_pkts() - this->ingress_snapshot);
-            this->ingress_snapshot =  ingress_port.get_qp_wrapper().rx_pkts();
+            this->egress_snapshot = this->egress_received;
         });
 
-        reporter.arm_periodic(1s);
+        // reporter.arm_periodic(1s);
 
         _ingress_sub.emplace(ingress_port.receive([&egress_port, this](net::packet pkt){
             // fprint(std::cout, "ingress receives packet.\n");
@@ -95,7 +93,7 @@ public:
                 eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
             }
 
-            // egress_port.send(std::move(pkt));
+            egress_port.send(std::move(pkt));
             return make_ready_future<>();
         }));
 
@@ -115,7 +113,7 @@ public:
                 eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
             }
 
-            // ingress_port.send(std::move(pkt));
+            ingress_port.send(std::move(pkt));
             return make_ready_future<>();
         }));
     }

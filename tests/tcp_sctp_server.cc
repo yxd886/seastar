@@ -36,7 +36,7 @@ static std::string str_unknow{"unknow cmd"};
 static int tx_msg_total_size = 100 * 1024 * 1024;
 static int tx_msg_size = 4 * 1024;
 static int tx_msg_nr = tx_msg_total_size / tx_msg_size;
-static int rx_msg_size = 4 * 1024;
+// static int rx_msg_size = 4 * 1024;
 static std::string str_txbuf(tx_msg_size, 'X');
 static bool enable_tcp = false;
 static bool enable_sctp = false;
@@ -72,6 +72,7 @@ public:
     void do_accepts(std::vector<server_socket>& listeners) {
         int which = listeners.size() - 1;
         listeners[which].accept().then([this, &listeners] (connected_socket fd, socket_address addr) mutable {
+            // fprint(std::cout, "Get a new connection.\n");
             auto conn = new connection(*this, std::move(fd), addr);
             conn->process().then_wrapped([conn] (auto&& f) {
                 delete conn;
@@ -154,7 +155,7 @@ public:
             });
         }
         future<> do_read() {
-            return _read_buf.read_exactly(rx_msg_size).then([this] (temporary_buffer<char> buf) {
+            return _read_buf.read()/*_exactly(rx_msg_size)*/.then([this] (temporary_buffer<char> buf) {
                 if (buf.size() == 0) {
                     return make_ready_future();
                 } else {
@@ -188,6 +189,7 @@ int main(int ac, char** av) {
             return engine().exit(1);
         }
         auto server = new distributed<tcp_server>;
+
         server->start().then([server = std::move(server), port] () mutable {
             engine().at_exit([server] {
                 return server->stop();

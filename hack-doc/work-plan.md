@@ -13,3 +13,5 @@ Aug 11:
 
 Nov 29.
 1. Refactor, remove boilerplates and replace them with helper utility functions.
+2. Refactor, change how the async loop run. After the async loop get the packet,
+the async loop should run the preprocessing first, then process the packet.

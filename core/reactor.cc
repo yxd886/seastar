@@ -3599,7 +3599,7 @@ void smp::configure(boost::program_options::variables_map configuration)
         rc.total_memory = parse_memory_size(configuration["memory"].as<std::string>());
 #ifdef HAVE_DPDK
         if (configuration.count("hugepages") &&
-            !configuration["network-stack"].as<std::string>().compare("native") &&
+            /*patch by djp !configuration["network-stack"].as<std::string>().compare("native") &&*/
             _using_dpdk) {
             size_t dpdk_memory = dpdk::eal::mem_size(smp::count);
 

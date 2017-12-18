@@ -48,7 +48,8 @@ public:
             });
         }
 
-        _queue_space = std::make_unique<semaphore>(212992);
+        // 180 is the default attempt of a single tx_poll by dpdk_qp;
+        _queue_space = std::make_unique<semaphore>(180);
     }
 
     ~port(){
@@ -84,9 +85,8 @@ public:
     // Need to wait for enough space in the _queue_space.
     inline future<> send(net::packet p){
         assert(_qp_wrapper.get_qid()<_qp_wrapper.get_hw_queues_count());
-        auto len = p.len();
-        return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
-            p = net::packet(std::move(p), make_deleter([qs = _queue_space.get(), len] { qs->signal(len); }));
+        return _queue_space->wait(1).then([this, p = std::move(p)] () mutable {
+            p = net::packet(std::move(p), make_deleter([qs = _queue_space.get()] { qs->signal(1); }));
             _sendq.push_back(std::move(p));
         });
     }
@@ -95,9 +95,8 @@ public:
     // This is primarily used by mica_client.
     inline future<> linearize_and_send(net::packet p){
         assert(_qp_wrapper.get_qid()<_qp_wrapper.get_hw_queues_count());
-        auto len = p.len();
-        return _queue_space->wait(len).then([this, len, p = std::move(p)] () mutable {
-            p = net::packet(std::move(p), make_deleter([qs = _queue_space.get(), len] { qs->signal(len); }));
+        return _queue_space->wait(1).then([this, p = std::move(p)] () mutable {
+            p = net::packet(std::move(p), make_deleter([qs = _queue_space.get()] { qs->signal(1); }));
             p.linearize();
             _sendq.push_back(std::move(p));
         });
