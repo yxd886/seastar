@@ -107,7 +107,7 @@ public:
 
             auto next_ns = _pkt_gen.get_next_active_time();
 
-            while(next_ns <= now_ns) {
+            while(next_ns <= now_ns && _p->peek_sendq_size() < 180) {
                 auto pkt = _pkt_gen.get_next_pkt(now_ns);
                 _p->send(std::move(pkt));
                 next_ns = _pkt_gen.get_next_active_time();
