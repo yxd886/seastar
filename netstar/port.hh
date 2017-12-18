@@ -84,22 +84,27 @@ public:
     // Assert that we are sending out from correct qp type.
     // Need to wait for enough space in the _queue_space.
     inline future<> send(net::packet p){
-        assert(_qp_wrapper.get_qid()<_qp_wrapper.get_hw_queues_count());
+        /*assert(_qp_wrapper.get_qid()<_qp_wrapper.get_hw_queues_count());
         return _queue_space->wait(1).then([this, p = std::move(p)] () mutable {
             p = net::packet(std::move(p), make_deleter([qs = _queue_space.get()] { qs->signal(1); }));
             _sendq.push_back(std::move(p));
-        });
+        });*/
+        _sendq.push_back(std::move(p));
+        return make_ready_future<>();
     }
 
     // Lineraize the packet and then send the packet out.
     // This is primarily used by mica_client.
     inline future<> linearize_and_send(net::packet p){
-        assert(_qp_wrapper.get_qid()<_qp_wrapper.get_hw_queues_count());
+        /*assert(_qp_wrapper.get_qid()<_qp_wrapper.get_hw_queues_count());
         return _queue_space->wait(1).then([this, p = std::move(p)] () mutable {
             p = net::packet(std::move(p), make_deleter([qs = _queue_space.get()] { qs->signal(1); }));
             p.linearize();
             _sendq.push_back(std::move(p));
-        });
+        });*/
+        p.linearize();
+        _sendq.push_back(std::move(p));
+        return make_ready_future<>();
     }
 
     // Provide a customized receive function for the underlying qp.
