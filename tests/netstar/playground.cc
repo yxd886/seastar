@@ -67,8 +67,8 @@ public:
         auto& egress_port = *_all_ports[1];
 
         reporter.set_callback([this]() {
-            fprint(std::cout, "ingress_receive=%d, egress_receive=%d.\n",
-                   this->ingress_received-this->ingress_snapshot, this->egress_received-this->egress_snapshot);
+            fprint(std::cout, "ingress_receive=%d, egress_receive=%d on core %d.\n",
+                   this->ingress_received-this->ingress_snapshot, this->egress_received-this->egress_snapshot, engine().cpu_id());
             this->ingress_snapshot = this->ingress_received;
             this->egress_snapshot = this->egress_received;
         });
