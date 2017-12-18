@@ -93,7 +93,7 @@ public:
                 eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
             }
 
-            egress_port.send(std::move(pkt));
+            // egress_port.send(std::move(pkt));
             return make_ready_future<>();
         }));
 
@@ -113,7 +113,7 @@ public:
                 eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
             }
 
-            ingress_port.send(std::move(pkt));
+            // ingress_port.send(std::move(pkt));
             return make_ready_future<>();
         }));
     }
