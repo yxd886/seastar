@@ -68,7 +68,7 @@ public:
         auto& ingress_port = *_all_ports[0];
         auto& egress_port = *_all_ports[1];
 
-        reporter.set_callback([this]() {
+        reporter.set_callback([this, &ingress_port]() {
             /*fprint(std::cout, "ingress_receive=%d, egress_receive=%d.\n",
                    this->ingress_received-this->ingress_snapshot, this->egress_received-this->egress_snapshot);
             this->ingress_snapshot = this->ingress_received;
