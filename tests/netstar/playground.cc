@@ -69,10 +69,12 @@ public:
         auto& egress_port = *_all_ports[1];
 
         reporter.set_callback([this]() {
-            fprint(std::cout, "ingress_receive=%d, egress_receive=%d.\n",
+            /*fprint(std::cout, "ingress_receive=%d, egress_receive=%d.\n",
                    this->ingress_received-this->ingress_snapshot, this->egress_received-this->egress_snapshot);
             this->ingress_snapshot = this->ingress_received;
-            this->egress_snapshot = this->egress_received;
+            this->egress_snapshot = this->egress_received;*/
+            fprint(std::cout, "ingress_receive=%d.\n", ingress_port.get_qp_wrapper().rx_pkts() - this->ingress_snapshot);
+            this->ingress_snapshot =  ingress_port.get_qp_wrapper().rx_pkts();
         });
 
         reporter.arm_periodic(1s);

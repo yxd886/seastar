@@ -2172,7 +2172,7 @@ void dpdk_qp<HugetlbfsMemBackend>::process_packets(
             (*p).set_rss_hash(m->hash.rss);
         }
 
-        _dev->l2receive(std::move(*p));
+        // _dev->l2receive(std::move(*p));
     }
 
     _stats.rx.good.update_pkts_bunch(count);
