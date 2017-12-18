@@ -30,7 +30,7 @@ using namespace std::chrono_literals;
 
 // To change the size of the transmitted message, change rx_msg_size!!!!
 // Otherwise it leads to stupid errors!!!!
-static int rx_msg_size = /*4 * 1024*/128;
+static int rx_msg_size = /*4 * 1024*/4*1024;
 static int tx_msg_total_size = 100 * 1024 * 1024;
 static int tx_msg_size = rx_msg_size;
 static int tx_msg_nr = tx_msg_total_size / tx_msg_size;

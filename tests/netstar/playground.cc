@@ -75,7 +75,7 @@ public:
             this->egress_snapshot = this->egress_received;
         });
 
-        // reporter.arm_periodic(1s);
+        reporter.arm_periodic(1s);
 
         _ingress_sub.emplace(ingress_port.receive([&egress_port, this](net::packet pkt){
             // fprint(std::cout, "ingress receives packet.\n");
