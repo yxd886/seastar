@@ -1205,14 +1205,15 @@ build_mbuf_cluster:
             // If there are no completed at the moment - take from the
             // factory's cache.
             //
-            if (_ring.empty()) {
+            // The following code is removed due to useless.
+            /*if (_ring.empty()) {
                 return nullptr;
             }
 
             pkt = _ring.back();
             _ring.pop_back();
 
-            return pkt;
+            return pkt;*/
         }
 
         void put(tx_buf* buf) {
@@ -1245,6 +1246,7 @@ build_mbuf_cluster:
          *   all the buffers from the freed mbufs.
          */
         void init_factory() {
+            // The following code is remoed due to useless.
             /*while (rte_mbuf* mbuf = rte_pktmbuf_alloc(_pool)) {
                 _ring.push_back(new(tx_buf::me(mbuf)) tx_buf{*this});
             }*/
@@ -1483,10 +1485,12 @@ private:
     std::vector<fragment> _frags;
     std::vector<char*> _bufs;
     size_t _num_rx_free_segs = 0;
+    // _rx_gc_poller is removed due to useless.
     // reactor::poller _rx_gc_poller;
     std::unique_ptr<void, free_deleter> _rx_xmem;
     tx_buf_factory _tx_buf_factory;
     std::experimental::optional<reactor::poller> _rx_poller;
+    // _tx_gc_poller is removed due to useless.
     // reactor::poller _tx_gc_poller;
     std::vector<rte_mbuf*> _tx_burst;
     uint16_t _tx_burst_idx = 0;
@@ -1950,8 +1954,9 @@ template <bool HugetlbfsMemBackend>
 dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
      : qp(true, stats_plugin_name, qid), _dev(dev), _qid(qid),
+       // _rx_gc_poller initialization is removed due to useless.
        // _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
-       _tx_buf_factory(qid, dev->port_idx())/*,
+       _tx_buf_factory(qid, dev->port_idx())/*, _tx_gc_poller initialization is removed due to useless.
        _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))*/
 {
     if (!init_rx_mbuf_pool()) {
@@ -2059,8 +2064,6 @@ dpdk_qp<false>::from_mbuf(rte_mbuf* m)
 
             return packet(fragment{buf, len}, make_free_deleter(buf));
         }
-        /*auto len = rte_pktmbuf_data_len(m);
-        return packet(fragment{reinterpret_cast<char*>(m), len}, deleter());*/
     } else {
         return from_mbuf_lro(m);
     }
