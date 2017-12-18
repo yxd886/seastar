@@ -2010,7 +2010,7 @@ dpdk_qp<false>::from_mbuf(rte_mbuf* m)
         // buffer, create a packet based on this buffer and return the mbuf to
         // its pool.
         //
-        /*auto len = rte_pktmbuf_data_len(m);
+        auto len = rte_pktmbuf_data_len(m);
         char* buf = (char*)malloc(len);
 
         if (!buf) {
@@ -2023,10 +2023,7 @@ dpdk_qp<false>::from_mbuf(rte_mbuf* m)
             rte_pktmbuf_free(m);
 
             return packet(fragment{buf, len}, make_free_deleter(buf));
-        }*/
-        auto len = rte_pktmbuf_data_len(m);
-        char* buf = rte_pktmbuf_mtod(m, char*);
-        return packet(fragment{buf, len}, make_deleter([m]{rte_pktmbuf_free(m);}));
+        }
     } else {
         return from_mbuf_lro(m);
     }
