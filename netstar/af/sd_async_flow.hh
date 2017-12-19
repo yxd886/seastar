@@ -305,7 +305,7 @@ public:
         _impl->event_unregistration(ev);
     }
 
-    net::packet& peek_cur_packet() {
+    net::packet& cur_packet() {
         return _impl->_client.cur_context.value().pkt;
     }
 
