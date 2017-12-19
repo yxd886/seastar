@@ -423,10 +423,8 @@ public:
             // send
 #if MICA_DEBUG
             printf("Thread %d: The request packet with size %d is sent out\n", engine().cpu_id(), p.len());
-#endif
             net::ethernet_address src_eth = p.get_header<net::eth_hdr>()->src_mac;
             net::ethernet_address dst_eth = p.get_header<net::eth_hdr>()->dst_mac;
-#if MICA_DEBUG
             std::cout<<"Send request packet with src mac: "<<src_eth<<" and dst mac: "<<dst_eth<<std::endl;
 #endif
             _port.linearize_and_send(std::move(p)).then([this]{
