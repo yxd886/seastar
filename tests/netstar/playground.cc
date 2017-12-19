@@ -36,12 +36,16 @@
 #include "netstar/work_unit.hh"
 #include "netstar/port_env.hh"
 #include "netstar/af/sd_async_flow.hh"
+#include "netstar/mica_client.hh"
 
 #include "bess/bess_flow_gen.hh"
+
+#include <vector>
 
 using namespace seastar;
 using namespace netstar;
 using namespace std::chrono_literals;
+using std::vector;
 
 enum class dummy_udp_events : uint8_t{
     pkt_in=0
@@ -267,6 +271,8 @@ public:
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
+    per_core_objs<mica_client> all_objs;
+    vector<vector<port_pair>> queue_map;
 
     return app.run_deprecated(ac, av, [&app, &all_ports] {
         auto& opts = app.configuration();
