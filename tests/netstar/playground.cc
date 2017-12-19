@@ -271,13 +271,29 @@ public:
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;
-    per_core_objs<mica_client> all_objs;
+    per_core_objs<mica_client> mica_clients;
     vector<vector<port_pair>> queue_map;
 
-    return app.run_deprecated(ac, av, [&app, &all_ports] {
+    return app.run_deprecated(ac, av, [&app, &all_ports, &mica_clients, &queue_map] {
         auto& opts = app.configuration();
         return all_ports.add_port(opts, 0, smp::count, port_type::original).then([&opts, &all_ports]{
-            return all_ports.add_port(opts, 1, smp::count, port_type::original);
+            return all_ports.add_port(opts, 1, smp::count, port_type::fdir);
+        }).then([&mica_clients]{
+           return mica_clients.start(&mica_clients);
+        }).then([&all_ports, &mica_clients]{
+            return mica_clients.invoke_on_all([&all_ports](mica_client& mc){
+                mc.configure_ports(all_ports, 1, 1);
+            });
+        }).then([&opts, &all_ports, &queue_map]{
+            queue_map = calculate_queue_mapping(opts, all_ports.local_port(1));
+        }).then([&mica_clients, &opts, &queue_map]{
+            return mica_clients.invoke_on_all([&opts, &queue_map](mica_client& mc){
+                mc.bootup(opts, queue_map);
+            });
+        }).then([&mica_clients]{
+            return mica_clients.invoke_on_all([](mica_client& mc){
+                mc.start_receiving();
+            });
         }).then([&all_ports]{
             return forwarders.start(std::ref(all_ports));
         }).then([]{
