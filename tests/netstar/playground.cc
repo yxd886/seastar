@@ -37,6 +37,7 @@
 #include "netstar/port_env.hh"
 #include "netstar/af/sd_async_flow.hh"
 #include "netstar/mica_client.hh"
+#include "netstar/extendable_buffer.hh"
 
 #include "bess/bess_flow_gen.hh"
 
@@ -142,6 +143,62 @@ public:
 
     future<> stop(){
         return make_ready_future<>();
+    }
+
+    future<> mica_test() {
+        // only test mica performance on thread 1.
+        return repeat([this]{
+            uint64_t key = 1;
+            extendable_buffer key_buf;
+            key_buf.fill_data(key);
+
+            return _mc.query(Operation::kGet,sizeof(key), key_buf.get_temp_buffer(),
+                             0, temporary_buffer<char>()).then([this](mica_response response){
+                assert(response.get_result() == Result::kNotFound);
+
+                uint64_t key = 1;
+                extendable_buffer key_buf;
+                key_buf.fill_data(key);
+
+                uint64_t val = 6;
+                extendable_buffer val_buf;
+                val_buf.fill_data(val);
+                return _mc.query(Operation::kSet, sizeof(key), key_buf.get_temp_buffer(),
+                                 sizeof(val), val_buf.get_temp_buffer());
+            }).then([this](mica_response response){
+                assert(response.get_result() == Result::kSuccess);
+
+                uint64_t key = 1;
+                extendable_buffer key_buf;
+                key_buf.fill_data(key);
+
+                return _mc.query(Operation::kGet,sizeof(key), key_buf.get_temp_buffer(),
+                                 0, temporary_buffer<char>());
+            }).then([this](mica_response response){
+                assert(response.get_value<uint64_t>() == 6);
+
+                uint64_t key = 1;
+                extendable_buffer key_buf;
+                key_buf.fill_data(key);
+
+                return _mc.query(Operation::kDelete,
+                                 sizeof(key), key_buf.get_temp_buffer(),
+                                 0, temporary_buffer<char>());
+            }).then([this](mica_response response){
+                assert(response.get_result() == Result::kSuccess);
+            }).then_wrapped([](auto&& f){
+                try{
+                    fprint(std::cout, "mica_test succeeds!\n");
+                    return make_ready_future<stop_iteration>(stop_iteration::yes);
+                }
+                catch(...) {
+                    fprint(std::cout, "mica_test failed, retry in 5s.\n");
+                    return sleep(5s).then([]{
+                        return stop_iteration::no;
+                    });
+                }
+            });
+        });
     }
 
     void configure(int i) {
