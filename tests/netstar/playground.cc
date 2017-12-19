@@ -217,6 +217,12 @@ public:
         uint64_t egress_send;
         unsigned egress_failed_send;
         size_t active_flow_num;
+        void operator+=(const info& o) {
+            ingress_received += o.ingress_received;
+            egress_send += o.egress_send;
+            egress_failed_send += o.egress_failed_send;
+            active_flow_num += o.active_flow_num;
+        }
     };
     info _old{0,0,0,0};
 
