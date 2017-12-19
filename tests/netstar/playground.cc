@@ -181,7 +181,7 @@ public:
                 }
 
                 if(ip_h->ip_proto == static_cast<uint8_t>(net::ip_protocol_num::udp)) {
-                    auto udp_h = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr+net::ip_hdr));
+                    auto udp_h = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
                     if(!udp_h) {
                         return make_ready_future<>();
                     }
