@@ -130,12 +130,14 @@ class forwarder {
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
 
+    mica_client& _mc;
 public:
-    forwarder (ports_env& all_ports)
+    forwarder (ports_env& all_ports, per_core_objs<mica_client>& mica_clients)
         : _ingress_port(std::ref(all_ports.local_port(0)))
         , _egress_port(std::ref(all_ports.local_port(1)))
         , _udp_manager_ingress(0)
-        , _udp_manager_egress(1){
+        , _udp_manager_egress(1)
+        , _mc(std::ref(mica_clients.local_obj())){
     }
 
     future<> stop(){
@@ -294,8 +296,8 @@ int main(int ac, char** av) {
             return mica_clients.invoke_on_all([](mica_client& mc){
                 mc.start_receiving();
             });
-        }).then([&all_ports]{
-            return forwarders.start(std::ref(all_ports));
+        }).then([&all_ports, &mica_clients]{
+            return forwarders.start(std::ref(all_ports), std::ref(mica_clients));
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::configure, 1);
         }).then([]{
