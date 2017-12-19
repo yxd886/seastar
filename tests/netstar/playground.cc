@@ -114,11 +114,6 @@ class forwarder {
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
 
-    unsigned ingress_received = 0;
-    unsigned ingress_snapshot = 0;
-    unsigned egress_received = 0;
-    unsigned egress_snapshot = 0;
-    timer<lowres_clock> reporter;
 public:
     forwarder (ports_env& all_ports)
         : _ingress_port(std::ref(all_ports.local_port(0)))
@@ -132,19 +127,6 @@ public:
     }
 
     void configure(int i) {
-        reporter.set_callback([this]() {
-            if(engine().cpu_id() == 0){
-                fprint(std::cout, "ingress_receive=%d. ", _ingress_port.get_qp_wrapper().rx_pkts() - this->ingress_snapshot);
-                fprint(std::cout, "egress_send=%d. ", _egress_port.get_qp_wrapper().tx_pkts()-this->egress_snapshot);
-                fprint(std::cout, "egress_failed_send_count=%d. ", _egress_port.peek_failed_send_cout());
-                fprint(std::cout, "active_flow_num=%d. ", _udp_manager.peek_active_flow_num());
-                fprint(std::cout, "core=%d.\n", engine().cpu_id());
-            }
-            this->ingress_snapshot =  _ingress_port.get_qp_wrapper().rx_pkts();
-            this->egress_snapshot = _egress_port.get_qp_wrapper().tx_pkts();
-        });
-
-        reporter.arm_periodic(1s);
 
         auto udp_manager_ingress_output_fn = [this](net::packet pkt) {
             // fprint(std::cout, "udp_manager_ingress_output_fn receives.\n");
@@ -226,6 +208,37 @@ public:
                 });
 
                 return stop_iteration::no;
+            });
+        });
+    }
+
+    struct info {
+        uint64_t ingress_received;
+        uint64_t egress_send;
+        unsigned egress_failed_send;
+        size_t active_flow_num;
+    };
+    info _old{0,0,0,0};
+
+    future<info> get_info() {
+        return make_ready_future<info>(info{_ingress_port.get_qp_wrapper().rx_pkts(),
+                                            _egress_port.get_qp_wrapper().tx_pkts(),
+                                            _egress_port.peek_failed_send_cout(),
+                                            _udp_manager.peek_active_flow_num()});
+    }
+    void collect_stats(int) {
+        repeat([this]{
+            return forwarders.map_reduce(adder<info>(), &forwarder::get_info).then([this](info i){
+                fprint(std::cout, "ingress_received=%d, egress_send=%d, egress_failed_send=%d, active_flow_num=%d.\n",
+                        i.ingress_received-_old.ingress_received,
+                        i.egress_send - _old.egress_send,
+                        i.egress_failed_send - _old.egress_failed_send,
+                        i.active_flow_num);
+                _old = i;
+            }).then([]{
+                return sleep(1s).then([]{
+                    return stop_iteration::no;
+                });
             });
         });
     }
