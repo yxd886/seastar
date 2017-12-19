@@ -203,6 +203,26 @@ public:
             }
         }));
     }
+
+    void run_udp_manager() {
+        repeat([this]{
+            return _udp_manager.on_new_initial_context().then([this]() mutable {
+                auto ic = _udp_manager.get_initial_context();
+
+                do_with(ic.get_sd_async_flow(), [](sd_async_flow<dummy_udp_ppr>& ac){
+                    ac.register_events(dummy_udp_events::pkt_in);
+                    return ac.run_async_loop([&ac](){
+                        printf("client async loop runs!\n");
+                        return make_ready_future<af_action>(af_action::forward);
+                    });
+                }).then([](){
+                    printf("client async flow is closed.\n");
+                });
+
+                return stop_iteration::no;
+            });
+        });
+    }
 };
 
 int main(int ac, char** av) {
