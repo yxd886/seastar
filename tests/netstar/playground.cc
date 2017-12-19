@@ -243,6 +243,9 @@ int main(int ac, char** av) {
             return forwarders.invoke_on_all(&forwarder::run_udp_manager, 1);
         }).then([]{
             fprint(std::cout, "forwarder runs!\n");
+            /*engine().at_exit([]{
+                return forwarders->stop();
+            });*/
         });
     });
 }
