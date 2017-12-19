@@ -71,7 +71,10 @@ public:
     generated_events<EventEnumType> handle_packet_send(net::packet& pkt){
         generated_events<EventEnumType> ge;
         ge.event_happen(dummy_udp_events::pkt_in);
-        _t.rearm(3s);
+        if(_t.armed()) {
+            _t.cancel();
+            _t.arm(3s);
+        }
         return ge;
     }
 
