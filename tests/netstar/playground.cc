@@ -69,10 +69,6 @@ public:
         auto& egress_port = *_all_ports[1];
 
         reporter.set_callback([this, &ingress_port, &egress_port]() {
-            /*fprint(std::cout, "ingress_receive=%d, egress_receive=%d.\n",
-                   this->ingress_received-this->ingress_snapshot, this->egress_received-this->egress_snapshot);
-            this->ingress_snapshot = this->ingress_received;
-            this->egress_snapshot = this->egress_received;*/
             fprint(std::cout, "ingress_receive=%d. ", ingress_port.get_qp_wrapper().rx_pkts() - this->ingress_snapshot);
             fprint(std::cout, "egress_send=%d. ", egress_port.get_qp_wrapper().tx_pkts()-this->egress_snapshot);
             fprint(std::cout, "egress_failed_send_count=%d. \n", egress_port.peek_failed_send_cout());

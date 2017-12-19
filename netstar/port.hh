@@ -27,7 +27,7 @@ class port{
     bool _receive_configured;
     std::experimental::optional<subscription<net::packet>> _sub;
     seastar::queue<net::packet> _receiveq;
-    static constexpr size_t port_sendq_size = 180;
+    static constexpr size_t port_sendq_size = 500;
 public:
     explicit port(boost::program_options::variables_map opts,
                           net::device* dev,
