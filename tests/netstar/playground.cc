@@ -130,8 +130,8 @@ int main(int ac, char** av) {
 
     return app.run_deprecated(ac, av, [&app, &all_ports] {
         auto& opts = app.configuration();
-        return all_ports.add_port(opts, 0, smp::count, port_type::netstar_dpdk).then([&opts, &all_ports]{
-            return all_ports.add_port(opts, 1, smp::count, port_type::netstar_dpdk);
+        return all_ports.add_port(opts, 0, smp::count, port_type::original).then([&opts, &all_ports]{
+            return all_ports.add_port(opts, 1, smp::count, port_type::original);
         }).then([&all_ports]{
             return forwarders.start(std::ref(all_ports));
         }).then([]{
