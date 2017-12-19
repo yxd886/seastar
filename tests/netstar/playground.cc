@@ -118,7 +118,7 @@ class forwarder {
 public:
     forwarder (ports_env& all_ports)
         : _ingress_port(std::ref(all_ports.local_port(0)))
-        , _egress_port(std::ref(all_ports.local_port(0))){
+        , _egress_port(std::ref(all_ports.local_port(1))){
     }
 
     future<> stop(){
