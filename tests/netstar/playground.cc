@@ -24,6 +24,7 @@
 #include "core/print.hh"
 #include "core/distributed.hh"
 #include "core/print.hh"
+#include "core/sleep.hh"
 
 #include "net/udp.hh"
 #include "net/ip_checksum.hh"
@@ -155,7 +156,6 @@ public:
                                                 _udp_manager_ingress);
 
         _ingress_port_sub.emplace(_ingress_port.receive([this](net::packet pkt){
-            ingress_received += 1;
 
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
             if(!eth_h) {
@@ -242,7 +242,7 @@ public:
                         i.active_flow_num);
                 _old = i;
             }).then([]{
-                return sleep(1s).then([]{
+                return seastar::sleep(1s).then([]{
                     return stop_iteration::no;
                 });
             });
