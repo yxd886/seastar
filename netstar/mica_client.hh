@@ -123,7 +123,7 @@ public:
         // record the number of retries performed by the current request
         unsigned _retry_count;
         // a timer that is used to check request timeout
-        timer<steady_clock_type> _to;
+        timer<lowres_clock> _to;
 
         // the request header
         RequestHeader _rq_hd;
@@ -143,7 +143,7 @@ public:
         size_t _request_size;
 
         // maximum number of allowed timeout retries
-        static constexpr unsigned max_retries = 32;
+        static constexpr unsigned max_retries = 5;
 
         // Initial timeout time in millisecond
         static constexpr unsigned initial_timeout_val = 1;
@@ -462,8 +462,7 @@ public:
     };
 
 private:
-    static constexpr unsigned total_request_descriptor_count = 1024;
-    static constexpr unsigned max_samephore_waiting_count = 2048;
+    static constexpr unsigned total_request_descriptor_count = 100000;
     std::vector<request_descriptor> _rds;
     std::vector<request_assembler> _ras;
     semaphore _pending_work_queue = {total_request_descriptor_count};
@@ -550,29 +549,16 @@ public:
     future<mica_response> query(Operation op,
                size_t key_len, temporary_buffer<char> key,
                size_t val_len, temporary_buffer<char> val) {
-        if(_pending_work_queue.waiters() > max_samephore_waiting_count){
+        if(_recycled_rds.size() == 0){
             return make_exception_future<mica_response>(kill_flow());
         }
-        if(_pending_work_queue.try_wait(1)){
-            auto rd_idx = _recycled_rds.front();
-            _recycled_rds.pop_front();
-            _rds[rd_idx].new_action(op, key_len, std::move(key),
-                                    val_len, std::move(val));
-            send_request_descriptor(rd_idx);
-            return _rds[rd_idx].obtain_future();
-        }
-        else{
-            return _pending_work_queue.wait(1).then(
-                    [this, op, key_len, key=std::move(key),
-                     val_len, val=std::move(val)] () mutable{
-                auto rd_idx = _recycled_rds.front();
-                _recycled_rds.pop_front();
-                _rds[rd_idx].new_action(op, key_len, std::move(key),
-                                        val_len, std::move(val));
-                send_request_descriptor(rd_idx);
-                return _rds[rd_idx].obtain_future();
-            });
-        }
+
+        auto rd_idx = _recycled_rds.front();
+        _recycled_rds.pop_front();
+        _rds[rd_idx].new_action(op, key_len, std::move(key),
+                                val_len, std::move(val));
+        send_request_descriptor(rd_idx);
+        return _rds[rd_idx].obtain_future();
     }
 private:
     void check_request_assemblers(){
