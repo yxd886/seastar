@@ -95,7 +95,7 @@ public:
     void run(int) {
         _prev_checkpoint = tsc_to_ns(rdtsc());
         repeat([this](){
-
+            uint64_t now_ns = tsc_to_ns(rdtsc());
             auto next_ns = _pkt_gen.get_next_active_time();
 
             if(next_ns) {
@@ -103,6 +103,9 @@ public:
                     auto pkt = _pkt_gen.get_next_pkt(*now_ns);
                     _p->send(std::move(pkt));
                     next_ns = _pkt_gen.get_next_active_time();
+                    if(!next_ns) {
+                        return make_ready_future<stop_iteration>(stop_iteration::yes);
+                    }
                 }
 
                 return later().then([]{
@@ -110,7 +113,7 @@ public:
                 });
             }
             else{
-                return stop_iteration::yes;
+                return make_ready_future<stop_iteration>(stop_iteration::yes);
             }
         });
     }
