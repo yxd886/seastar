@@ -1448,7 +1448,7 @@ private:
     std::vector<fragment> _frags;
     std::vector<char*> _bufs;
     size_t _num_rx_free_segs = 0;
-    reactor::poller _rx_gc_poller;
+    // reactor::poller _rx_gc_poller;
     std::unique_ptr<void, free_deleter> _rx_xmem;
     tx_buf_factory _tx_buf_factory;
     std::experimental::optional<reactor::poller> _rx_poller;
@@ -1915,7 +1915,7 @@ template <bool HugetlbfsMemBackend>
 dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
      : qp(true, stats_plugin_name, qid), _dev(dev), _qid(qid),
-       _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
+       // _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
        _tx_buf_factory(qid, dev->port_idx()),
        _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))
 {
