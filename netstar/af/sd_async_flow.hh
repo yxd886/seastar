@@ -304,6 +304,13 @@ public:
     void unregister_events(EventEnumType ev) {
         _impl->event_unregistration(ev);
     }
+
+    net::packet& peek_cur_packet() {
+        return _impl->_client.cur_context.value().pkt;
+    }
+
+    // One shot interface, continuous call without shutting down
+    // the current async loop will abort the program
     future<> run_async_loop(std::function<future<af_action>()> fn) {
         return _impl->run_async_loop(std::move(fn));
     }

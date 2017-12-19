@@ -60,12 +60,20 @@ public:
     dummy_udp_ppr(bool is_client, std::function<void(bool)> close_fn)
         : _is_client(is_client)
         , _close_fn(std::move(close_fn)){
+        _t.set_callback([this]{
+            this->_close_fn(this->_is_client);
+        });
+        _t.arm(3s);
     }
 
 public:
     generated_events<EventEnumType> handle_packet_send(net::packet& pkt){
         generated_events<EventEnumType> ge;
         ge.event_happen(dummy_udp_events::pkt_in);
+        if(_t.armed()) {
+            _t.cancel();
+            _t.arm(3s);
+        }
         return ge;
     }
 
@@ -203,6 +211,7 @@ public:
                     ac.register_events(dummy_udp_events::pkt_in);
                     return ac.run_async_loop([&ac](){
                         // printf("client async loop runs!\n");
+
                         return make_ready_future<af_action>(af_action::forward);
                     });
                 }).then([](){

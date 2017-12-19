@@ -236,8 +236,8 @@ private:
                     uint8_t client_direction,
                     FlowKeyType* client_flow_key)
         : _manager(manager)
-        , _client(true, client_direction)
-        , _server(false, manager.get_reverse_direction(client_direction))
+        , _client(true, client_direction, [this](bool is_client){this->ppr_passive_close(is_client);})
+        , _server(false, manager.get_reverse_direction(client_direction),[this](bool is_client){this->ppr_passive_close(is_client);})
         , _pkts_in_pipeline(0)
         , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;
