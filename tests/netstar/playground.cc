@@ -161,11 +161,11 @@ public:
         };
 
         _udp_manager_ingress.register_to_manager(_udp_manager,
-                                                 std::move(udp_manager_ingress_output_fn),
+                                                 std::move(udp_manager_egress_output_fn),
                                                  _udp_manager_egress);
 
         _udp_manager_egress.register_to_manager(_udp_manager,
-                                                std::move(udp_manager_egress_output_fn),
+                                                std::move(udp_manager_ingress_output_fn),
                                                 _udp_manager_ingress);
 
         _ingress_port_sub.emplace(_ingress_port.receive([this](net::packet pkt){
