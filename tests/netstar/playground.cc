@@ -34,12 +34,71 @@
 
 #include "netstar/work_unit.hh"
 #include "netstar/port_env.hh"
+#include "netstar/af/sd_async_flow.hh"
 
 #include "bess/bess_flow_gen.hh"
 
 using namespace seastar;
 using namespace netstar;
 using namespace std::chrono_literals;
+
+enum class dummy_udp_events : uint8_t{
+    pkt_in=0
+};
+
+class dummy_udp_ppr{
+private:
+    bool _is_client;
+public:
+    using EventEnumType = dummy_udp_events;
+    using FlowKeyType = net::l4connid<net::ipv4_traits>;
+    using HashFunc = net::l4connid<net::ipv4_traits>::connid_hash;
+
+    dummy_udp_ppr(bool is_client)
+        : _is_client(is_client) {
+    }
+
+public:
+    generated_events<EventEnumType> handle_packet_send(net::packet& pkt){
+        generated_events<EventEnumType> ge;
+        ge.event_happen(dummy_udp_events::pkt_in);
+        ge.close_event_happen();
+        return ge;
+    }
+
+    generated_events<EventEnumType> handle_packet_recv(net::packet& pkt){
+        generated_events<EventEnumType> ge;
+        ge.event_happen(dummy_udp_events::pkt_in);
+        ge.close_event_happen();
+        return ge;
+    }
+
+    FlowKeyType get_reverse_flow_key(net::packet& pkt){
+        auto ip_hd_ptr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+        auto udp_hd_ptr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
+        return FlowKeyType{net::ntoh(ip_hd_ptr->src_ip),
+                           net::ntoh(ip_hd_ptr->dst_ip),
+                           net::ntoh(udp_hd_ptr->src_port),
+                           net::ntoh(udp_hd_ptr->dst_port)};
+    }
+
+public:
+    struct async_flow_config {
+        static constexpr int max_event_context_queue_size = 5;
+        static constexpr int new_flow_queue_size = 100;
+        static constexpr int max_flow_table_size = 10000;
+        static constexpr int max_directions = 2;
+
+        static FlowKeyType get_flow_key(net::packet& pkt){
+            auto ip_hd_ptr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+            auto udp_hd_ptr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
+            return FlowKeyType{net::ntoh(ip_hd_ptr->dst_ip),
+                               net::ntoh(ip_hd_ptr->src_ip),
+                               net::ntoh(udp_hd_ptr->dst_port),
+                               net::ntoh(udp_hd_ptr->src_port)};
+        }
+    };
+};
 
 class forwarder;
 distributed<forwarder> forwarders;
