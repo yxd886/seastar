@@ -167,12 +167,13 @@ struct af_work_unit {
     bool is_client;
 
     af_work_unit(bool is_client_arg,
-                 uint8_t direction_arg)
-        : ppr(is_client_arg)
+                 uint8_t direction_arg,
+                 std::function<void(bool)> close_fn)
+        : ppr(is_client_arg, std::move(close_fn))
         , direction(direction_arg)
         , ppr_close(false)
         , is_client(is_client_arg) {
-        buffer_q.reserve(5);
+        buffer_q.reserve(Ppr::async_flow_config::max_event_context_queue_size);
         loop_fn = nullptr;
     }
 };

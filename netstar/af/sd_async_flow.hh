@@ -179,7 +179,7 @@ public:
                        uint8_t client_direction,
                        FlowKeyType* client_flow_key)
         : _manager(manager)
-        , _client(true, client_direction)
+        , _client(true, client_direction, [this](bool){this->ppr_passive_close();})
         , _pkts_in_pipeline(0)
         , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;

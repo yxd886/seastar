@@ -51,13 +51,15 @@ class dummy_udp_ppr{
 private:
     bool _is_client;
     timer<lowres_clock> _t;
+    std::function<void(bool)> _close_fn;
 public:
     using EventEnumType = dummy_udp_events;
     using FlowKeyType = net::l4connid<net::ipv4_traits>;
     using HashFunc = net::l4connid<net::ipv4_traits>::connid_hash;
 
-    dummy_udp_ppr(bool is_client)
-        : _is_client(is_client) {
+    dummy_udp_ppr(bool is_client, std::function<void(bool)> close_fn)
+        : _is_client(is_client)
+        , _close_fn(std::move(close_fn)){
     }
 
 public:
