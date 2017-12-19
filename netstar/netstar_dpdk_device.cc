@@ -1179,7 +1179,7 @@ build_mbuf_cluster:
             // Fill the factory with the buffers from the mempool allocated
             // above.
             //
-            init_factory();
+            // init_factory();
         }
 
         /**
