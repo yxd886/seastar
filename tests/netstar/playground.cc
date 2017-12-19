@@ -61,7 +61,7 @@ public:
         : _is_client(is_client)
         , _close_fn(std::move(close_fn)){
         _t.set_callback([this]{
-            fprint(std::cout, "timer called.\n");
+            // fprint(std::cout, "timer called.\n");
             this->_close_fn(this->_is_client);
         });
         _t.arm(3s);
@@ -218,7 +218,7 @@ public:
                         return make_ready_future<af_action>(af_action::forward);
                     });
                 }).then([](){
-                    printf("client async flow is closed.\n");
+                    // printf("client async flow is closed.\n");
                 });
 
                 return stop_iteration::no;
