@@ -204,7 +204,7 @@ public:
         }));
     }
 
-    void run_udp_manager() {
+    void run_udp_manager(int) {
         repeat([this]{
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
@@ -237,6 +237,8 @@ int main(int ac, char** av) {
             return forwarders.start(std::ref(all_ports));
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::configure, 1);
+        }).then([]{
+            return forwarders.invoke_on_all(&forwarder::run_udp_manager, 1);
         }).then([]{
             fprint(std::cout, "forwarder runs!\n");
         });
