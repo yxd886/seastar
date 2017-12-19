@@ -136,7 +136,7 @@ public:
 
         reporter.arm_periodic(1s);
 
-        _ingress_sub.emplace(_ingress_port.receive([this](net::packet pkt){
+        _ingress_port_sub.emplace(_ingress_port.receive([this](net::packet pkt){
             // fprint(std::cout, "ingress receives packet.\n");
             ingress_received += 1;
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
@@ -156,7 +156,7 @@ public:
             return make_ready_future<>();
         }));
 
-        _egress_sub.emplace(_egress_port.receive([this](net::packet pkt){
+        _egress_port_sub.emplace(_egress_port.receive([this](net::packet pkt){
             // fprint(std::cout, "egress receives packet.\n");
             egress_received += 1;
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
