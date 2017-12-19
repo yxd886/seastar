@@ -191,6 +191,7 @@ public:
                                                   net::ntoh(udp_h->dst_port),
                                                   net::ntoh(udp_h->src_port)};
                     _udp_manager_ingress.get_send_stream().produce(std::move(pkt), &fk);
+                    return make_ready_future<>();
 
                 }
                 else{
