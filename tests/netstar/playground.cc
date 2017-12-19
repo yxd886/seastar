@@ -106,9 +106,6 @@ class forwarder {
     std::vector<port*> _all_ports;
     std::experimental::optional<subscription<net::packet>> _ingress_sub;
     std::experimental::optional<subscription<net::packet>> _egress_sub;
-    sd_async_flow_manager<dummy_udp_ppr> manager;
-    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction ingress;
-    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction egress;
 
     unsigned ingress_received = 0;
     unsigned ingress_snapshot = 0;
@@ -117,8 +114,7 @@ class forwarder {
     timer<lowres_clock> reporter;
 public:
     forwarder (ports_env& all_ports)
-        : ingress(0)
-        , egress(1){
+       {
         _all_ports.push_back(&(all_ports.local_port(0)));
         _all_ports.push_back(&(all_ports.local_port(1)));
     }
