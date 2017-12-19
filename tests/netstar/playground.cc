@@ -211,7 +211,9 @@ public:
                     ac.register_events(dummy_udp_events::pkt_in);
                     return ac.run_async_loop([&ac](){
                         // printf("client async loop runs!\n");
-
+                        if(ac.cur_event().on_close_event()) {
+                            return make_ready_future<af_action>(af_action::close_forward);
+                        }
                         return make_ready_future<af_action>(af_action::forward);
                     });
                 }).then([](){

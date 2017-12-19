@@ -309,6 +309,10 @@ public:
         return _impl->_client.cur_context.value().pkt;
     }
 
+    filtered_events<EventEnumType> cur_event() {
+        return _impl->_client.cur_context.value().fe;
+    }
+
     // One shot interface, continuous call without shutting down
     // the current async loop will abort the program
     future<> run_async_loop(std::function<future<af_action>()> fn) {
