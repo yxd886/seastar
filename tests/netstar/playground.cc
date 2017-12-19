@@ -142,44 +142,64 @@ public:
 
         reporter.arm_periodic(1s);
 
-        _ingress_port_sub.emplace(_ingress_port.receive([this](net::packet pkt){
-            // fprint(std::cout, "ingress receives packet.\n");
-            ingress_received += 1;
+        auto udp_manager_ingress_output_fn = [this](net::packet pkt) {
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
-            if(!eth_h) {
-                return make_ready_future<>();
-            }
-
-            if(net::ntoh(eth_h->eth_proto) == static_cast<uint16_t>(net::eth_protocol_num::ipv4)) {
-                // Perform the address translation.
-                // For IP/TCP packets received from port 0, it should replace the
-                // source mac to 3c:fd:fe:06:09:62 and destination mac to 3c:fd:fe:06:07:82
-                eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62};
-                eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
-            }
-
+            eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62};
+            eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
             _egress_port.send(std::move(pkt));
             return make_ready_future<>();
-        }));
+        };
 
-        _egress_port_sub.emplace(_egress_port.receive([this](net::packet pkt){
-            // fprint(std::cout, "egress receives packet.\n");
-            egress_received += 1;
+        auto udp_manager_egress_output_fn = [this](net::packet pkt) {
+            auto eth_h = pkt.get_header<net::eth_hdr>(0);
+            eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
+            eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
+            _ingress_port.send(std::move(pkt));
+            return make_ready_future<>();
+        };
+
+        _udp_manager_ingress.register_to_manager(_udp_manager,
+                                                 std::move(udp_manager_ingress_output_fn),
+                                                 _udp_manager_egress);
+
+        _udp_manager_egress.register_to_manager(_udp_manager,
+                                                std::move(udp_manager_egress_output_fn),
+                                                _udp_manager_ingress);
+
+        _ingress_port_sub.emplace(_ingress_port.receive([this](net::packet pkt){
+            ingress_received += 1;
+
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
             if(!eth_h) {
                 return make_ready_future<>();
             }
 
             if(net::ntoh(eth_h->eth_proto) == static_cast<uint16_t>(net::eth_protocol_num::ipv4)) {
-                // Perform the address translation.
-                // For IP/TCP packets received from port 1, it should replace the
-                // source mac to 3c:fd:fe:06:09:60 and destination mac to 3c:fd:fe:06:08:00
-                eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
-                eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
-            }
+                auto ip_h = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+                if(!ip_h) {
+                    return make_ready_future<>();
+                }
 
-            _ingress_port.send(std::move(pkt));
-            return make_ready_future<>();
+                if(ip_h->ip_proto == static_cast<uint8_t>(net::ip_protocol_num::udp)) {
+                    auto udp_h = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr+net::ip_hdr));
+                    if(!udp_h) {
+                        return make_ready_future<>();
+                    }
+
+                    dummy_udp_ppr::FlowKeyType fk{net::ntoh(ip_h->dst_ip),
+                                                  net::ntoh(ip_h->src_ip),
+                                                  net::ntoh(udp_h->dst_port),
+                                                  net::ntoh(udp_h->src_port)};
+                    _udp_manager_ingress.get_send_stream().produce(std::move(pkt), &fk);
+
+                }
+                else{
+                    return make_ready_future<>();
+                }
+            }
+            else{
+                return make_ready_future<>();
+            }
         }));
     }
 };
