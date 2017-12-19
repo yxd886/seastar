@@ -277,6 +277,7 @@ tests = [
     'tests/netstar/two_stack_ports',
     'tests/netstar/test_af_event',
     'tests/netstar/udp_traffic_gen',
+    'tests/netstar/static_udp_traffic_gen',
     ]
 
 apps = [
@@ -520,6 +521,7 @@ deps = {
     'tests/netstar/two_stack_ports': ['tests/netstar/two_stack_ports.cc'] + core + libnet + libnetstar,
     'tests/netstar/test_af_event': ['tests/netstar/test_af_event.cc'] + core + libnet + libnetstar,
     'tests/netstar/udp_traffic_gen': ['tests/netstar/udp_traffic_gen.cc'] + core + libnet + libnetstar,
+    'tests/netstar/static_udp_traffic_gen': ['tests/netstar/static_udp_traffic_gen.cc'] + core + libnet + libnetstar,
 }
 
 boost_tests = [
