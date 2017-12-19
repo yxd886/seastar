@@ -417,6 +417,9 @@ public:
         auto qitem = _new_ic_q.pop();
         return sd_af_initial_context<Ppr>(std::move(qitem.pkt), qitem.direction, std::move(qitem.impl_ptr));
     }
+    size_t peek_active_flow_num() {
+        return _flow_table.size();
+    }
 
 private:
     subscription<net::packet> direction_registration(uint8_t direction,

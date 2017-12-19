@@ -135,7 +135,8 @@ public:
         reporter.set_callback([this]() {
             fprint(std::cout, "ingress_receive=%d. ", _ingress_port.get_qp_wrapper().rx_pkts() - this->ingress_snapshot);
             fprint(std::cout, "egress_send=%d. ", _egress_port.get_qp_wrapper().tx_pkts()-this->egress_snapshot);
-            fprint(std::cout, "egress_failed_send_count=%d. \n", _egress_port.peek_failed_send_cout());
+            fprint(std::cout, "egress_failed_send_count=%d. ", _egress_port.peek_failed_send_cout());
+            fprint(std::cout, "active_flow_num=%d.\n", _udp_manager.peek_active_flow_num());
             this->ingress_snapshot =  _ingress_port.get_qp_wrapper().rx_pkts();
             this->egress_snapshot = _egress_port.get_qp_wrapper().tx_pkts();
         });
