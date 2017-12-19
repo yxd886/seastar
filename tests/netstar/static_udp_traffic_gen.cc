@@ -92,15 +92,15 @@ public:
         _pkt_gen.launch(tsc_to_ns(rdtsc()));
     }
 
-    void run(int) {
+    future<> run(int) {
         _prev_checkpoint = tsc_to_ns(rdtsc());
-        repeat([this](){
+        return repeat([this](){
             uint64_t now_ns = tsc_to_ns(rdtsc());
             auto next_ns = _pkt_gen.get_next_active_time();
 
             if(next_ns) {
                 while(*next_ns <= now_ns && _p->peek_sendq_size() < 180) {
-                    auto pkt = _pkt_gen.get_next_pkt(*now_ns);
+                    auto pkt = _pkt_gen.get_next_pkt(now_ns);
                     _p->send(std::move(pkt));
                     next_ns = _pkt_gen.get_next_active_time();
                     if(!next_ns) {
@@ -166,9 +166,12 @@ int main(int ac, char** av) {
         }).then([]{
             return traffic_gens.invoke_on_all(&traffic_gen::prepare_initial_flows, 1);
         }).then([]{
-            return traffic_gens.invoke_on_all(&traffic_gen::run, 1);
-        }).then([]{
             return traffic_gens.invoke_on(0, &traffic_gen::collect_stats, 1);
+        }).then([]{
+            traffic_gens.invoke_on_all(&traffic_gen::run, 1).then([]{
+                traffic_gens.stop();
+                engine().exit(0);
+            });
         })
         ;
     });
