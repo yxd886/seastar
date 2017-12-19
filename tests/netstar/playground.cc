@@ -74,7 +74,8 @@ public:
             this->ingress_snapshot = this->ingress_received;
             this->egress_snapshot = this->egress_received;*/
             fprint(std::cout, "ingress_receive=%d. ", ingress_port.get_qp_wrapper().rx_pkts() - this->ingress_snapshot);
-            fprint(std::cout, "egress_send=%d.\n", egress_port.get_qp_wrapper().tx_pkts()-this->egress_snapshot);
+            fprint(std::cout, "egress_send=%d. ", egress_port.get_qp_wrapper().tx_pkts()-this->egress_snapshot);
+            fprint(std::cout, "egress_failed_send_count=%d. \n", egress_port.peek_failed_send_cout());
             this->ingress_snapshot =  ingress_port.get_qp_wrapper().rx_pkts();
             this->egress_snapshot = egress_port.get_qp_wrapper().tx_pkts();
         });

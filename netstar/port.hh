@@ -23,15 +23,18 @@ class port{
     uint16_t _port_id;
     qp_wrapper _qp_wrapper;
     circular_buffer<net::packet> _sendq;
+    unsigned _failed_send_count;
     bool _receive_configured;
     std::experimental::optional<subscription<net::packet>> _sub;
     seastar::queue<net::packet> _receiveq;
+    static constexpr size_t port_sendq_size = 180;
 public:
     explicit port(boost::program_options::variables_map opts,
                           net::device* dev,
                           uint16_t port_id) :
         _port_id(port_id),
         _qp_wrapper(opts, dev, engine().cpu_id()),
+        _failed_send_count(0),
         _receive_configured(false),
         _receiveq(100){
 
@@ -48,6 +51,7 @@ public:
 
         // 180 is the default attempt of a single tx_poll by dpdk_qp;
         // _queue_space = std::make_unique<semaphore>(180);
+        _sendq.reserve(port_sendq_size);
     }
 
     ~port(){
@@ -70,20 +74,34 @@ public:
     // Assert that we are sending out from correct qp type.
     // Need to wait for enough space in the _queue_space.
     inline future<> send(net::packet p){
-        _sendq.push_back(std::move(p));
+        if(_sendq.size() < port_sendq_size) {
+            _sendq.push_back(std::move(p));
+        }
+        else{
+            _failed_send_count += 1;
+        }
         return make_ready_future<>();
     }
 
     // Lineraize the packet and then send the packet out.
     // This is primarily used by mica_client.
     inline future<> linearize_and_send(net::packet p){
-        p.linearize();
-        _sendq.push_back(std::move(p));
+        if(_sendq.size() < port_sendq_size) {
+            p.linearize();
+            _sendq.push_back(std::move(p));
+        }
+        else{
+            _failed_send_count += 1;
+        }
         return make_ready_future<>();
     }
 
     inline size_t peek_sendq_size() {
         return _sendq.size();
+    }
+
+    inline unsigned peek_failed_send_cout () {
+        return _failed_send_count;
     }
 
     // Provide a customized receive function for the underlying qp.
