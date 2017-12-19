@@ -56,9 +56,6 @@ do_calculate_queue_mapping(boost::program_options::variables_map& opts,
             net::l4connid<net::ipv4_traits>
             to_remote{remote_ip_addr, local_ip_addr, remote_port, local_port};
 
-            const auto& wtf = pt.get_qp_wrapper().get_rss_key();
-            fprint(std::cout, "size is %d.\n", wtf.size());
-
             unsigned local_queue = pt.get_qp_wrapper().hash2cpu(to_local.hash(pt.get_qp_wrapper().get_rss_key()));
             unsigned remote_queue =
                     remote_redir_table[
@@ -71,7 +68,7 @@ do_calculate_queue_mapping(boost::program_options::variables_map& opts,
                 total--;
                 res[local_queue][remote_queue].local_port = local_port;
                 res[local_queue][remote_queue].remote_port = remote_port;
-#if 0
+#if MICA_DEBUG
                 printf("Find one valid queue mapping entry: local_queue %d <-> remote_queue %d, \\"
                        "local_port %d, remote_port %d\n", local_queue, remote_queue, local_port, remote_port);
 #endif

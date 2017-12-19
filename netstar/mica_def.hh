@@ -21,6 +21,8 @@
 
 #include "netstar/port.hh"
 
+#define MICA_DEBUG 1
+
 using namespace seastar;
 using namespace std;
 
