@@ -103,9 +103,12 @@ class forwarder;
 distributed<forwarder> forwarders;
 
 class forwarder {
-    std::vector<port*> _all_ports;
-    std::experimental::optional<subscription<net::packet>> _ingress_sub;
-    std::experimental::optional<subscription<net::packet>> _egress_sub;
+    port& _ingress_port;
+    std::experimental::optional<subscription<net::packet>> _ingress_port_sub;
+
+    port& _egress_port;
+    std::experimental::optional<subscription<net::packet>> _egress_port_sub;
+
 
     unsigned ingress_received = 0;
     unsigned ingress_snapshot = 0;
@@ -114,9 +117,8 @@ class forwarder {
     timer<lowres_clock> reporter;
 public:
     forwarder (ports_env& all_ports)
-       {
-        _all_ports.push_back(&(all_ports.local_port(0)));
-        _all_ports.push_back(&(all_ports.local_port(1)));
+        : _ingress_port(std::ref(all_ports.local_port(0)))
+        , _egress_port(std::ref(all_ports.local_port(0))){
     }
 
     future<> stop(){
@@ -124,20 +126,17 @@ public:
     }
 
     void configure(int i) {
-        auto& ingress_port = *_all_ports[0];
-        auto& egress_port = *_all_ports[1];
-
-        reporter.set_callback([this, &ingress_port, &egress_port]() {
-            fprint(std::cout, "ingress_receive=%d. ", ingress_port.get_qp_wrapper().rx_pkts() - this->ingress_snapshot);
-            fprint(std::cout, "egress_send=%d. ", egress_port.get_qp_wrapper().tx_pkts()-this->egress_snapshot);
-            fprint(std::cout, "egress_failed_send_count=%d. \n", egress_port.peek_failed_send_cout());
-            this->ingress_snapshot =  ingress_port.get_qp_wrapper().rx_pkts();
-            this->egress_snapshot = egress_port.get_qp_wrapper().tx_pkts();
+        reporter.set_callback([this]() {
+            fprint(std::cout, "ingress_receive=%d. ", _ingress_port.get_qp_wrapper().rx_pkts() - this->ingress_snapshot);
+            fprint(std::cout, "egress_send=%d. ", _egress_port.get_qp_wrapper().tx_pkts()-this->egress_snapshot);
+            fprint(std::cout, "egress_failed_send_count=%d. \n", _egress_port.peek_failed_send_cout());
+            this->ingress_snapshot =  _ingress_port.get_qp_wrapper().rx_pkts();
+            this->egress_snapshot = _egress_port.get_qp_wrapper().tx_pkts();
         });
 
         reporter.arm_periodic(1s);
 
-        _ingress_sub.emplace(ingress_port.receive([&egress_port, this](net::packet pkt){
+        _ingress_sub.emplace(_ingress_port.receive([this](net::packet pkt){
             // fprint(std::cout, "ingress receives packet.\n");
             ingress_received += 1;
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
@@ -153,11 +152,11 @@ public:
                 eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
             }
 
-            egress_port.send(std::move(pkt));
+            _egress_port.send(std::move(pkt));
             return make_ready_future<>();
         }));
 
-        _egress_sub.emplace(egress_port.receive([&ingress_port, this](net::packet pkt){
+        _egress_sub.emplace(_egress_port.receive([this](net::packet pkt){
             // fprint(std::cout, "egress receives packet.\n");
             egress_received += 1;
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
@@ -173,7 +172,7 @@ public:
                 eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
             }
 
-            ingress_port.send(std::move(pkt));
+            _ingress_port.send(std::move(pkt));
             return make_ready_future<>();
         }));
     }
