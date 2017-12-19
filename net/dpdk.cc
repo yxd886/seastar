@@ -2324,7 +2324,7 @@ get_dpdk_net_options_description()
                 boost::program_options::value<uint16_t>()->default_value(10),
                 "The number of the cores used by the mica server.")
         ("mica-server-mac",
-                boost::program_options::value<std::string>()->default_value("3c:fd:fe:06:07:82"),
+                boost::program_options::value<std::string>()->default_value("3c:fd:fe:06:09:62"),
                 "The MAC address of the port on the mica server.")
         ("mica-server-ip",
                 boost::program_options::value<std::string>()->default_value("10.0.0.2"),
