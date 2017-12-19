@@ -49,6 +49,7 @@ enum class dummy_udp_events : uint8_t{
 class dummy_udp_ppr{
 private:
     bool _is_client;
+    timer<lowres_clock> _t;
 public:
     using EventEnumType = dummy_udp_events;
     using FlowKeyType = net::l4connid<net::ipv4_traits>;
@@ -62,14 +63,12 @@ public:
     generated_events<EventEnumType> handle_packet_send(net::packet& pkt){
         generated_events<EventEnumType> ge;
         ge.event_happen(dummy_udp_events::pkt_in);
-        ge.close_event_happen();
         return ge;
     }
 
     generated_events<EventEnumType> handle_packet_recv(net::packet& pkt){
         generated_events<EventEnumType> ge;
         ge.event_happen(dummy_udp_events::pkt_in);
-        ge.close_event_happen();
         return ge;
     }
 
@@ -107,6 +106,9 @@ class forwarder {
     std::vector<port*> _all_ports;
     std::experimental::optional<subscription<net::packet>> _ingress_sub;
     std::experimental::optional<subscription<net::packet>> _egress_sub;
+    sd_async_flow_manager<dummy_udp_ppr> manager;
+    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction ingress;
+    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction egress;
 
     unsigned ingress_received = 0;
     unsigned ingress_snapshot = 0;
@@ -114,7 +116,9 @@ class forwarder {
     unsigned egress_snapshot = 0;
     timer<lowres_clock> reporter;
 public:
-    forwarder (ports_env& all_ports) {
+    forwarder (ports_env& all_ports)
+        : ingress(0)
+        , egress(1){
         _all_ports.push_back(&(all_ports.local_port(0)));
         _all_ports.push_back(&(all_ports.local_port(1)));
     }
