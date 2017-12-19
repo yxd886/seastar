@@ -19,7 +19,7 @@ class generated_events;
 #define async_flow_assert(condition) assert(condition)
 #endif
 
-#define ASYNC_FLOW_DEBUG
+// #define ASYNC_FLOW_DEBUG
 
 template <typename... Args>
 void async_flow_debug(const char* fmt, Args&&... args) {

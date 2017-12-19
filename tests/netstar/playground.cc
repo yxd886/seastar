@@ -143,7 +143,7 @@ public:
         reporter.arm_periodic(1s);
 
         auto udp_manager_ingress_output_fn = [this](net::packet pkt) {
-            fprint(std::cout, "udp_manager_ingress_output_fn receives.\n");
+            // fprint(std::cout, "udp_manager_ingress_output_fn receives.\n");
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
             eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62};
             eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
@@ -152,7 +152,7 @@ public:
         };
 
         auto udp_manager_egress_output_fn = [this](net::packet pkt) {
-            fprint(std::cout, "udp_manager_egress_output_fn receives.\n");
+            // fprint(std::cout, "udp_manager_egress_output_fn receives.\n");
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
             eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
             eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
@@ -214,11 +214,11 @@ public:
                 do_with(ic.get_sd_async_flow(), [](sd_async_flow<dummy_udp_ppr>& ac){
                     ac.register_events(dummy_udp_events::pkt_in);
                     return ac.run_async_loop([&ac](){
-                        printf("client async loop runs!\n");
+                        // printf("client async loop runs!\n");
                         return make_ready_future<af_action>(af_action::forward);
                     });
                 }).then([](){
-                    printf("client async flow is closed.\n");
+                    // printf("client async flow is closed.\n");
                 });
 
                 return stop_iteration::no;
