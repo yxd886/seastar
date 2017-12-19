@@ -143,6 +143,7 @@ public:
         reporter.arm_periodic(1s);
 
         auto udp_manager_ingress_output_fn = [this](net::packet pkt) {
+            fprint(std::cout, "udp_manager_ingress_output_fn receives.\n");
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
             eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x62};
             eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x07, 0x82};
@@ -151,6 +152,7 @@ public:
         };
 
         auto udp_manager_egress_output_fn = [this](net::packet pkt) {
+            fprint(std::cout, "udp_manager_egress_output_fn receives.\n");
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
             eth_h->src_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x09, 0x60};
             eth_h->dst_mac = net::ethernet_address{0x3c, 0xfd, 0xfe, 0x06, 0x08, 0x00};
