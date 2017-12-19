@@ -1202,7 +1202,8 @@ build_mbuf_cluster:
             // Fill the factory with the buffers from the mempool allocated
             // above.
             //
-            init_factory();
+            // patch by djp
+            // init_factory();
         }
 
         /**
@@ -1471,11 +1472,13 @@ private:
     std::vector<fragment> _frags;
     std::vector<char*> _bufs;
     size_t _num_rx_free_segs = 0;
-    reactor::poller _rx_gc_poller;
+    // patch by djp
+    // reactor::poller _rx_gc_poller;
     std::unique_ptr<void, free_deleter> _rx_xmem;
     tx_buf_factory _tx_buf_factory;
     std::experimental::optional<reactor::poller> _rx_poller;
-    reactor::poller _tx_gc_poller;
+    // patch by djp
+    // reactor::poller _tx_gc_poller;
     std::vector<rte_mbuf*> _tx_burst;
     uint16_t _tx_burst_idx = 0;
     static constexpr phys_addr_t page_mask = ~(memory::page_size - 1);
@@ -1939,13 +1942,15 @@ template <bool HugetlbfsMemBackend>
 dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
      : qp(true, stats_plugin_name, qid), _dev(dev), _qid(qid),
-       _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
+       // patch by djp
+       // _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
        /*
         * patch by djp
         * pass the dev->port_idx() to construct _tx_buf_factory.
         */
-       _tx_buf_factory(qid, dev->port_idx()),
-       _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))
+       _tx_buf_factory(qid, dev->port_idx())
+       // patch by djp
+       // , _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))
 {
     if (!init_rx_mbuf_pool()) {
         rte_exit(EXIT_FAILURE, "Cannot initialize mbuf pools\n");
