@@ -11,6 +11,8 @@
 
 #include "netstar/af/async_flow_util.hh"
 
+#include "mica/util/hash.h"
+
 #include <deque>
 #include <experimental/optional>
 #include <unordered_map>
@@ -43,6 +45,7 @@ class sd_async_flow_impl : public enable_lw_shared_from_this<sd_async_flow_impl<
     af_work_unit<Ppr> _client;
     unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
     bool _initial_context_destroyed;
+    uint64_t flow_key_hash;
 
 private:
 
@@ -183,6 +186,7 @@ public:
         , _pkts_in_pipeline(0)
         , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;
+        flow_key_hash = mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(typename FlowKeyType));
     }
 
     ~sd_async_flow_impl() {
@@ -311,6 +315,14 @@ public:
 
     filtered_events<EventEnumType> cur_event() {
         return _impl->_client.cur_context.value().fe;
+    }
+
+    temporary_buffer<char> get_flow_key_in_tb() {
+        return _impl->_client.flow_key.get_tb();
+    }
+
+    size_t get_flow_key_size() {
+        return sizeof(typename Ppr::FlowKeyType);
     }
 
     // One shot interface, continuous call without shutting down
