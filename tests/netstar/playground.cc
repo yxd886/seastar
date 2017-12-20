@@ -289,7 +289,7 @@ public:
                         });
                     });
                 }).then([](){
-                    printf("client async flow is closed.\n");
+                    // printf("client async flow is closed.\n");
                 });
 
                 return stop_iteration::no;
