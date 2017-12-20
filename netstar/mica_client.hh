@@ -249,8 +249,8 @@ public:
             // Here, the timer should be armed and not timed out.
             // The retry count should not exceed the maximum value.
             // the _pr must be associated with some continuations.
-            if(_to.armed()) {
-                fprint(std::cout, "_retry_count=%d, _epoch=%d, _rd_index=%d", _retry_count, _epoch, _rd_index);
+            if(!_to.armed()) {
+                fprint(std::cout, "_retry_count=%d, _epoch=%d, _rd_index=%d.\n", _retry_count, _epoch, _rd_index);
             }
             assert(_to.armed());
             assert(_retry_count < max_retries);
