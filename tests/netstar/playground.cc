@@ -359,6 +359,10 @@ int main(int ac, char** av) {
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::mica_test, 1);
         }).then([]{
+            return forwarders.invoke_on_all(&forwarder::mica_test, 1);
+        }).then([]{
+            return forwarders.invoke_on_all(&forwarder::mica_test, 1);
+        }).then([]{
             return forwarders.invoke_on_all(&forwarder::configure, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::run_udp_manager, 1);
