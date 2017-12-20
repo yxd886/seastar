@@ -313,6 +313,12 @@ public:
         return _impl->_client.cur_context.value().fe;
     }
 
+    temporary_buffer<char> get_flow_key_in_tb() {
+        return temporary_buffer<char>(static_cast<char*>(&(_impl->_client.flow_key.value())),
+                                      sizeof(typename Ppr::FlowKeyType),
+                                      deleter());
+    }
+
     // One shot interface, continuous call without shutting down
     // the current async loop will abort the program
     future<> run_async_loop(std::function<future<af_action>()> fn) {

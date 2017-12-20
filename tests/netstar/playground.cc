@@ -275,14 +275,19 @@ public:
                 do_with(ic.get_sd_async_flow(), [this](sd_async_flow<dummy_udp_ppr>& ac){
                     ac.register_events(dummy_udp_events::pkt_in);
                     return ac.run_async_loop([&ac, this](){
-                        // printf("client async loop runs!\n");
+                        printf("client async loop runs!\n");
                         if(ac.cur_event().on_close_event()) {
                             return make_ready_future<af_action>(af_action::close_forward);
                         }
-                        return make_ready_future<af_action>(af_action::forward);
+
+                        auto fk_tb = ac.get_flow_key_in_tb();
+                        return this->_mc.query(Operation::kGet, fk_tb.size(),
+                            std::move(fk_tb), 0, temporary_buffer<char>()).then([&ac, this](mica_response response){
+                            return make_ready_future<af_action>(af_action::forward);
+                        });
                     });
                 }).then([](){
-                    // printf("client async flow is closed.\n");
+                    printf("client async flow is closed.\n");
                 });
 
                 return stop_iteration::no;
