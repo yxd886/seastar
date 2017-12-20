@@ -318,6 +318,10 @@ public:
         return _impl->_client.flow_key.get_tb();
     }
 
+    size_t get_flow_key_size() {
+        return sizeof(typename Ppr::FlowKeyType);
+    }
+
     // One shot interface, continuous call without shutting down
     // the current async loop will abort the program
     future<> run_async_loop(std::function<future<af_action>()> fn) {
