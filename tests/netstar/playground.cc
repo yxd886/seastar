@@ -145,7 +145,7 @@ public:
         return make_ready_future<>();
     }
 
-    future<> mica_test() {
+    future<> mica_test(int ) {
         // only test mica performance on thread 1.
         return repeat([this]{
             uint64_t key = 1;
@@ -356,6 +356,8 @@ int main(int ac, char** av) {
             });
         }).then([&all_ports, &mica_clients]{
             return forwarders.start(std::ref(all_ports), std::ref(mica_clients));
+        }).then([]{
+            return forwarders.invoke_on(0, &forwarder::mica_test, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::configure, 1);
         }).then([]{
