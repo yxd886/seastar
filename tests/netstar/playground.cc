@@ -148,7 +148,7 @@ public:
     future<> mica_test(int ) {
         // only test mica performance on thread 1.
         return repeat([this]{
-            uint64_t key = 1;
+            uint64_t key = engine().cpu_id()+1;
             extendable_buffer key_buf;
             key_buf.fill_data(key);
 
@@ -156,7 +156,7 @@ public:
                              0, temporary_buffer<char>()).then([this](mica_response response){
                 assert(response.get_result() == Result::kNotFound);
 
-                uint64_t key = 1;
+                uint64_t key = engine().cpu_id()+1;
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 
@@ -168,7 +168,7 @@ public:
             }).then([this](mica_response response){
                 assert(response.get_result() == Result::kSuccess);
 
-                uint64_t key = 1;
+                uint64_t key = engine().cpu_id()+1;
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 
@@ -177,7 +177,7 @@ public:
             }).then([this](mica_response response){
                 assert(response.get_value<uint64_t>() == 6);
 
-                uint64_t key = 1;
+                uint64_t key = engine().cpu_id()+1;
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 
@@ -189,11 +189,11 @@ public:
             }).then_wrapped([](auto&& f){
                 try{
                     f.get();
-                    fprint(std::cout, "mica_test succeeds!\n");
+                    fprint(std::cout, "mica_test succeeds on core %d!\n", engine().cpu_id());
                     return make_ready_future<stop_iteration>(stop_iteration::yes);
                 }
                 catch(...) {
-                    fprint(std::cout, "mica_test failed, retry in 5s.\n");
+                    fprint(std::cout, "mica_test fails on core %d, retry in 5s.\n", engine().cpu_id());
                     return sleep(5s).then([]{
                         return stop_iteration::no;
                     });
@@ -357,7 +357,7 @@ int main(int ac, char** av) {
         }).then([&all_ports, &mica_clients]{
             return forwarders.start(std::ref(all_ports), std::ref(mica_clients));
         }).then([]{
-            return forwarders.invoke_on(0, &forwarder::mica_test, 1);
+            return forwarders.invoke_on_all(&forwarder::mica_test, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::configure, 1);
         }).then([]{
