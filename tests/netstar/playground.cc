@@ -60,7 +60,7 @@ private:
 public:
     using EventEnumType = dummy_udp_events;
     using FlowKeyType = net::general_flow_key_t;
-    using HashFunc = net::l4connid<net::ipv4_traits>::connid_hash;
+    using HashFunc = net::general_flow_key_t_hash_fn;
 
     dummy_udp_ppr(bool is_client, std::function<void(bool)> close_fn)
         : _is_client(is_client)

@@ -503,6 +503,17 @@ struct l4connid<InetTraits>::connid_hash : private std::hash<ipaddr>, private st
     }
 };
 
+struct general_flow_key_t_hash_fn : private std::hash<uint32_t>, private std::hash<uint16_t> {
+    size_t operator()(const general_flow_key_t& id) const noexcept {
+        using h1 = std::hash<uint32_t>;
+        using h2 = std::hash<uint16_t>;
+        return h1::operator()(id.local_ip)
+            ^ h1::operator()(id.foreign_ip)
+            ^ h2::operator()(id.local_port)
+            ^ h2::operator()(id.foreign_port);
+    }
+};
+
 void arp_learn(ethernet_address l2, ipv4_address l3);
 
 }
