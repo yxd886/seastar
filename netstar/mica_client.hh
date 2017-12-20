@@ -468,7 +468,9 @@ public:
     };
 
 private:
-    static constexpr unsigned total_request_descriptor_count = 100000;
+    // total_request_descriptor_count must be smaller than the max value
+    // that can be represented by uint16_t.
+    static constexpr unsigned total_request_descriptor_count = 65535;
     std::vector<request_descriptor> _rds;
     std::vector<request_assembler> _ras;
     semaphore _pending_work_queue = {total_request_descriptor_count};
