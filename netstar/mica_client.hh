@@ -550,7 +550,7 @@ public:
         // finally, set up a timer to regularly force packet out
         // in case there's not enough request put into the request
         // assemblers.
-        _check_ras_timer.set_callback([this, which_ra=0]{
+        _check_ras_timer.set_callback([this, which_ra=0] () mutable{
             check_request_assemblers(which_ra);
             which_ra = (which_ra+1)%(_ras.size());
         });
