@@ -46,7 +46,7 @@ class sd_async_flow_impl : public enable_lw_shared_from_this<sd_async_flow_impl<
     af_work_unit<Ppr> _client;
     unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
     bool _initial_context_destroyed;
-    uint64_t flow_key_hash;
+    extendable_buffer _flow_key_hash_eb;
 
 private:
 
@@ -187,7 +187,8 @@ public:
         , _pkts_in_pipeline(0)
         , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;
-        flow_key_hash = mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(FlowKeyType));
+        uint64_t flow_key_hash = mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(FlowKeyType));
+        _flow_key_hash_eb.fill_data(flow_key_hash);
     }
 
     ~sd_async_flow_impl() {
@@ -319,11 +320,11 @@ public:
     }
 
     temporary_buffer<char> get_flow_key_in_tb() {
-        return _impl->_client.flow_key.get_tb();
+        return _impl->_flow_key_hash_eb.share_temp_buffer();
     }
 
     size_t get_flow_key_size() {
-        return sizeof(typename Ppr::FlowKeyType);
+        return _impl->_flow_key_hash_eb.data_len();
     }
 
     // One shot interface, continuous call without shutting down
