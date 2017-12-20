@@ -289,12 +289,12 @@ public:
                                 return af_action::forward;
                             }
                             else{
-                                if(this->_mc.nr_request_descriptors() == 0){
+                                /*if(this->_mc.nr_request_descriptors() == 0){
                                     this->_old.insufficient_mica_rd_erorr += 1;
                                 }
                                 else{
                                     this->_old.mica_timeout_error += 1;
-                                }
+                                }*/
                                 return af_action::drop;
                             }
                         });
