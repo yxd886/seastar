@@ -569,7 +569,9 @@ public:
         _recycled_rds.pop_front();
         _rds[rd_idx].new_action(op, key_len, std::move(key),
                                 val_len, std::move(val));
-        send_request_descriptor(rd_idx);
+        auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
+                                                      _ras.size());
+        _ras[partition_id].append_new_request_descriptor(rd_idx);
         return _rds[rd_idx].obtain_future();
     }
     size_t nr_request_descriptors() {
@@ -595,27 +597,15 @@ private:
             break;
         }
         case action::resend_rd : {
-            send_request_descriptor(rd_idx);
+            auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
+                                                  _ras.size());
+            _ras[partition_id].append_new_request_descriptor(rd_idx);
+            _ras[partition_id].force_send();
             break;
         }
         default:
             break;
         }
-    }
-    void send_request_descriptor(unsigned rd_idx){
-        // do something to send the request descriptor
-        // to the request assembler
-
-        // We don't need to calcualte the server index
-        // because we only support a single server curently.
-
-        // Here, each ra in _ras represents a partition.
-        auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
-                                              _ras.size());
-#if MICA_DEBUG
-        printf("Thread %d: The partition id is %d\n", engine().cpu_id(), partition_id);
-#endif
-        _ras[partition_id].append_new_request_descriptor(rd_idx);
     }
     future<> receive(net::packet p){
         if (!is_valid(p) || !is_response(p) || p.nr_frags()!=1){
