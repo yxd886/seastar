@@ -272,9 +272,9 @@ public:
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
 
-                do_with(ic.get_sd_async_flow(), [&_mc](sd_async_flow<dummy_udp_ppr>& ac){
+                do_with(ic.get_sd_async_flow(), [this](sd_async_flow<dummy_udp_ppr>& ac){
                     ac.register_events(dummy_udp_events::pkt_in);
-                    return ac.run_async_loop([&ac, &_mc](){
+                    return ac.run_async_loop([&ac, this](){
                         // printf("client async loop runs!\n");
                         if(ac.cur_event().on_close_event()) {
                             return make_ready_future<af_action>(af_action::close_forward);
