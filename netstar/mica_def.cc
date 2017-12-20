@@ -1,5 +1,7 @@
 #include "netstar/mica_def.hh"
 #include "core/print.hh"
+#include "core/reactor.hh"
+#include "net/toeplitz.hh"
 
 namespace netstar{
 
@@ -56,10 +58,16 @@ do_calculate_queue_mapping(boost::program_options::variables_map& opts,
             net::l4connid<net::ipv4_traits>
             to_remote{remote_ip_addr, local_ip_addr, remote_port, local_port};
 
-            unsigned local_queue = pt.get_qp_wrapper().hash2cpu(to_local.hash(pt.get_qp_wrapper().get_rss_key()));
+            const rss_key_type& rss_key = (seastar::smp::count==1)?
+                                          (seastar::default_rsskey_52bytes) :
+                                          (pt.get_qp_wrapper().get_rss_key());
+
+            unsigned local_queue = (seastar::smp::count==1)?
+                                    0 :
+                                    pt.get_qp_wrapper().hash2cpu(to_local.hash(rss_key));
             unsigned remote_queue =
                     remote_redir_table[
-                                       to_remote.hash(pt.get_qp_wrapper().get_rss_key()) &
+                                       to_remote.hash(rss_key) &
                                        (remote_redir_table.size() - 1)
                                        ];
 

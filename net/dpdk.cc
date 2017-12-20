@@ -1571,7 +1571,6 @@ int dpdk_device::init_port_start()
         if (_dev_info.hash_key_size == 40) {
             _rss_key = default_rsskey_40bytes;
         } else if (_dev_info.hash_key_size == 52) {
-            printf("52 confirmed.\n");
             _rss_key = default_rsskey_52bytes;
         } else if (_dev_info.hash_key_size != 0) {
             // WTF?!!
