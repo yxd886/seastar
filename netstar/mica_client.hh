@@ -146,7 +146,7 @@ public:
         static constexpr unsigned max_retries = 5;
 
         // Initial timeout time in millisecond
-        static constexpr unsigned initial_timeout_val = 10;
+        static constexpr unsigned initial_timeout_val = 20;
     public:
         // A series of actions that can be applied to request_descriptor.
 
