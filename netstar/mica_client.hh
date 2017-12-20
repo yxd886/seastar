@@ -153,7 +153,7 @@ public:
         size_t _request_size;
 
         // maximum number of allowed timeout retries
-        static constexpr unsigned max_retries = 1;
+        static constexpr unsigned max_retries = 3;
 
         // Initial timeout time in millisecond
         static constexpr unsigned initial_timeout_val = 1;
