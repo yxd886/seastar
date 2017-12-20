@@ -584,13 +584,9 @@ public:
         send_request_descriptor(rd_idx);
         return _rds[rd_idx].obtain_future();
     }
-
-    // Get some stats:
-    struct mica_stat {
-        unsigned mica_request_to_error;
-        unsigned available_request_descriptors;
-    };
-    mica_stat mica_public_stat;
+    size_t nr_request_descriptors() {
+        return _recycled_rds.size();
+    }
 private:
     void check_request_assemblers(){
         for(auto& ra : _ras){

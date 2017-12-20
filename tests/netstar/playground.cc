@@ -284,13 +284,18 @@ public:
                         // fprint(std::cout, "size of the flow key is %d.\n", fk_tb.size());
                         // fprint(std::cout, "size of roundup flow key is %d.\n", roundup<8>(fk_tb.size()));
                         return this->_mc.query(Operation::kGet, ac.get_flow_key_size(),
-                            std::move(fk_tb), 0, temporary_buffer<char>()).then_wrapped([&ac, this](auto&& f){
-                            try{
-                                f.get();
-                                return make_ready_future<af_action>(af_action::forward);
+                            std::move(fk_tb), 0, temporary_buffer<char>()).then([&ac, this](mica_response response){
+                            if(response.is_valid()) {
+                                return af_action::forward;
                             }
-                            catch(...){
-                                return make_ready_future<af_action>(af_action::drop);
+                            else{
+                                if(this->_mc.nr_request_descriptors() == 0){
+                                    this->_old.insufficient_mica_rd_erorr += 1;
+                                }
+                                else{
+                                    this->_old.mica_timeout_error += 1;
+                                }
+                                return af_action::drop;
                             }
                         });
                     });
@@ -308,14 +313,20 @@ public:
         uint64_t egress_send;
         unsigned egress_failed_send;
         size_t active_flow_num;
+
+        unsigned mica_timeout_error;
+        unsigned insufficient_mica_rd_erorr;
+
         void operator+=(const info& o) {
             ingress_received += o.ingress_received;
             egress_send += o.egress_send;
             egress_failed_send += o.egress_failed_send;
             active_flow_num += o.active_flow_num;
+            mica_timeout_error += o.mica_timeout_error;
+            insufficient_mica_rd_erorr += o.insufficient_mica_rd_erorr;
         }
     };
-    info _old{0,0,0,0};
+    info _old{0,0,0,0,0,0};
 
     future<info> get_info() {
         /*return make_ready_future<info>(info{_ingress_port.get_qp_wrapper().rx_pkts(),
@@ -325,7 +336,8 @@ public:
         return make_ready_future<info>(info{_ingress_port.get_qp_wrapper().rx_pkts(),
                                             _ingress_port.get_qp_wrapper().tx_pkts(),
                                             _ingress_port.peek_failed_send_cout(),
-                                            _udp_manager.peek_active_flow_num()});
+                                            _udp_manager.peek_active_flow_num(),
+        1, 1});
     }
     void collect_stats(int) {
         repeat([this]{
