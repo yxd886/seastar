@@ -381,9 +381,9 @@ int main(int ac, char** av) {
             return forwarders.invoke_on(0, &forwarder::collect_stats, 1);
         }).then([]{
             fprint(std::cout, "forwarder runs!\n");
-            /*engine().at_exit([]{
-                return forwarders->stop();
-            });*/
+            engine().at_exit([]{
+                return forwarders.stop();
+            });
         });
     });
 }
