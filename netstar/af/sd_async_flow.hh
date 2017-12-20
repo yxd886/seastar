@@ -48,9 +48,9 @@ private:
 
     void close_ppr_and_remove_flow_key() {
         _client.ppr_close = true;
-        if(_client.flow_key_on_flow_table) {
-            _manager.remove_mapping_on_flow_table(_client.flow_key.flow_key_ref());
-            _client.flow_key_on_flow_table = false;
+        if(_client.flow_key) {
+            _manager.remove_mapping_on_flow_table(*(_client.flow_key));
+            _client.flow_key = std::experimental::nullopt;
         }
     }
 
@@ -182,8 +182,7 @@ public:
         , _client(true, client_direction, [this](bool){this->ppr_passive_close();})
         , _pkts_in_pipeline(0)
         , _initial_context_destroyed(false) {
-        _client.flow_key.assign_flow_key(*client_flow_key);
-        _client.flow_key_on_flow_table = true;
+        _client.flow_key = *client_flow_key;
     }
 
     ~sd_async_flow_impl() {
@@ -312,14 +311,6 @@ public:
 
     filtered_events<EventEnumType> cur_event() {
         return _impl->_client.cur_context.value().fe;
-    }
-
-    temporary_buffer<char> get_flow_key_in_tb() {
-        return _impl->_client.flow_key.get_tb();
-    }
-
-    size_t get_flow_key_size() {
-        return sizeof(typename Ppr::FlowKeyType);
     }
 
     // One shot interface, continuous call without shutting down
@@ -486,7 +477,7 @@ private:
                                        lw_shared_ptr<internal::sd_async_flow_impl<Ppr>> impl_lw_ptr){
         assert(_flow_table.insert({flow_key, impl_lw_ptr}).second);
     }
-    void remove_mapping_on_flow_table(const FlowKeyType& flow_key) {
+    void remove_mapping_on_flow_table(FlowKeyType& flow_key) {
         _flow_table.erase(flow_key);
     }
 };
