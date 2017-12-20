@@ -226,7 +226,7 @@ public:
             // (4 retries, 1ms initial timeout value) a request descriptor
             // will be held for at most 10ms.
             // _to.arm(std::chrono::milliseconds(initial_timeout_val+_retry_count));
-            _to.arm(std::chrono::milliseconds(initial_timeout_val));
+            _to.arm(10ms);
         }
     public:
         size_t get_request_size(){
@@ -551,7 +551,7 @@ public:
         // in case there's not enough request put into the request
         // assemblers.
         _check_ras_timer.set_callback([this]{check_request_assemblers();});
-        _check_ras_timer.arm_periodic(100us);
+        _check_ras_timer.arm_periodic(1ms);
     }
     void start_receiving(){
         mc_assert(ports().size() == 1);
