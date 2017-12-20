@@ -140,8 +140,8 @@ def debug_flag(compiler):
 
         x<int> a;
         ''')
-    if try_compile(source = src_with_auto, flags = ['-g', '-std=gnu++1y'], compiler = compiler):
-        return '-g'
+    if try_compile(source = src_with_auto, flags = ['-pg', '-std=gnu++1y'], compiler = compiler):
+        return '-pg'
     else:
         print('Note: debug information disabled; upgrade your compiler')
         return ''

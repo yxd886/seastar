@@ -387,3 +387,6 @@ int main(int ac, char** av) {
         });
     });
 }
+
+// 1 thread forwarder, sender use static udp traffic gen, 700000 total pps, 1000 flows
+// The system barely crashes, which is good.
