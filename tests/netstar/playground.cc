@@ -305,9 +305,13 @@ public:
     info _old{0,0,0,0};
 
     future<info> get_info() {
-        return make_ready_future<info>(info{_ingress_port.get_qp_wrapper().rx_pkts(),
+        /*return make_ready_future<info>(info{_ingress_port.get_qp_wrapper().rx_pkts(),
                                             _egress_port.get_qp_wrapper().tx_pkts(),
                                             _egress_port.peek_failed_send_cout(),
+                                            _udp_manager.peek_active_flow_num()});*/
+        return make_ready_future<info>(info{_ingress_port.get_qp_wrapper().rx_pkts(),
+                                            _ingress_port.get_qp_wrapper().tx_pkts(),
+                                            _ingress_port.peek_failed_send_cout(),
                                             _udp_manager.peek_active_flow_num()});
     }
     void collect_stats(int) {
