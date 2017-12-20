@@ -283,10 +283,14 @@ public:
                             return make_ready_future<af_action>(af_action::close_forward);
                         }
 
-                        auto fk_tb = ac.get_flow_key_in_tb();
-                        return this->_mc.query(Operation::kGet, sizeof(uint64_t), std::move(fk_tb),
+                        auto src_ip = ac.get_src_ip();
+                        extendable_buffer key_buf;
+                        key_buf.fill_data(src_ip);
+                        return this->_mc.query(Operation::kGet, sizeof(src_ip), std::move(key_buf),
                                                0, temporary_buffer<char>()).then([&ac, this](mica_response response){
-                            auto fk_tb = ac.get_flow_key_in_tb();
+                            auto src_ip = ac.get_src_ip();
+                            extendable_buffer key_buf;
+                            key_buf.fill_data(src_ip);
 
                             if(response.get_result() == Result::kNotFound) {
                                 // fprint(std::cout,"Key does not exist.\n");
@@ -295,8 +299,8 @@ public:
                                 val_buf.fill_data(val);
 
                                 return this->_mc.query(Operation::kSet,
-                                        sizeof(uint64_t), std::move(fk_tb),
-                                        sizeof(fake_val), val_buf.get_temp_buffer());
+                                        sizeof(src_ip), std::move(key_buf),
+                                        sizeof(val), val_buf.get_temp_buffer());
                             }
                             else{
                                 // fprint(std::cout,"Key exist.\n");
@@ -305,8 +309,8 @@ public:
                                 val_buf.fill_data(val);
 
                                 return this->_mc.query(Operation::kSet,
-                                                       sizeof(uint64_t), std::move(fk_tb),
-                                                       sizeof(fake_val), val_buf.get_temp_buffer());
+                                                       sizeof(src_ip), std::move(key_buf),
+                                                       sizeof(val), val_buf.get_temp_buffer());
                             }
                         }).then_wrapped([&ac, this](auto&& f){
                             try{
