@@ -362,10 +362,6 @@ public:
         // a vector of request descriptors
         std::vector<request_descriptor>& _rds;
 
-        // a boolean flag for checking whether the
-        // request assembler is waiting to send something out.
-        bool _is_in_send_state;
-
         // a stream for holding the rd indexes.
         circular_buffer<unsigned> _send_stream;
     public:
@@ -374,7 +370,7 @@ public:
                 std::vector<request_descriptor>& rds) :
                 _remote_ei(remote_ei), _local_ei(local_ei),
                 _port(p), _remaining_size(max_req_len),
-                _rds(rds), _is_in_send_state(false) {
+                _rds(rds) {
             _batch_header_pkt = build_requet_batch_header();
             _batch_header_frag = _batch_header_pkt.frag(0);
             _rd_idxs.reserve(10);
@@ -387,7 +383,7 @@ public:
         }
 
         void consume_send_stream(){
-            while(!_send_stream.empty() && !_is_in_send_state){
+            while(!_send_stream.empty()){
                 auto next_rd_idx = _send_stream.front();
                 auto& next_rd = _rds[next_rd_idx];
                 auto next_rd_size = next_rd.get_request_size();
@@ -403,7 +399,7 @@ public:
         }
 
         void force_send(){
-            if(_rd_idxs.size()>0 && !_is_in_send_state){
+            if(_rd_idxs.size()>0){
                 send_request_packet();
             }
         }
@@ -435,9 +431,6 @@ public:
             setup_ip_udp_length(p);
             setup_request_num(p);
 
-            // flip the send state
-            _is_in_send_state = true;
-
             // send
 #if MICA_DEBUG
             printf("Thread %d: The request packet with size %d is sent out\n", engine().cpu_id(), p.len());
@@ -453,7 +446,6 @@ public:
             }
 
             // reset the status of the request_assembler
-            _is_in_send_state = false;
            _rd_idxs.clear();
            _remaining_size = max_req_len;
         }
@@ -486,7 +478,6 @@ private:
     static constexpr unsigned total_request_descriptor_count = 65535;
     std::vector<request_descriptor> _rds;
     std::vector<request_assembler> _ras;
-    semaphore _pending_work_queue = {total_request_descriptor_count};
     circular_buffer<unsigned> _recycled_rds;
     timer<lowres_clock> _check_ras_timer;
 public:
@@ -598,7 +589,6 @@ private:
         }
         case action::recycle_rd : {
             _recycled_rds.push_back(rd_idx);
-            _pending_work_queue.signal(1);
             break;
         }
         case action::resend_rd : {
@@ -695,7 +685,6 @@ private:
 #endif
                 // recycle the request descriptor.
                 _recycled_rds.push_back(rd_idx);
-                _pending_work_queue.signal(1);
                 break;
             }
             case action::resend_rd : {
