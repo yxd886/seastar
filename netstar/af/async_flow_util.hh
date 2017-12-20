@@ -129,7 +129,8 @@ private:
     char flow_key[roundup<8>(sizeof(FlowKeyType))];
 public:
     const FlowKeyType& flow_key_ref() {
-        return *(reinterpret_cast<FlowKeyType*>(flow_key));
+        FlowKeyType* ptr = reinterpret_cast<FlowKeyType*>(flow_key);
+        return *ptr;
     }
     void assign_flow_key(FlowKeyType& new_flow_key) {
         std::memcpy(flow_key, reinterpret_cast<char*>(&new_flow_key), sizeof(FlowKeyType));
