@@ -188,6 +188,7 @@ public:
                 assert(response.get_result() == Result::kSuccess);
             }).then_wrapped([](auto&& f){
                 try{
+                    f.get();
                     fprint(std::cout, "mica_test succeeds!\n");
                     return make_ready_future<stop_iteration>(stop_iteration::yes);
                 }
