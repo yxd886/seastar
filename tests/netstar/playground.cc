@@ -283,16 +283,10 @@ public:
                             return make_ready_future<af_action>(af_action::close_forward);
                         }
 
-                        // auto fk_tb = ac.get_flow_key_in_tb();
-                        uint64_t key = 10276325;
-                        extendable_buffer key_buf;
-                        key_buf.fill_data(key);
-                        return this->_mc.query(Operation::kGet, sizeof(uint64_t), key_buf.get_temp_buffer(),
-                                               0, temporary_buffer<char>()).then([&ac, this](mica_response response){
-                            uint64_t key = 10276325;
-                            extendable_buffer key_buf;
-                            key_buf.fill_data(key);
-
+                        auto fk_tb = ac.get_flow_key_in_tb();
+                        return this->_mc.query(Operation::kGet, ac.get_flow_key_size(),
+                            std::move(fk_tb), 0, temporary_buffer<char>()).then([&ac, this](mica_response response){
+                            auto fk_tb = ac.get_flow_key_in_tb();
                             if(response.get_result() == Result::kNotFound) {
                                 fprint(std::cout,"Key does not exist.\n");
                                 fake_val val;
@@ -300,7 +294,7 @@ public:
                                 val_buf.fill_data(val);
 
                                 return this->_mc.query(Operation::kSet,
-                                        sizeof(uint64_t), key_buf.get_temp_buffer(),
+                                        ac.get_flow_key_size(), std::move(fk_tb),
                                         sizeof(fake_val), val_buf.get_temp_buffer());
                             }
                             else{
@@ -309,7 +303,7 @@ public:
                                 auto val_tb = response.get_val_tb();
 
                                 return this->_mc.query(Operation::kSet,
-                                                       sizeof(uint64_t), key_buf.get_temp_buffer(),
+                                                       ac.get_flow_key_size(), std::move(fk_tb),
                                                        val_len, std::move(val_tb));
                             }
                         }).then_wrapped([&ac, this](auto&& f){

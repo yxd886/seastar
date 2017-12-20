@@ -624,8 +624,9 @@ private:
         // Here, each ra in _ras represents a partition.
         auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
                                               _ras.size());
-#if MICA_DEBUG
+#if 1
         printf("Thread %d: The partition id is %d\n", engine().cpu_id(), partition_id);
+        printf("Thread %d: The key hash is %" PRIu64 "\n", engine().cpu_id(), _rds[rd_idx].get_key_hash());
 #endif
         _ras[partition_id].append_new_request_descriptor(rd_idx);
     }
