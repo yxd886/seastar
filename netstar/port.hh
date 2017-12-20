@@ -83,6 +83,11 @@ public:
         return make_ready_future<>();
     }
 
+    inline future<> force_send(net::packet p) {
+        _sendq.push_back(std::move(p));
+        return make_ready_future<>();
+    }
+
     inline size_t peek_sendq_size() {
         return _sendq.size();
     }

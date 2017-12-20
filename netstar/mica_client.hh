@@ -439,7 +439,7 @@ public:
             std::cout<<"Send request packet with src mac: "<<src_eth<<" and dst mac: "<<dst_eth<<std::endl;
 #endif
             p.linearize();
-            _port.send(std::move(p));
+            _port.force_send(std::move(p));
 
             for(auto rd_idx : _rd_idxs){
                 _rds[rd_idx].arm_timer();
@@ -554,7 +554,7 @@ public:
             check_request_assemblers(which_ra);
             which_ra = (which_ra+1)%(_ras.size());
         });
-        _check_ras_timer.arm_periodic(100us);
+        _check_ras_timer.arm_periodic(50us);
     }
     void start_receiving(){
         mc_assert(ports().size() == 1);
