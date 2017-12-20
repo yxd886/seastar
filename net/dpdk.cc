@@ -1148,7 +1148,7 @@ build_mbuf_cluster:
              * patch by djp
              * modify the name of the pktmbuf_pool.
              */
-            sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + to_sstring(_dev->port_idx()) + "_tx";
+            sstring name = sstring(pktmbuf_pool_name) + to_sstring(qid) + to_sstring(port_idx) + "_tx";
 
             printf("Creating Tx mbuf pool '%s' [%u mbufs] ...\n",
                    name.c_str(), mbufs_per_queue_tx);
