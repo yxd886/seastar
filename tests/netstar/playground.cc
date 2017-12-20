@@ -179,6 +179,11 @@ public:
                 return _mc.query(Operation::kGet,sizeof(key), key_buf.get_temp_buffer(),
                                  0, temporary_buffer<char>());
             }).then([this](mica_response response){
+                if(response.get_result() == Result::kNotFound) {
+                    fprint(std::cout, "wtf??.\n");
+                    assert(false);
+                }
+
                 assert(response.get_value<uint64_t>() == 6);
 
                 net::general_flow_key_t key{engine().cpu_id()+1, 0, 0, 0};
