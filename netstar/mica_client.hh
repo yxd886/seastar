@@ -146,7 +146,7 @@ public:
         static constexpr unsigned max_retries = 5;
 
         // Initial timeout time in millisecond
-        static constexpr unsigned initial_timeout_val = 20;
+        static constexpr unsigned initial_timeout_val = 10;
     public:
         // A series of actions that can be applied to request_descriptor.
 
@@ -550,7 +550,10 @@ public:
         // finally, set up a timer to regularly force packet out
         // in case there's not enough request put into the request
         // assemblers.
-        _check_ras_timer.set_callback([this]{check_request_assemblers();});
+        _check_ras_timer.set_callback([this, which_ra=0]{
+            check_request_assemblers(which_ra);
+            which_ra = (which_ra+1)%(_ras.size());
+        });
         _check_ras_timer.arm_periodic(100us);
     }
     void start_receiving(){
@@ -569,20 +572,17 @@ public:
         _recycled_rds.pop_front();
         _rds[rd_idx].new_action(op, key_len, std::move(key),
                                 val_len, std::move(val));
-        auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
-                                                      _ras.size());
-        _ras[partition_id].append_new_request_descriptor(rd_idx);
+        send_request_descriptor(rd_idx);
         return _rds[rd_idx].obtain_future();
     }
     size_t nr_request_descriptors() {
         return _recycled_rds.size();
     }
 private:
-    void check_request_assemblers(){
-        for(auto& ra : _ras){
-            ra.consume_send_stream();
-            ra.force_send();
-        }
+    void check_request_assemblers(int which_ra){
+        auto& ra = _ras[which_ra];
+        ra.consume_send_stream();
+        ra.force_send();
     }
     void check_request_descriptor_timeout(unsigned rd_idx){
         auto action_result = _rds[rd_idx].timeout_handler();
@@ -597,15 +597,27 @@ private:
             break;
         }
         case action::resend_rd : {
-            auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
-                                                  _ras.size());
-            _ras[partition_id].append_new_request_descriptor(rd_idx);
-            _ras[partition_id].force_send();
+            send_request_descriptor(rd_idx);
             break;
         }
         default:
             break;
         }
+    }
+    void send_request_descriptor(unsigned rd_idx){
+        // do something to send the request descriptor
+        // to the request assembler
+
+        // We don't need to calcualte the server index
+        // because we only support a single server curently.
+
+        // Here, each ra in _ras represents a partition.
+        auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
+                                              _ras.size());
+#if MICA_DEBUG
+        printf("Thread %d: The partition id is %d\n", engine().cpu_id(), partition_id);
+#endif
+        _ras[partition_id].append_new_request_descriptor(rd_idx);
     }
     future<> receive(net::packet p){
         if (!is_valid(p) || !is_response(p) || p.nr_frags()!=1){
