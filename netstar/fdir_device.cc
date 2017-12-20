@@ -160,7 +160,7 @@ uint32_t qp_mempool_obj_size(bool hugetlbfs_membackend)
     return mp_size;
 }
 
-static constexpr const char* pktmbuf_pool_name   = "dpdk_pktmbuf_pool";
+static constexpr const char* pktmbuf_pool_name   = "fdpdk_pktmbuf_pool";
 
 /*
  * When doing reads from the NIC queues, use this batch size
@@ -1125,9 +1125,7 @@ build_mbuf_cluster:
         tx_buf_factory(uint8_t qid, uint8_t port_idx) {
             using namespace memory;
 
-            sstring name = sstring(pktmbuf_pool_name) + sstring("_") +
-                           sstring("p") + to_sstring(port_idx) + sstring("q") + to_sstring(qid) +
-                           "_tx";
+            sstring name = sstring(pktmbuf_pool_name) + to_sstring(qid) + to_sstring(port_idx) + "_tx";
 
             printf("Creating Tx mbuf pool '%s' [%u mbufs] ...\n",
                    name.c_str(), mbufs_per_queue_tx);
@@ -1910,9 +1908,7 @@ template <bool HugetlbfsMemBackend>
 bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
 {
     using namespace memory;
-    sstring name = sstring(pktmbuf_pool_name) + sstring("_") +
-                   sstring("p") + to_sstring(_dev->port_idx()) + sstring("q") + to_sstring(_qid) +
-                   "_rx";
+    sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + to_sstring(_dev->port_idx()) + "_rx";
 
     printf("Creating Rx mbuf pool '%s' [%u mbufs] ...\n",
            name.c_str(), mbufs_per_queue_rx);
