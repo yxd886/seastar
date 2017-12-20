@@ -275,14 +275,14 @@ public:
                 do_with(ic.get_sd_async_flow(), [this](sd_async_flow<dummy_udp_ppr>& ac){
                     ac.register_events(dummy_udp_events::pkt_in);
                     return ac.run_async_loop([&ac, this](){
-                        printf("client async loop runs!\n");
+                        // printf("client async loop runs!\n");
                         if(ac.cur_event().on_close_event()) {
                             return make_ready_future<af_action>(af_action::close_forward);
                         }
 
                         auto fk_tb = ac.get_flow_key_in_tb();
-                        fprint(std::cout, "size of the flow key is %d.\n", fk_tb.size());
-                        fprint(std::cout, "size of roundup flow key is %d.\n", roundup<8>(fk_tb.size()));
+                        // fprint(std::cout, "size of the flow key is %d.\n", fk_tb.size());
+                        // fprint(std::cout, "size of roundup flow key is %d.\n", roundup<8>(fk_tb.size()));
                         return this->_mc.query(Operation::kGet, ac.get_flow_key_size(),
                             std::move(fk_tb), 0, temporary_buffer<char>()).then([&ac, this](mica_response response){
                             return make_ready_future<af_action>(af_action::forward);
