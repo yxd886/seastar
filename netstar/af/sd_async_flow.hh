@@ -10,6 +10,7 @@
 #include "core/queue.hh"
 
 #include "netstar/af/async_flow_util.hh"
+#include "netstar/extendable_buffer.hh"
 
 #include "mica/util/hash.h"
 
@@ -186,7 +187,7 @@ public:
         , _pkts_in_pipeline(0)
         , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;
-        flow_key_hash = mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(typename FlowKeyType));
+        flow_key_hash = mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(FlowKeyType));
     }
 
     ~sd_async_flow_impl() {
