@@ -289,12 +289,12 @@ public:
                                 return af_action::forward;
                             }
                             else{
-                                /*if(this->_mc.nr_request_descriptors() == 0){
-                                    this->_old.insufficient_mica_rd_erorr += 1;
+                                if(this->_mc.nr_request_descriptors() == 0){
+                                    this->_insufficient_mica_rd_erorr += 1;
                                 }
                                 else{
-                                    this->_old.mica_timeout_error += 1;
-                                }*/
+                                    this->_mica_timeout_error += 1;
+                                }
                                 return af_action::drop;
                             }
                         });
@@ -327,6 +327,8 @@ public:
         }
     };
     info _old{0,0,0,0,0,0};
+    unsigned _mica_timeout_error;
+    unsigned _insufficient_mica_rd_erorr;
 
     future<info> get_info() {
         /*return make_ready_future<info>(info{_ingress_port.get_qp_wrapper().rx_pkts(),
@@ -337,16 +339,19 @@ public:
                                             _ingress_port.get_qp_wrapper().tx_pkts(),
                                             _ingress_port.peek_failed_send_cout(),
                                             _udp_manager.peek_active_flow_num(),
-        1, 1});
+                                            _mica_timeout_error,
+                                            _insufficient_mica_rd_erorr});
     }
     void collect_stats(int) {
         repeat([this]{
             return forwarders.map_reduce(adder<info>(), &forwarder::get_info).then([this](info i){
-                fprint(std::cout, "ingress_received=%d, egress_send=%d, egress_failed_send=%d, active_flow_num=%d.\n",
+                fprint(std::cout, "ingress_received=%d, egress_send=%d, egress_failed_send=%d, active_flow_num=%d, mica_timeout_error=%d, insufficient_mica_rd_erorr=%d.\n",
                         i.ingress_received-_old.ingress_received,
                         i.egress_send - _old.egress_send,
                         i.egress_failed_send - _old.egress_failed_send,
-                        i.active_flow_num);
+                        i.active_flow_num,
+                        i.mica_timeout_error - _old.mica_timeout_error,
+                        i.insufficient_mica_rd_erorr - _old.insufficient_mica_rd_erorr);
                 _old = i;
             }).then([]{
                 return seastar::sleep(1s).then([]{
