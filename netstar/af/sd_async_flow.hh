@@ -314,7 +314,7 @@ public:
     }
 
     temporary_buffer<char> get_flow_key_in_tb() {
-        return temporary_buffer<char>(static_cast<char*>(&(_impl->_client.flow_key.value())),
+        return temporary_buffer<char>(reinterpret_cast<char*>(&(_impl->_client.flow_key.value())),
                                       sizeof(typename Ppr::FlowKeyType),
                                       deleter());
     }
