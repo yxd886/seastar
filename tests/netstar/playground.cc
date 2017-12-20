@@ -288,6 +288,7 @@ public:
                             std::move(fk_tb), 0, temporary_buffer<char>()).then([&ac, this](mica_response response){
                             auto fk_tb = ac.get_flow_key_in_tb();
                             if(response.get_result() == Result::kNotFound) {
+                                fprint(std::cout,"Key does not exist.\n");
                                 fake_val val;
                                 extendable_buffer val_buf;
                                 val_buf.fill_data(val);
@@ -297,6 +298,7 @@ public:
                                         sizeof(fake_val), val_buf.get_temp_buffer());
                             }
                             else{
+                                fprint(std::cout,"Key exist.\n");
                                 auto val_len = response.get_val_len();
                                 auto val_tb = response.get_val_tb();
 
