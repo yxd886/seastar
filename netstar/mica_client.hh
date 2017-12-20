@@ -87,14 +87,14 @@ public:
 
     template<typename T>
     T& get_key(){
-        assert(sizeof(T) == get_key_len());
+        mc_assert(sizeof(T) == get_key_len());
         auto key = _response_pkt.get_header<T>(sizeof(RequestHeader));
         return *key;
     }
 
     template<typename T>
     T& get_value(){
-        assert(sizeof(T) == get_val_len());
+        mc_assert(sizeof(T) == get_val_len());
         auto value =
                 _response_pkt.get_header<T>(
                         sizeof(RequestHeader)+get_roundup_key_len());
@@ -170,12 +170,15 @@ public:
             // 1. _pr contains nothing and associate with no continuation
             // 2. _retry_count is cleared and is zero
             // 3. _to timer is not armed.
-            assert(!_pr && _retry_count == 0 && !_to.armed());
-            assert(key_len >= 8 &&
-                   (key_len < (1 << 8)) &&
-                   (val_len >= 8 || val_len == 0) &&
-                   roundup<8>(key_len) == key.size() &&
-                   roundup<8>(val_len) == val.size());
+            mc_assert(!_pr);
+            mc_assert(_retry_count == 0);
+            mc_assert(!_to.armed());
+            mc_assert(key_len>=8);
+            mc_assert((key_len < (1 << 8)));
+            mc_assert((val_len >= 8 || val_len == 0));
+            mc_assert(roundup<8>(key_len) == key.size());
+            mc_assert(roundup<8>(val_len) == val.size());
+            mc_assert(ENABLE_MC_ASSERTION == 1);
 
             _key_len = key_len;
             _key_buf = std::move(key);
@@ -184,7 +187,7 @@ public:
             _request_size = sizeof(RequestHeader)+_key_buf.size()+_val_buf.size();
 
             // make sure that _request_size is smaller than max_req_len
-            assert(_request_size<=max_req_len);
+            mc_assert(_request_size<=max_req_len);
 
             setup_request_header(op);
         }
@@ -192,7 +195,10 @@ public:
         future<mica_response> obtain_future(){
             // This is called after new_action is called. So we
             // perform the same assertion.
-            assert(!_pr && _retry_count == 0 && !_to.armed());
+            mc_assert(!_pr);
+            mc_assert(_retry_count==0);
+            mc_assert(!_to.armed());
+
             _pr = promise<mica_response>();
             return _pr->get_future();
         }
@@ -208,7 +214,8 @@ public:
         }
 
         void arm_timer(){
-            assert( _retry_count < max_retries && !_to.armed());
+            mc_assert(_retry_count<max_retries);
+            mc_assert(!_to.armed());
             // determining how long to timeout before waiting for
             // the response to come back. I test that sometimes,
             // We need to wait for at least 4ms for some requests.
@@ -252,9 +259,9 @@ public:
             if(!_to.armed()) {
                 fprint(std::cout, "_retry_count=%d, _epoch=%d, _rd_index=%d.\n", _retry_count, _epoch, _rd_index);
             }
-            assert(_to.armed());
-            assert(_retry_count < max_retries);
-            assert(_pr);
+            mc_assert(_to.armed());
+            mc_assert(_retry_count < max_retries);
+            mc_assert(_pr);
 
             _pr->set_value(mica_response(std::move(response_pkt)));
             normal_recycle_prep();
@@ -263,7 +270,7 @@ public:
         // The timeout handler
         action timeout_handler(){
             // handle _to timeout
-            assert(_pr);
+            mc_assert(_pr);
 #if MICA_DEBUG
             printf("Request descriptor %d times out\n", _rd_index);
 #endif
@@ -307,7 +314,10 @@ public:
             // Preparation for a normal recycle.
             // This is only triggered by correctly match a response.
             // We have the following assertions to check
-            assert(_to.armed() && _retry_count < max_retries && _pr);
+            mc_assert(_to.armed());
+            mc_assert(_retry_count<max_retries);
+            mc_assert(_pr);
+
             // increase the epoch for a new request_descriptor
             _epoch++;
             // reset the _retyry_count to 0
@@ -322,7 +332,10 @@ public:
             // Preparation for a timeout recycle.
             // This is only triggered after consecutive timeout is triggered
             // without getting a response.
-            assert(_retry_count == max_retries && _pr && !_to.armed());
+            mc_assert(_retry_count == max_retries);
+            mc_assert(_pr);
+            mc_assert(!_to.armed());
+
             _epoch++;
             _retry_count = 0;
             _pr = std::experimental::nullopt;
@@ -475,7 +488,7 @@ private:
     std::vector<request_assembler> _ras;
     semaphore _pending_work_queue = {total_request_descriptor_count};
     circular_buffer<unsigned> _recycled_rds;
-    timer<steady_clock_type> _check_ras_timer;
+    timer<lowres_clock> _check_ras_timer;
 public:
     explicit mica_client(per_core_objs<mica_client>* all_objs) :
             work_unit<mica_client>(all_objs){}
@@ -493,7 +506,7 @@ public:
                 vector<vector<port_pair>>& queue_map){
         // Currently, we only support one port for mica client, and
         // one port for mica server.
-        assert(ports().size() == 1);
+        mc_assert(ports().size() == 1);
 
         // prepare all the ingredients for the intialization loop
         net::ethernet_address remote_ei_eth_addr(
@@ -547,10 +560,10 @@ public:
         // in case there's not enough request put into the request
         // assemblers.
         _check_ras_timer.set_callback([this]{check_request_assemblers();});
-        _check_ras_timer.arm_periodic(100us);
+        _check_ras_timer.arm_periodic(1ms);
     }
     void start_receiving(){
-        assert(ports().size() == 1);
+        mc_assert(ports().size() == 1);
         this->configure_receive_fn(0,
                 [this](net::packet pkt){return receive(std::move(pkt));});
     }
@@ -580,7 +593,7 @@ private:
 
         switch (action_result){
         case action::no_action : {
-            assert(false);
+            mc_assert(false);
             break;
         }
         case action::recycle_rd : {
@@ -686,7 +699,7 @@ private:
                 break;
             }
             case action::resend_rd : {
-                assert(false);
+                mc_assert(false);
                 break;
             }
             default:
@@ -695,7 +708,7 @@ private:
 
             offset += total_reponse_length;
         }
-        assert(offset == p.len());
+        mc_assert(offset == p.len());
         return make_ready_future<>();
     }
     uint16_t calc_partition_id(uint64_t key_hash, size_t partition_count) {
