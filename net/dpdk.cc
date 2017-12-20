@@ -1148,9 +1148,7 @@ build_mbuf_cluster:
              * patch by djp
              * modify the name of the pktmbuf_pool.
              */
-            sstring name = sstring(pktmbuf_pool_name) + sstring("_") +
-                           sstring("p") + to_sstring(port_idx) + sstring("q") + to_sstring(qid) +
-                           "_tx";
+            sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + to_sstring(_dev->port_idx()) + "_tx";
 
             printf("Creating Tx mbuf pool '%s' [%u mbufs] ...\n",
                    name.c_str(), mbufs_per_queue_tx);
@@ -1814,9 +1812,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
      * patch by djp
      * modify the name of the pktmbuf_pool.
      */
-    sstring name = sstring(pktmbuf_pool_name) + sstring("_") +
-                   sstring("p") + to_sstring(_dev->port_idx()) + sstring("q") + to_sstring(_qid) +
-                   "_rx";
+    sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + to_sstring(_dev->port_idx()) + "_rx";
 
     printf("Creating Rx mbuf pool '%s' [%u mbufs] ...\n",
            name.c_str(), mbufs_per_queue_rx);
