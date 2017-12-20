@@ -155,6 +155,7 @@ public:
             net::general_flow_key_t key{engine().cpu_id()+1, 0, 0, 0};
             extendable_buffer key_buf;
             key_buf.fill_data(key);
+            fprint(std::cout, "sizeof(key)=%d, key_buf.size()=%d.\n", sizeof(key), key_buf.buf_len());
 
             return _mc.query(Operation::kGet, sizeof(key), key_buf.get_temp_buffer(),
                              0, temporary_buffer<char>()).then([this](mica_response response){
