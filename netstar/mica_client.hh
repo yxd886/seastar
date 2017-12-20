@@ -100,6 +100,16 @@ public:
                         sizeof(RequestHeader)+get_roundup_key_len());
         return *value;
     }
+
+    temporary_buffer<char> get_val_tb() {
+        temporary_buffer<char> ret;
+        auto pkt = _response_pkt.share(sizeof(RequestHeader)+get_roundup_key_len(), get_roundup_val_len());
+        mc_assert(pkt.nr_frags() == 1);
+        pkt.release_into([&ret] (temporary_buffer<char>&& frag) {
+            ret = std::move(frag);
+        });
+        return ret;
+    }
 };
 
 class mica_client : public work_unit<mica_client>{

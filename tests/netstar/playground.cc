@@ -116,6 +116,10 @@ public:
     };
 };
 
+struct fake_val {
+    char v[64];
+};
+
 class forwarder;
 distributed<forwarder> forwarders;
 
@@ -275,16 +279,32 @@ public:
                 do_with(ic.get_sd_async_flow(), [this](sd_async_flow<dummy_udp_ppr>& ac){
                     ac.register_events(dummy_udp_events::pkt_in);
                     return ac.run_async_loop([&ac, this](){
-                        // printf("client async loop runs!\n");
                         if(ac.cur_event().on_close_event()) {
                             return make_ready_future<af_action>(af_action::close_forward);
                         }
 
                         auto fk_tb = ac.get_flow_key_in_tb();
-                        // fprint(std::cout, "size of the flow key is %d.\n", fk_tb.size());
-                        // fprint(std::cout, "size of roundup flow key is %d.\n", roundup<8>(fk_tb.size()));
                         return this->_mc.query(Operation::kGet, ac.get_flow_key_size(),
-                            std::move(fk_tb), 0, temporary_buffer<char>()).then_wrapped([&ac, this](auto&& f){
+                            std::move(fk_tb), 0, temporary_buffer<char>()).then([&ac, this](mica_response response){
+                            auto fk_tb = ac.get_flow_key_in_tb();
+                            if(response.get_result() == Result::kNotFound) {
+                                fake_val val;
+                                extendable_buffer val_buf;
+                                val_buf.fill_data(val);
+
+                                return this->_mc.query(Operation::kSet,
+                                        ac.get_flow_key_size(), std::move(fk_tb),
+                                        sizeof(fake_val), val_buf.get_temp_buffer());
+                            }
+                            else{
+                                auto val_len = response.get_val_len();
+                                auto val_tb = response.get_val_tb();
+
+                                return this->_mc.query(Operation::kSet,
+                                                       ac.get_flow_key_size(), std::move(fk_tb),
+                                                       val_len, std::move(val_tb));
+                            }
+                        }).then_wrapped([&ac, this](auto&& f){
                             try{
                                 f.get();
                                 return af_action::forward;
@@ -329,8 +349,8 @@ public:
         }
     };
     info _old{0,0,0,0,0,0};
-    unsigned _mica_timeout_error;
-    unsigned _insufficient_mica_rd_erorr;
+    unsigned _mica_timeout_error = 0;
+    unsigned _insufficient_mica_rd_erorr=0;
 
     future<info> get_info() {
         /*return make_ready_future<info>(info{_ingress_port.get_qp_wrapper().rx_pkts(),
