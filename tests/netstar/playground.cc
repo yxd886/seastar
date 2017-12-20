@@ -152,15 +152,15 @@ public:
     future<> mica_test(int ) {
         // only test mica performance on thread 1.
         return repeat([this]{
-            uint64_t key = engine().cpu_id()+1;
+            net::general_flow_key_t key{engine().cpu_id()+1, 0, 0, 0};
             extendable_buffer key_buf;
             key_buf.fill_data(key);
 
-            return _mc.query(Operation::kGet,sizeof(key), key_buf.get_temp_buffer(),
+            return _mc.query(Operation::kGet, sizeof(key), key_buf.get_temp_buffer(),
                              0, temporary_buffer<char>()).then([this](mica_response response){
                 assert(response.get_result() == Result::kNotFound);
 
-                uint64_t key = engine().cpu_id()+1;
+                net::general_flow_key_t key{engine().cpu_id()+1, 0, 0, 0};
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 
@@ -172,7 +172,7 @@ public:
             }).then([this](mica_response response){
                 assert(response.get_result() == Result::kSuccess);
 
-                uint64_t key = engine().cpu_id()+1;
+                net::general_flow_key_t key{engine().cpu_id()+1, 0, 0, 0};
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 
@@ -181,7 +181,7 @@ public:
             }).then([this](mica_response response){
                 assert(response.get_value<uint64_t>() == 6);
 
-                uint64_t key = engine().cpu_id()+1;
+                net::general_flow_key_t key{engine().cpu_id()+1, 0, 0, 0};
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 

@@ -503,6 +503,7 @@ struct l4connid<InetTraits>::connid_hash : private std::hash<ipaddr>, private st
     }
 };
 
+// patch by djp
 struct general_flow_key_t_hash_fn : private std::hash<uint32_t>, private std::hash<uint16_t> {
     size_t operator()(const general_flow_key_t& id) const noexcept {
         using h1 = std::hash<uint32_t>;
