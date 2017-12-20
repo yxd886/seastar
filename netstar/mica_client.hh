@@ -30,13 +30,6 @@ namespace netstar {
 using namespace seastar;
 using namespace std::chrono_literals;
 
-class kill_flow : public std::exception {
-public:
-    virtual const char* what() const noexcept override {
-        return "killflow";
-    }
-};
-
 // The response is shared from the received
 // response packet. There for mica_response should
 // not be held indefinitely. It should be deconstructed
@@ -56,7 +49,12 @@ public:
     }
 
     bool is_valid() {
-        return _response_pkt;
+        if(_response_pkt){
+            return true;
+        }
+        else{
+            return false;
+        }
     }
 
     // Get the the size of the key
