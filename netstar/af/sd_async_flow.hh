@@ -327,7 +327,7 @@ public:
         return _impl->_flow_key_hash_eb.data_len();
     }
 
-    uint32_t get_src_ip () {
+    uint64_t get_src_ip () {
         return _impl->_client.flow_key->foreign_ip.ip.raw;
     }
 
