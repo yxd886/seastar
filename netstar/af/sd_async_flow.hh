@@ -327,6 +327,10 @@ public:
         return _impl->_flow_key_hash_eb.data_len();
     }
 
+    uint32_t get_src_ip () {
+        return _impl->_client.flow_key->foreign_ip.ip.raw;
+    }
+
     // One shot interface, continuous call without shutting down
     // the current async loop will abort the program
     future<> run_async_loop(std::function<future<af_action>()> fn) {
