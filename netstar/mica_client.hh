@@ -55,38 +55,49 @@ public:
         return *this;
     }
 
+    bool is_valid() {
+        return _response_pkt;
+    }
+
     // Get the the size of the key
     size_t get_key_len(){
+        assert(_response_pkt);
         auto rh = _response_pkt.get_header<RequestHeader>();
         return (rh->kv_length_vec >> 24);
     }
     // Get the size of the rounded up key len, aka key buffer len
     size_t get_roundup_key_len(){
+        assert(_response_pkt);
         return roundup<8>(get_key_len());
     }
 
     // Get the size of the value
     size_t get_val_len(){
+        assert(_response_pkt);
         auto rh = _response_pkt.get_header<RequestHeader>();
         return (rh->kv_length_vec & ((1 << 24) - 1));
     }
     // Get the size of the rounded up value len, aka value buffer len
     size_t get_roundup_val_len(){
+       assert(_response_pkt);
        return roundup<8>(get_val_len());
     }
 
     Operation get_operation(){
+        assert(_response_pkt);
         auto rh = _response_pkt.get_header<RequestHeader>();
         return static_cast<Operation>(rh->operation);
     }
 
     Result get_result(){
+        assert(_response_pkt);
         auto rh = _response_pkt.get_header<RequestHeader>();
         return static_cast<Result>(rh->result);
     }
 
     template<typename T>
     T& get_key(){
+        assert(_response_pkt);
         mc_assert(sizeof(T) == get_key_len());
         auto key = _response_pkt.get_header<T>(sizeof(RequestHeader));
         return *key;
@@ -94,6 +105,7 @@ public:
 
     template<typename T>
     T& get_value(){
+        assert(_response_pkt);
         mc_assert(sizeof(T) == get_val_len());
         auto value =
                 _response_pkt.get_header<T>(
@@ -283,7 +295,7 @@ public:
 #endif
                 // we have retried four times without receiving a response,
                 // timeout
-                _pr->set_exception(kill_flow());
+                _pr->set_value(mica_response(net::packet::make_null_packet()));
                 timeout_recycle_prep();
                 return action::recycle_rd;
             }
@@ -562,7 +574,7 @@ public:
                size_t key_len, temporary_buffer<char> key,
                size_t val_len, temporary_buffer<char> val) {
         if(_recycled_rds.size() == 0){
-            return make_exception_future<mica_response>(kill_flow());
+            return make_ready_future<mica_response>(mica_response(net::packet::make_null_packet()));
         }
 
         auto rd_idx = _recycled_rds.front();
@@ -572,6 +584,13 @@ public:
         send_request_descriptor(rd_idx);
         return _rds[rd_idx].obtain_future();
     }
+
+    // Get some stats:
+    struct mica_stat {
+        unsigned mica_request_to_error;
+        unsigned available_request_descriptors;
+    };
+    mica_stat mica_public_stat;
 private:
     void check_request_assemblers(){
         for(auto& ra : _ras){
