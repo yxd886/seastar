@@ -92,10 +92,10 @@ public:
     FlowKeyType get_reverse_flow_key(net::packet& pkt){
         auto ip_hd_ptr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
         auto udp_hd_ptr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
-        return FlowKeyType{net::ntoh(ip_hd_ptr->src_ip),
-                           net::ntoh(ip_hd_ptr->dst_ip),
-                           net::ntoh(udp_hd_ptr->src_port),
-                           net::ntoh(udp_hd_ptr->dst_port)};
+        return FlowKeyType{net::ntoh(ip_hd_ptr->src_ip.ip.raw),
+                           net::ntoh(ip_hd_ptr->dst_ip.ip.raw),
+                           net::ntoh(udp_hd_ptr->src_port.raw),
+                           net::ntoh(udp_hd_ptr->dst_port.raw)};
     }
 
 public:
