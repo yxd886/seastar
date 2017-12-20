@@ -124,7 +124,6 @@ struct packet_context {
 
 template<typename FlowKeyType>
 struct flow_key_t {
-    // static_assert(std::is_pod<FlowKeyType>::value, "FlowKeyType is not Plain Old Object.\n");
 private:
     char flow_key[roundup<8>(sizeof(FlowKeyType))];
 public:
@@ -144,7 +143,6 @@ template<typename Ppr>
 struct af_work_unit {
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
-    static_assert(std::is_pod<FlowKeyType>::value, "Flow Key is not Plain Old Object.\n");
 
     Ppr ppr;
     std::experimental::optional<promise<>> async_loop_quit_pr;
