@@ -5,6 +5,9 @@
 #include <assert.h>
 
 #include "core/future.hh"
+#include "core/temporary_buffer.hh"
+
+#include "netstar/roundup.hh"
 
 namespace netstar{
 
@@ -119,17 +122,36 @@ struct packet_context {
     }
 };
 
+template<typename FlowKeyType>
+struct flow_key_t {
+    static_assert(std::is_pod<FlowKeyType>::value, "FlowKeyType is not Plain Old Object.\n");
+private:
+    char flow_key[roundup<8>(sizeof(FlowKeyType))];
+public:
+    const FlowKeyType& flow_key_ref() {
+        return *(reinterpret_cast<FlowKeyType*>(flow_key));
+    }
+    void assign_flow_key(FlowKeyType& new_flow_key) {
+        std::memcpy(flow_key, reinterpret_cast<char*>(&new_flow_key), sizeof(FlowKeyType));
+    }
+    temporary_buffer<char> get_tb(){
+        return temporary_buffer<char>(flow_key, roundup<8>(sizeof(FlowKeyType)), deleter());
+    }
+};
+
 template<typename Ppr>
 struct af_work_unit {
     using EventEnumType = typename Ppr::EventEnumType;
     using FlowKeyType = typename Ppr::FlowKeyType;
+    static_assert(std::is_pod<FlowKeyType>::value, "Flow Key is not Plain Old Object.\n");
 
     Ppr ppr;
     std::experimental::optional<promise<>> async_loop_quit_pr;
     registered_events<EventEnumType> send_events;
     registered_events<EventEnumType> recv_events;
     circular_buffer<buffered_packet> buffer_q;
-    std::experimental::optional<FlowKeyType> flow_key;
+    flow_key_t<FlowKeyType> flow_key;
+    bool flow_key_on_flow_table;
     std::experimental::optional<packet_context<Ppr>> cur_context;
     std::function<future<af_action>()> loop_fn;
     uint8_t direction;
@@ -140,6 +162,7 @@ struct af_work_unit {
                  uint8_t direction_arg,
                  std::function<void(bool)> close_fn)
         : ppr(is_client_arg, std::move(close_fn))
+        , flow_key_on_flow_table(false)
         , direction(direction_arg)
         , ppr_close(false)
         , is_client(is_client_arg) {
