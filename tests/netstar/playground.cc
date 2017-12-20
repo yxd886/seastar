@@ -312,7 +312,7 @@ public:
                                                        sizeof(src_ip), key_buf.get_temp_buffer(),
                                                        sizeof(val), val_buf.get_temp_buffer());
                             }
-                        }).then([&ac, this](mica_response response){
+                        })/*.then([&ac, this](mica_response response){
                             auto src_ip = ac.get_src_ip();
                             extendable_buffer key_buf;
                             key_buf.fill_data(src_ip);
@@ -374,7 +374,7 @@ public:
                                                            sizeof(val), val_buf.get_temp_buffer());
                                 }
                             });
-                        }).then_wrapped([&ac, this](auto&& f){
+                        })*/.then_wrapped([&ac, this](auto&& f){
                             try{
                                 f.get();
                                 return af_action::forward;
