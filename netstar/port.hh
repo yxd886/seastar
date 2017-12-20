@@ -83,19 +83,6 @@ public:
         return make_ready_future<>();
     }
 
-    // Lineraize the packet and then send the packet out.
-    // This is primarily used by mica_client.
-    inline future<> linearize_and_send(net::packet p){
-        if(_sendq.size() < port_sendq_size) {
-            p.linearize();
-            _sendq.push_back(std::move(p));
-        }
-        else{
-            _failed_send_count += 1;
-        }
-        return make_ready_future<>();
-    }
-
     inline size_t peek_sendq_size() {
         return _sendq.size();
     }

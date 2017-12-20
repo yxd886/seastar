@@ -432,16 +432,17 @@ public:
             net::ethernet_address dst_eth = p.get_header<net::eth_hdr>()->dst_mac;
             std::cout<<"Send request packet with src mac: "<<src_eth<<" and dst mac: "<<dst_eth<<std::endl;
 #endif
-            _port.linearize_and_send(std::move(p)).then([this]{
-                for(auto rd_idx : _rd_idxs){
-                    _rds[rd_idx].arm_timer();
-                }
+            p.linearize();
+            _port.send(std::move(p));
 
-                // reset the status of the request_assembler
-                _is_in_send_state = false;
-               _rd_idxs.clear();
-               _remaining_size = max_req_len;
-            });
+            for(auto rd_idx : _rd_idxs){
+                _rds[rd_idx].arm_timer();
+            }
+
+            // reset the status of the request_assembler
+            _is_in_send_state = false;
+           _rd_idxs.clear();
+           _remaining_size = max_req_len;
         }
         net::packet build_requet_batch_header();
         void setup_ip_udp_length(net::packet& p){
