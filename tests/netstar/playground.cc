@@ -300,12 +300,13 @@ public:
                             }
                             else{
                                 // fprint(std::cout,"Key exist.\n");
-                                auto val_len = response.get_val_len();
-                                auto val_tb = response.get_val_tb();
+                                fake_val val;
+                                extendable_buffer val_buf;
+                                val_buf.fill_data(val);
 
                                 return this->_mc.query(Operation::kSet,
                                                        sizeof(uint64_t), std::move(fk_tb),
-                                                       val_len, std::move(val_tb));
+                                                       sizeof(fake_val), val_buf.get_temp_buffer());
                             }
                         }).then_wrapped([&ac, this](auto&& f){
                             try{
