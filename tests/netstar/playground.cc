@@ -59,8 +59,8 @@ private:
     std::function<void(bool)> _close_fn;
 public:
     using EventEnumType = dummy_udp_events;
-    using FlowKeyType = net::general_flow_key_t;
-    using HashFunc = net::general_flow_key_t_hash_fn;
+    using FlowKeyType = net::l4connid<net::ipv4_traits>;
+    using HashFunc = net::l4connid<net::ipv4_traits>::connid_hash;
 
     dummy_udp_ppr(bool is_client, std::function<void(bool)> close_fn)
         : _is_client(is_client)
@@ -92,10 +92,10 @@ public:
     FlowKeyType get_reverse_flow_key(net::packet& pkt){
         auto ip_hd_ptr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
         auto udp_hd_ptr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
-        return FlowKeyType{net::ntoh(ip_hd_ptr->src_ip.ip.raw),
-                           net::ntoh(ip_hd_ptr->dst_ip.ip.raw),
-                           net::ntoh(udp_hd_ptr->src_port.raw),
-                           net::ntoh(udp_hd_ptr->dst_port.raw)};
+        return FlowKeyType{net::ntoh(ip_hd_ptr->src_ip),
+                           net::ntoh(ip_hd_ptr->dst_ip),
+                           net::ntoh(udp_hd_ptr->src_port),
+                           net::ntoh(udp_hd_ptr->dst_port)};
     }
 
 public:
@@ -108,10 +108,10 @@ public:
         static FlowKeyType get_flow_key(net::packet& pkt){
             auto ip_hd_ptr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
             auto udp_hd_ptr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
-            return FlowKeyType{net::ntoh(ip_hd_ptr->dst_ip.ip.raw),
-                               net::ntoh(ip_hd_ptr->src_ip.ip.raw),
-                               net::ntoh(udp_hd_ptr->dst_port.raw),
-                               net::ntoh(udp_hd_ptr->src_port.raw)};
+            return FlowKeyType{net::ntoh(ip_hd_ptr->dst_ip),
+                               net::ntoh(ip_hd_ptr->src_ip),
+                               net::ntoh(udp_hd_ptr->dst_port),
+                               net::ntoh(udp_hd_ptr->src_port)};
         }
     };
 };
@@ -152,16 +152,15 @@ public:
     future<> mica_test(int ) {
         // only test mica performance on thread 1.
         return repeat([this]{
-            net::general_flow_key_t key{engine().cpu_id()+1, 0, 0, 0};
+            uint64_t key = engine().cpu_id()+1;
             extendable_buffer key_buf;
             key_buf.fill_data(key);
-            fprint(std::cout, "sizeof(key)=%d, key_buf.size()=%d.\n", sizeof(key), key_buf.buf_len());
 
-            return _mc.query(Operation::kGet, sizeof(key), key_buf.get_temp_buffer(),
+            return _mc.query(Operation::kGet,sizeof(key), key_buf.get_temp_buffer(),
                              0, temporary_buffer<char>()).then([this](mica_response response){
                 assert(response.get_result() == Result::kNotFound);
 
-                net::general_flow_key_t key{engine().cpu_id()+1, 0, 0, 0};
+                uint64_t key = engine().cpu_id()+1;
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 
@@ -173,21 +172,16 @@ public:
             }).then([this](mica_response response){
                 assert(response.get_result() == Result::kSuccess);
 
-                net::general_flow_key_t key{engine().cpu_id()+1, 0, 0, 0};
+                uint64_t key = engine().cpu_id()+1;
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 
                 return _mc.query(Operation::kGet,sizeof(key), key_buf.get_temp_buffer(),
                                  0, temporary_buffer<char>());
             }).then([this](mica_response response){
-                if(response.get_result() == Result::kNotFound) {
-                    fprint(std::cout, "wtf??.\n");
-                    assert(false);
-                }
-
                 assert(response.get_value<uint64_t>() == 6);
 
-                net::general_flow_key_t key{engine().cpu_id()+1, 0, 0, 0};
+                uint64_t key = engine().cpu_id()+1;
                 extendable_buffer key_buf;
                 key_buf.fill_data(key);
 
@@ -259,10 +253,10 @@ public:
                         return make_ready_future<>();
                     }
 
-                    dummy_udp_ppr::FlowKeyType fk{net::ntoh(ip_h->dst_ip.ip.raw),
-                                                  net::ntoh(ip_h->src_ip.ip.raw),
-                                                  net::ntoh(udp_h->dst_port.raw),
-                                                  net::ntoh(udp_h->src_port.raw)};
+                    dummy_udp_ppr::FlowKeyType fk{net::ntoh(ip_h->dst_ip),
+                                                  net::ntoh(ip_h->src_ip),
+                                                  net::ntoh(udp_h->dst_port),
+                                                  net::ntoh(udp_h->src_port)};
                     _udp_manager_ingress.get_send_stream().produce(std::move(pkt), &fk);
                     return make_ready_future<>();
 
@@ -289,10 +283,16 @@ public:
                             return make_ready_future<af_action>(af_action::close_forward);
                         }
 
-                        auto fk_tb = ac.get_flow_key_in_tb();
-                        return this->_mc.query(Operation::kGet, ac.get_flow_key_size(),
-                            std::move(fk_tb), 0, temporary_buffer<char>()).then([&ac, this](mica_response response){
-                            auto fk_tb = ac.get_flow_key_in_tb();
+                        // auto fk_tb = ac.get_flow_key_in_tb();
+                        uint64_t key = 10276325;
+                        extendable_buffer key_buf;
+                        key_buf.fill_data(key);
+                        return this->_mc.query(Operation::kGet, sizeof(uint64_t), key_buf.get_temp_buffer(),
+                                               0, temporary_buffer<char>()).then([&ac, this](mica_response response){
+                            uint64_t key = 10276325;
+                            extendable_buffer key_buf;
+                            key_buf.fill_data(key);
+
                             if(response.get_result() == Result::kNotFound) {
                                 fprint(std::cout,"Key does not exist.\n");
                                 fake_val val;
@@ -300,18 +300,17 @@ public:
                                 val_buf.fill_data(val);
 
                                 return this->_mc.query(Operation::kSet,
-                                        ac.get_flow_key_size(), std::move(fk_tb),
+                                        sizeof(uint64_t), key_buf.get_temp_buffer(),
                                         sizeof(fake_val), val_buf.get_temp_buffer());
                             }
                             else{
                                 fprint(std::cout,"Key exist.\n");
-                                fake_val val;
-                                extendable_buffer val_buf;
-                                val_buf.fill_data(val);
+                                auto val_len = response.get_val_len();
+                                auto val_tb = response.get_val_tb();
 
                                 return this->_mc.query(Operation::kSet,
-                                        ac.get_flow_key_size(), std::move(fk_tb),
-                                        sizeof(fake_val), val_buf.get_temp_buffer());
+                                                       sizeof(uint64_t), key_buf.get_temp_buffer(),
+                                                       val_len, std::move(val_tb));
                             }
                         }).then_wrapped([&ac, this](auto&& f){
                             try{
