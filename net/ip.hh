@@ -189,6 +189,30 @@ struct l4connid {
     }
 };
 
+// patch by djp
+struct general_flow_key_t {
+    uint32_t local_ip;
+    uint32_t foreign_ip;
+    uint16_t local_port;
+    uint16_t foreign_port;
+
+    bool operator==(const general_flow_key_t& x) const {
+        return local_ip == x.local_ip
+                && foreign_ip == x.foreign_ip
+                && local_port == x.local_port
+                && foreign_port == x.foreign_port;
+    }
+
+    uint32_t hash(const rss_key_type& rss_key) {
+        forward_hash hash_data;
+        hash_data.push_back(hton(foreign_ip));
+        hash_data.push_back(hton(local_ip));
+        hash_data.push_back(hton(foreign_port));
+        hash_data.push_back(hton(local_port));
+        return toeplitz_hash(rss_key, hash_data);
+    }
+};
+
 class ipv4_tcp final : public ip_protocol {
     ipv4_l4<ip_protocol_num::tcp> _inet_l4;
     std::unique_ptr<tcp<ipv4_traits>> _tcp;

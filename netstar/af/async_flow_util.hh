@@ -124,6 +124,7 @@ struct packet_context {
 
 template<typename FlowKeyType>
 struct flow_key_t {
+    static_assert(std::is_pod<FlowKeyType>::value, "FlowKeyType is not POD.\n");
 private:
     char flow_key[roundup<8>(sizeof(FlowKeyType))];
 public:

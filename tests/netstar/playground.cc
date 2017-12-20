@@ -59,7 +59,7 @@ private:
     std::function<void(bool)> _close_fn;
 public:
     using EventEnumType = dummy_udp_events;
-    using FlowKeyType = net::l4connid<net::ipv4_traits>;
+    using FlowKeyType = net::general_flow_key_t;
     using HashFunc = net::l4connid<net::ipv4_traits>::connid_hash;
 
     dummy_udp_ppr(bool is_client, std::function<void(bool)> close_fn)
@@ -253,10 +253,10 @@ public:
                         return make_ready_future<>();
                     }
 
-                    dummy_udp_ppr::FlowKeyType fk{net::ntoh(ip_h->dst_ip),
-                                                  net::ntoh(ip_h->src_ip),
-                                                  net::ntoh(udp_h->dst_port),
-                                                  net::ntoh(udp_h->src_port)};
+                    dummy_udp_ppr::FlowKeyType fk{net::ntoh(ip_h->dst_ip.ip.raw),
+                                                  net::ntoh(ip_h->src_ip.ip.raw),
+                                                  net::ntoh(udp_h->dst_port.raw),
+                                                  net::ntoh(udp_h->src_port.raw)};
                     _udp_manager_ingress.get_send_stream().produce(std::move(pkt), &fk);
                     return make_ready_future<>();
 
