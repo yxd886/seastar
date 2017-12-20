@@ -284,11 +284,13 @@ public:
                         // fprint(std::cout, "size of the flow key is %d.\n", fk_tb.size());
                         // fprint(std::cout, "size of roundup flow key is %d.\n", roundup<8>(fk_tb.size()));
                         return this->_mc.query(Operation::kGet, ac.get_flow_key_size(),
-                            std::move(fk_tb), 0, temporary_buffer<char>()).then([&ac, this](mica_response response){
-                            if(response.is_valid()) {
+                            std::move(fk_tb), 0, temporary_buffer<char>()).then_wrapped([&ac, this](auto&& f){
+                            try{
+                                f.get();
                                 return af_action::forward;
+
                             }
-                            else{
+                            catch(...){
                                 if(this->_mc.nr_request_descriptors() == 0){
                                     this->_insufficient_mica_rd_erorr += 1;
                                 }
