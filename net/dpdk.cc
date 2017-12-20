@@ -2317,7 +2317,7 @@ get_dpdk_net_options_description()
          * add several command line parameters for mica clients
          */
         ("mica-sever-smp-count",
-                boost::program_options::value<uint16_t>()->default_value(10),
+                boost::program_options::value<uint16_t>()->default_value(20),
                 "The number of the cores used by the mica server.")
         ("mica-server-mac",
                 boost::program_options::value<std::string>()->default_value("3c:fd:fe:06:07:82"),
