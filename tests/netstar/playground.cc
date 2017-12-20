@@ -281,6 +281,8 @@ public:
                         }
 
                         auto fk_tb = ac.get_flow_key_in_tb();
+                        fprint(std::cout, "size of the flow key is %d.\n", fk_tb.size());
+                        fprint(std::cout, "size of roundup flow key is %d.\n", roundup<8>(fk_tb.size()));
                         return this->_mc.query(Operation::kGet, fk_tb.size(),
                             std::move(fk_tb), 0, temporary_buffer<char>()).then([&ac, this](mica_response response){
                             return make_ready_future<af_action>(af_action::forward);
