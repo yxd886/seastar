@@ -249,7 +249,9 @@ public:
             // Here, the timer should be armed and not timed out.
             // The retry count should not exceed the maximum value.
             // the _pr must be associated with some continuations.
-            assert(_to.armed() && _retry_count < max_retries && _pr);
+            assert(_to.armed());
+            assert(_retry_count < max_retries);
+            assert(_pr);
 
             _pr->set_value(mica_response(std::move(response_pkt)));
             normal_recycle_prep();
