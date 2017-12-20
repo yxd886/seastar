@@ -193,8 +193,8 @@ public:
                     return make_ready_future<stop_iteration>(stop_iteration::yes);
                 }
                 catch(...) {
-                    fprint(std::cout, "mica_test fails on core %d, retry in 5s.\n", engine().cpu_id());
-                    return sleep(5s).then([]{
+                    fprint(std::cout, "mica_test fails on core %d, retry in 3s.\n", engine().cpu_id());
+                    return sleep(3s).then([]{
                         return stop_iteration::no;
                     });
                 }
