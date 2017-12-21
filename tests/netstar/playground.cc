@@ -19,8 +19,7 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
-#include "nf/nf_state.hh"
-#include "nf/nf_common.hh"
+#include "nf/firewall.hh"
 
 #include "core/reactor.hh"
 #include "core/app-template.hh"
