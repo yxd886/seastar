@@ -299,7 +299,7 @@ public:
 
                             if(response.get_result() == Result::kNotFound) {
                                 // fprint(std::cout,"Key does not exist.\n");
-                                fake_val val;
+                                uint64_t val;
                                 extendable_buffer val_buf;
                                 val_buf.fill_data(val);
 
@@ -309,7 +309,7 @@ public:
                             }
                             else{
                                 // fprint(std::cout,"Key exist.\n");
-                                fake_val val;
+                                uint64_t val;
                                 extendable_buffer val_buf;
                                 val_buf.fill_data(val);
 
