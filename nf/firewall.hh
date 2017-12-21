@@ -50,11 +50,14 @@ public:
 
     }
 
-    void check_session(struct fivetuple* five,firewall_state* state){
-
+    void check_session(net::packet* pkt,firewall_state* state){
+        net::ip_hdr *iphdr;
+        net::udp_hdr *tcp;
         std::vector<rule>::iterator it;
+        iphdr =pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+        tcp = (net::udp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
         for(it=rules.begin();it!=rules.end();it++){
-            if(five->_dst_addr==it->_dst_addr&&five->_dst_port==it->_dst_port&&five->_src_addr==it->_src_addr&&five->_src_port==it->_src_port){
+            if(iphdr->dst_ip.ip==it->_dst_addr&&tcp->dst_port==it->_dst_port&&iphdr->src_ip.ip==it->_src_addr&&tcp->src_port==it->_src_port){
                 state->_pass=false;
                 return;
             }
@@ -98,11 +101,11 @@ public:
                     0, temporary_buffer<char>()).then([&](mica_response response){
                 if(response.get_result() == Result::kNotFound){
 
-                    check_session(&tuple,&state);
+                    check_session(rte_pkt,&state);
                     //write updated state into mica hash table.
                     extendable_buffer key_buf;
                     key_buf.fill_data(key);
-                    extendable_buffer val_set_buf;
+                    extendable_buffer val_buf;
                     val_buf.fill_data(state);
 
                      return mc.query(Operation::kSet,
