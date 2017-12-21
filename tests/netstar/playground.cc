@@ -41,6 +41,9 @@
 
 #include "bess/bess_flow_gen.hh"
 
+#include "nf/nf_state.hh"
+#include "nf/nf_common.hh"
+
 #include <vector>
 
 using namespace seastar;
@@ -118,6 +121,10 @@ public:
 
 struct fake_val {
     char v[64];
+};
+
+struct firewall {
+
 };
 
 class forwarder;
