@@ -46,7 +46,8 @@ class sd_async_flow_impl : public enable_lw_shared_from_this<sd_async_flow_impl<
     af_work_unit<Ppr> _client;
     unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
     bool _initial_context_destroyed;
-    extendable_buffer _flow_key_hash_eb;
+    uint64_t _flow_key_hash;
+    uint32_t _flow_rss;
 
 private:
 
@@ -187,8 +188,8 @@ public:
         , _pkts_in_pipeline(0)
         , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;
-        uint64_t flow_key_hash = mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(FlowKeyType));
-        _flow_key_hash_eb.fill_data(flow_key_hash);
+        _flow_key_hash = mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(FlowKeyType));
+        _flow_rss = 0;
     }
 
     ~sd_async_flow_impl() {
@@ -204,6 +205,11 @@ public:
     void handle_packet_send(net::packet pkt, uint8_t direction) {
         async_flow_debug("sd_async_flow_impl: handle_packet_send is called\n");
         async_flow_assert(direction == _client.direction);
+
+        // a patch
+        if(_flow_rss == 0){
+            _flow_rss = pkt.rss_hash();
+        }
 
         if( _pkts_in_pipeline >= Ppr::async_flow_config::max_event_context_queue_size ||
              _client.ppr_close ||
@@ -319,16 +325,12 @@ public:
         return _impl->_client.cur_context.value().fe;
     }
 
-    temporary_buffer<char> get_flow_key_in_tb() {
-        return _impl->_flow_key_hash_eb.share_temp_buffer();
+    uint32_t get_flow_rss () {
+        return _impl->_flow_rss;
     }
 
-    size_t get_flow_key_size() {
-        return _impl->_flow_key_hash_eb.data_len();
-    }
-
-    uint64_t get_src_ip () {
-        return _impl->_client.flow_key->foreign_ip.ip.raw;
+    uint64_t get_flow_key_hash () {
+        return _impl->_flow_key_hash;
     }
 
     // One shot interface, continuous call without shutting down
