@@ -208,7 +208,7 @@ public:
 
         // a patch
         if(_flow_rss == 0){
-            _flow_rss = pkt.rss_hash();
+            _flow_rss = pkt.rss_hash().value();
         }
 
         if( _pkts_in_pipeline >= Ppr::async_flow_config::max_event_context_queue_size ||
