@@ -19,8 +19,6 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
-#include "nf/firewall.hh"
-
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
@@ -122,10 +120,6 @@ struct fake_val {
     char v[64];
 };
 
-struct firewall {
-
-};
-
 class forwarder;
 distributed<forwarder> forwarders;
 
@@ -140,7 +134,7 @@ class forwarder {
     sd_async_flow_manager<dummy_udp_ppr> _udp_manager;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
-public:
+
     mica_client& _mc;
 public:
     forwarder (ports_env& all_ports, per_core_objs<mica_client>& mica_clients)
@@ -277,56 +271,66 @@ public:
         }));
     }
 
-    class firewall_runner {
-        sd_async_flow<dummy_udp_ppr> _ac;
-        forwarder& _f;
-    public:
-        firewall_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
-            : _ac(std::move(ac))
-            , _f(f){}
-
-        void events_registration() {
-            _ac.register_events(dummy_udp_events::pkt_in);
-        }
-
-        future<> run_firewall() {
-            return _ac.run_async_loop([this](){
-                if(_ac.cur_event().on_close_event()) {
-                    return make_ready_future<af_action>(af_action::close_forward);
-                }
-                foo();
-                bar();
-                auto& cur_pkt = _ac.cur_packet();
-                return _f.firewall.process_packet(&cur_pkt, std::ref(_f._mc));
-            });
-        }
-    private:
-        void foo() {}
-        void bar() {}
-    };
-
     void run_udp_manager(int) {
         repeat([this]{
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
 
-                /*do_with(ic.get_sd_async_flow(), [this](sd_async_flow<dummy_udp_ppr>& ac){
+                do_with(ic.get_sd_async_flow(), [this](sd_async_flow<dummy_udp_ppr>& ac){
                     ac.register_events(dummy_udp_events::pkt_in);
                     return ac.run_async_loop([&ac, this](){
                         if(ac.cur_event().on_close_event()) {
                             return make_ready_future<af_action>(af_action::close_forward);
                         }
 
-                        auto& cur_pkt = ac.cur_packet();
-                        return firewall.process_packet(&cur_pkt, std::ref(this->_mc));
+                        auto src_ip = ac.get_flow_rss();
+                        extendable_buffer key_buf;
+                        key_buf.fill_data(src_ip);
+                        return this->_mc.query(Operation::kGet, sizeof(src_ip), key_buf.get_temp_buffer(),
+                                               0, temporary_buffer<char>()).then([&ac, this](mica_response response){
+                            auto src_ip = ac.get_flow_rss();
+                            extendable_buffer key_buf;
+                            key_buf.fill_data(src_ip);
+
+                            if(response.get_result() == Result::kNotFound) {
+                                // fprint(std::cout,"Key does not exist.\n");
+                                fake_val val;
+                                extendable_buffer val_buf;
+                                val_buf.fill_data(val);
+
+                                return this->_mc.query(Operation::kSet,
+                                        sizeof(src_ip), key_buf.get_temp_buffer(),
+                                        sizeof(val), val_buf.get_temp_buffer());
+                            }
+                            else{
+                                // fprint(std::cout,"Key exist.\n");
+                                fake_val val;
+                                extendable_buffer val_buf;
+                                val_buf.fill_data(val);
+
+                                return this->_mc.query(Operation::kSet,
+                                                       sizeof(src_ip), key_buf.get_temp_buffer(),
+                                                       sizeof(val), val_buf.get_temp_buffer());
+                            }
+                        }).then_wrapped([&ac, this](auto&& f){
+                            try{
+                                f.get();
+                                return af_action::forward;
+
+                            }
+                            catch(...){
+                                if(this->_mc.nr_request_descriptors() == 0){
+                                    this->_insufficient_mica_rd_erorr += 1;
+                                }
+                                else{
+                                    this->_mica_timeout_error += 1;
+                                }
+                                return af_action::drop;
+                            }
+                        });
                     });
                 }).then([](){
                     // printf("client async flow is closed.\n");
-                });*/
-
-                do_with(firewall_runner(ic.get_sd_async_flow(), (*this)), [](firewall_runner& r){
-                     r.events_registration();
-                     return r.run_firewall();
                 });
 
                 return stop_iteration::no;
@@ -386,9 +390,6 @@ public:
             });
         });
     }
-public:
-
-    Firewall firewall;
 };
 
 int main(int ac, char** av) {
