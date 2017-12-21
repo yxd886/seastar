@@ -324,7 +324,7 @@ public:
                     // printf("client async flow is closed.\n");
                 });*/
 
-                do_with(firewall_runner(ic.get_sd_async_flow()), [](firewall_runner& r){
+                do_with(firewall_runner(ic.get_sd_async_flow(), (*this)), [](firewall_runner& r){
                      r.events_registration();
                      return r.run_firewall();
                 });
