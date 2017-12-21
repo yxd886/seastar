@@ -18,7 +18,7 @@
 /*
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
-
+#include "nf/firewall.h"
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
@@ -155,9 +155,10 @@ public:
 
 class sd_async_flow_safe_loop {
     sd_async_flow_safe<dummy_udp_ppr> _safe;
+    Firewall _firewall;
 public:
-    sd_async_flow_safe_loop(sd_async_flow<dummy_udp_ppr>&& client)
-        : _safe(std::move(client)){
+    sd_async_flow_safe_loop(sd_async_flow<dummy_udp_ppr>&& client, Firewall firewall)
+        : _safe(std::move(client)),_firewall(firewall){
     }
 
     void configure() {
@@ -184,6 +185,8 @@ int main(int ac, char** av) {
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction ingress(0);
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction egress(1);
     net::packet the_pkt = dummy_udp_ppr::async_flow_config::build_pkt("abcdefg");
+    Firewall firewall;
+
 
     return app.run_deprecated(ac, av, [&app, &to, &manager, &ingress, &egress, &the_pkt]{
         ingress.register_to_manager(manager, [](net::packet pkt){return make_ready_future();}, egress);
@@ -205,7 +208,7 @@ int main(int ac, char** av) {
                 printf("client async flow is closed.\n");
             });*/
 
-            do_with(sd_async_flow_safe_loop(ic.get_sd_async_flow()), [](sd_async_flow_safe_loop& l){
+            do_with(sd_async_flow_safe_loop(ic.get_sd_async_flow(),firewall), [](sd_async_flow_safe_loop& l){
                l.configure();
                return l.run();
             }).then([](){

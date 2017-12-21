@@ -122,9 +122,6 @@ struct fake_val {
     char v[64];
 };
 
-struct firewall {
-
-};
 
 class forwarder;
 distributed<forwarder> forwarders;
@@ -280,6 +277,7 @@ public:
     class firewall_runner {
         sd_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
+        firewall_state _state;
     public:
         firewall_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
             : _ac(std::move(ac))
@@ -297,7 +295,7 @@ public:
                 foo();
                 bar();
                 auto& cur_pkt = _ac.cur_packet();
-                return _f.firewall.process_packet(&cur_pkt, std::ref(_f._mc));
+                return _f.firewall.process_packet(&cur_pkt, std::ref(_f._mc),_state,_ac.get_flow_key_hash());
             });
         }
     private:
