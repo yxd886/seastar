@@ -207,7 +207,7 @@ public:
         async_flow_assert(direction == _client.direction);
 
         // a patch
-        if(_flow_rss == 0){
+        if(_flow_rss == 0 && pkt.rss_hash()){
             _flow_rss = pkt.rss_hash().value();
         }
 
