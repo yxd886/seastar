@@ -19,6 +19,9 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
+#include "nf/nf_state.hh"
+#include "nf/nf_common.hh"
+
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
@@ -40,9 +43,6 @@
 #include "netstar/extendable_buffer.hh"
 
 #include "bess/bess_flow_gen.hh"
-
-#include "nf/nf_state.hh"
-#include "nf/nf_common.hh"
 
 #include <vector>
 
