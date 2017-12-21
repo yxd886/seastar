@@ -564,7 +564,7 @@ public:
             check_request_assemblers(which_ra);
             which_ra = (which_ra+1)%(_ras.size());
         });
-        // _check_ras_timer.arm_periodic(50us);
+        _check_ras_timer.arm_periodic(50us);
     }
     void start_receiving(){
         mc_assert(ports().size() == 1);
