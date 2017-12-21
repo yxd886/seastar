@@ -10,7 +10,7 @@
 #include "nf/nf_state.hh"
 #include <vector>
 #include <iostream>
-#define DEBUG 1
+#define DEBUG 0
 /*
 struct rte_ring_item{
     uint64_t _key_hash;
