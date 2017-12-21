@@ -154,6 +154,9 @@ public:
 
 class async_flow_loop {
     client_async_flow<dummy_udp_ppr> _client;
+    // int i;
+    // string x;
+
     server_async_flow<dummy_udp_ppr> _server;
     seastar::gate _g;
 public:
