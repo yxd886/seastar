@@ -136,14 +136,13 @@ public:
                           assert(response.get_val_len() == 0);
                           assert(response.get_result() == Result::kSuccess);
 
-                      }).then([&](mica_response){
-                         if(state._pass==true){
-                             //pass
-                             return make_ready_future<netstar::af_action>(netstar::af_action::forward);
-                         }else{
-                             //drop
-                             return make_ready_future<netstar::af_action>(netstar::af_action::drop);
-                         }
+                          if(state._pass==true){
+                               //pass
+                               return make_ready_future<netstar::af_action>(netstar::af_action::forward);
+                           }else{
+                               //drop
+                               return make_ready_future<netstar::af_action>(netstar::af_action::drop);
+                           }
                       });
                 }
 
