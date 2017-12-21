@@ -81,7 +81,7 @@ public:
     future<netstar::af_action> process_packet(net::packet* rte_pkt, mica_client& mc,firewall_state state, uint64_t key ){
 
         net::ip_hdr *iphdr;
-        net::udp_hdr *tcp;
+
         iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
 
         if (iphdr->ip_proto!=(uint8_t)net::ip_protocol_num::udp){
@@ -89,7 +89,6 @@ public:
             if(DEBUG==1) printf("not tcp pkt\n");
             return make_ready_future<netstar::af_action>(netstar::af_action::drop);
         }else{
-            tcp = (net::udp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
             //printf("src_addr:%d ,iphdr->dst_addr:%d tcp->src_port:%d tcp->dst_port:%d\n ",iphdr->src_addr,iphdr->dst_addr,tcp->src_port,tcp->dst_port);
 
             //generate key based on five-tuples
