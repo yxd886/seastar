@@ -283,12 +283,12 @@ public:
                             return make_ready_future<af_action>(af_action::close_forward);
                         }
 
-                        auto src_ip = ac.get_flow_rss();
+                        auto src_ip = ac.get_flow_key_hash();
                         extendable_buffer key_buf;
                         key_buf.fill_data(src_ip);
                         return this->_mc.query(Operation::kGet, sizeof(src_ip), key_buf.get_temp_buffer(),
                                                0, temporary_buffer<char>()).then([&ac, this](mica_response response){
-                            auto src_ip = ac.get_flow_rss();
+                            auto src_ip = ac.get_flow_key_hash();
                             extendable_buffer key_buf;
                             key_buf.fill_data(src_ip);
 
@@ -443,3 +443,6 @@ int main(int ac, char** av) {
 
 // 1 thread forwarder, sender use static udp traffic gen, 700000 total pps, 1000 flows
 // The system barely crashes, which is good.
+
+// When turn on mica debug mode, mica will fail to made an assertion about memory alignment in the packet
+// This is easy to reproduce even when 1 flow with 1pps. Please check this out carefully!
