@@ -289,51 +289,8 @@ public:
                             return make_ready_future<af_action>(af_action::close_forward);
                         }
 
-                        auto src_ip = ac.get_flow_rss();
-                        extendable_buffer key_buf;
-                        key_buf.fill_data(src_ip);
-                        return this->_mc.query(Operation::kGet, sizeof(src_ip), key_buf.get_temp_buffer(),
-                                               0, temporary_buffer<char>()).then([&ac, this](mica_response response){
-                            auto src_ip = ac.get_flow_rss();
-                            extendable_buffer key_buf;
-                            key_buf.fill_data(src_ip);
-
-                            if(response.get_result() == Result::kNotFound) {
-                                // fprint(std::cout,"Key does not exist.\n");
-                                fake_val val;
-                                extendable_buffer val_buf;
-                                val_buf.fill_data(val);
-
-                                return this->_mc.query(Operation::kSet,
-                                        sizeof(src_ip), key_buf.get_temp_buffer(),
-                                        sizeof(val), val_buf.get_temp_buffer());
-                            }
-                            else{
-                                // fprint(std::cout,"Key exist.\n");
-                                fake_val val;
-                                extendable_buffer val_buf;
-                                val_buf.fill_data(val);
-
-                                return this->_mc.query(Operation::kSet,
-                                                       sizeof(src_ip), key_buf.get_temp_buffer(),
-                                                       sizeof(val), val_buf.get_temp_buffer());
-                            }
-                        }).then_wrapped([&ac, this](auto&& f){
-                            try{
-                                f.get();
-                                return af_action::forward;
-
-                            }
-                            catch(...){
-                                if(this->_mc.nr_request_descriptors() == 0){
-                                    this->_insufficient_mica_rd_erorr += 1;
-                                }
-                                else{
-                                    this->_mica_timeout_error += 1;
-                                }
-                                return af_action::drop;
-                            }
-                        });
+                        auto& cur_pkt = ac.cur_packet();
+                        return firewall.process_packet(&cur_pkt, std::ref(this->_mc));
                     });
                 }).then([](){
                     // printf("client async flow is closed.\n");
@@ -396,6 +353,7 @@ public:
             });
         });
     }
+    Firewall firewall;
 };
 
 int main(int ac, char** av) {
