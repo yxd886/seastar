@@ -70,6 +70,14 @@ public:
             _devs.push_back(std::move(dev_shared_ptr));
             break;
         }
+        case(port_type::original) : {
+            auto dev = seastar::create_dpdk_net_device(port_id, queue_num, false, true);
+            auto dev_ptr = dev.release();
+            std::shared_ptr<net::device> dev_shared_ptr;
+            dev_shared_ptr.reset(dev_ptr);
+            _devs.push_back(std::move(dev_shared_ptr));
+            break;
+        }
         default : {
             break;
         }

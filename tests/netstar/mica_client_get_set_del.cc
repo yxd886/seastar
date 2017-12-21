@@ -39,6 +39,10 @@ struct large_object{
     char unused_buf[100];
 };
 
+struct large_key {
+    uint32_t keys[3];
+};
+
 int main(int ac, char** av) {
     app_template app;
     ports_env all_ports;

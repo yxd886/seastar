@@ -10,6 +10,9 @@
 #include "core/queue.hh"
 
 #include "netstar/af/async_flow_util.hh"
+#include "netstar/extendable_buffer.hh"
+
+#include "mica/util/hash.h"
 
 #include <deque>
 #include <experimental/optional>
@@ -43,6 +46,8 @@ class sd_async_flow_impl : public enable_lw_shared_from_this<sd_async_flow_impl<
     af_work_unit<Ppr> _client;
     unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
     bool _initial_context_destroyed;
+    uint64_t _flow_key_hash;
+    uint32_t _flow_rss;
 
 private:
 
@@ -179,10 +184,12 @@ public:
                        uint8_t client_direction,
                        FlowKeyType* client_flow_key)
         : _manager(manager)
-        , _client(true, client_direction)
+        , _client(true, client_direction, [this](bool){this->ppr_passive_close();})
         , _pkts_in_pipeline(0)
         , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;
+        _flow_key_hash = mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(FlowKeyType));
+        _flow_rss = 0;
     }
 
     ~sd_async_flow_impl() {
@@ -198,6 +205,11 @@ public:
     void handle_packet_send(net::packet pkt, uint8_t direction) {
         async_flow_debug("sd_async_flow_impl: handle_packet_send is called\n");
         async_flow_assert(direction == _client.direction);
+
+        // a patch
+        if(_flow_rss == 0 && pkt.rss_hash()){
+            _flow_rss = pkt.rss_hash().value();
+        }
 
         if( _pkts_in_pipeline >= Ppr::async_flow_config::max_event_context_queue_size ||
              _client.ppr_close ||
@@ -304,6 +316,25 @@ public:
     void unregister_events(EventEnumType ev) {
         _impl->event_unregistration(ev);
     }
+
+    net::packet& cur_packet() {
+        return _impl->_client.cur_context.value().pkt;
+    }
+
+    filtered_events<EventEnumType> cur_event() {
+        return _impl->_client.cur_context.value().fe;
+    }
+
+    uint32_t get_flow_rss () {
+        return _impl->_flow_rss;
+    }
+
+    uint64_t get_flow_key_hash () {
+        return _impl->_flow_key_hash;
+    }
+
+    // One shot interface, continuous call without shutting down
+    // the current async loop will abort the program
     future<> run_async_loop(std::function<future<af_action>()> fn) {
         return _impl->run_async_loop(std::move(fn));
     }
@@ -416,6 +447,9 @@ public:
         async_flow_assert(!_new_ic_q.empty());
         auto qitem = _new_ic_q.pop();
         return sd_af_initial_context<Ppr>(std::move(qitem.pkt), qitem.direction, std::move(qitem.impl_ptr));
+    }
+    size_t peek_active_flow_num() {
+        return _flow_table.size();
     }
 
 private:

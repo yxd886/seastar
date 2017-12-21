@@ -21,10 +21,20 @@
 
 #include "netstar/port.hh"
 
+#define MICA_DEBUG 0
+
 using namespace seastar;
 using namespace std;
 
 namespace netstar{
+
+#define ENABLE_MC_ASSERTION 0
+
+#if ENABLE_MC_ASSERTION
+#define mc_assert(condition) assert(condition)
+#else
+#define mc_assert(condition) ((void)0)
+#endif
 
 struct endpoint_info{
     net::ethernet_address eth_addr;

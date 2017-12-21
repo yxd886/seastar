@@ -61,7 +61,7 @@ struct rx_tx_stats {
 };
 
 class traffic_gen {
-    bess::dynamic_udp_flow_gen _pkt_gen;
+    bess::static_udp_flow_gen _pkt_gen;
     netstar::port* _p;
     int _n;
     int _duration;
@@ -96,26 +96,25 @@ public:
         _prev_checkpoint = tsc_to_ns(rdtsc());
         return repeat([this](){
             uint64_t now_ns = tsc_to_ns(rdtsc());
-
-            if(now_ns - _prev_checkpoint > 1e9) {
-                _prev_checkpoint = now_ns;
-                _n += 1;
-                if(_n == _duration) {
-                    return make_ready_future<stop_iteration>(stop_iteration::yes);
-                }
-            }
-
             auto next_ns = _pkt_gen.get_next_active_time();
 
-            while(next_ns <= now_ns && _p->peek_sendq_size() < 180) {
-                auto pkt = _pkt_gen.get_next_pkt(now_ns);
-                _p->send(std::move(pkt));
-                next_ns = _pkt_gen.get_next_active_time();
-            }
+            if(next_ns) {
+                while(*next_ns <= now_ns && _p->peek_sendq_size() < 180) {
+                    auto pkt = _pkt_gen.get_next_pkt(now_ns);
+                    _p->send(std::move(pkt));
+                    next_ns = _pkt_gen.get_next_active_time();
+                    if(!next_ns) {
+                        return make_ready_future<stop_iteration>(stop_iteration::yes);
+                    }
+                }
 
-            return later().then([]{
-                 return stop_iteration::no;
-            });
+                return later().then([]{
+                     return stop_iteration::no;
+                });
+            }
+            else{
+                return make_ready_future<stop_iteration>(stop_iteration::yes);
+            }
         });
     }
 

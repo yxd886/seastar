@@ -22,19 +22,20 @@ namespace netstar{
 class port{
     uint16_t _port_id;
     qp_wrapper _qp_wrapper;
-    unsigned _failed_send_count;
     circular_buffer<net::packet> _sendq;
-    std::unique_ptr<semaphore> _queue_space;
+    unsigned _failed_send_count;
     bool _receive_configured;
     std::experimental::optional<subscription<net::packet>> _sub;
     seastar::queue<net::packet> _receiveq;
+    static constexpr size_t port_sendq_size = 500;
 public:
     explicit port(boost::program_options::variables_map opts,
                           net::device* dev,
                           uint16_t port_id) :
         _port_id(port_id),
         _qp_wrapper(opts, dev, engine().cpu_id()),
-        _failed_send_count(0), _receive_configured(false),
+        _failed_send_count(0),
+        _receive_configured(false),
         _receiveq(100){
 
         if(_qp_wrapper.get_qid() < _qp_wrapper.get_hw_queues_count()){
@@ -49,22 +50,11 @@ public:
         }
 
         // 180 is the default attempt of a single tx_poll by dpdk_qp;
-        _queue_space = std::make_unique<semaphore>(180);
+        // _queue_space = std::make_unique<semaphore>(180);
+        _sendq.reserve(port_sendq_size);
     }
 
     ~port(){
-        // Extend the life time of _queue_space.
-        // When port is deconstructed, both _sendq and _qp contain some packets with a customized deletor like this:
-        // [qs = _queue_space.get(), len] { qs->signal(len); }.
-        // These packets will also be deconstructed when deconstructing the port.
-        // Therefore we must ensure that _queue_space lives until the port is completely deconstructed.
-        // What we have done here is to move the _queue_space into a fifo, that will be called later after the port.
-        // Because the we use per_core_objs to construct the port, the port is actually placed in a position that
-        // is closer to the head of the fifo. So we guarantee that _queue_space lives until port is fully deconstructed.
-        // However, we do have to ensure that the port is constructed only by per_core_objs, otherwise this hack
-        // doesn't work and abort seastar exit processs.
-        // BTW: This hack saves about 100000pkts/s send rate, which I think to be important.
-        engine().at_destroy([queue_space_sptr = std::move(_queue_space)]{});
     }
 
     // port can only be constructed by per_core_objs,
@@ -84,22 +74,26 @@ public:
     // Assert that we are sending out from correct qp type.
     // Need to wait for enough space in the _queue_space.
     inline future<> send(net::packet p){
-        assert(_qp_wrapper.get_qid()<_qp_wrapper.get_hw_queues_count());
-        return _queue_space->wait(1).then([this, p = std::move(p)] () mutable {
-            p = net::packet(std::move(p), make_deleter([qs = _queue_space.get()] { qs->signal(1); }));
+        if(_sendq.size() < port_sendq_size) {
             _sendq.push_back(std::move(p));
-        });
+        }
+        else{
+            _failed_send_count += 1;
+        }
+        return make_ready_future<>();
     }
 
-    // Lineraize the packet and then send the packet out.
-    // This is primarily used by mica_client.
-    inline future<> linearize_and_send(net::packet p){
-        assert(_qp_wrapper.get_qid()<_qp_wrapper.get_hw_queues_count());
-        return _queue_space->wait(1).then([this, p = std::move(p)] () mutable {
-            p = net::packet(std::move(p), make_deleter([qs = _queue_space.get()] { qs->signal(1); }));
-            p.linearize();
-            _sendq.push_back(std::move(p));
-        });
+    inline future<> force_send(net::packet p) {
+        _sendq.push_back(std::move(p));
+        return make_ready_future<>();
+    }
+
+    inline size_t peek_sendq_size() {
+        return _sendq.size();
+    }
+
+    inline unsigned peek_failed_send_cout () {
+        return _failed_send_count;
     }
 
     // Provide a customized receive function for the underlying qp.

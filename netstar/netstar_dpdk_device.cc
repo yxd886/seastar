@@ -160,7 +160,7 @@ uint32_t qp_mempool_obj_size(bool hugetlbfs_membackend)
     return mp_size;
 }
 
-static constexpr const char* pktmbuf_pool_name   = "dpdk_pktmbuf_pool";
+static constexpr const char* pktmbuf_pool_name   = "ndpdk_pktmbuf_pool";
 
 /*
  * When doing reads from the NIC queues, use this batch size
@@ -1125,9 +1125,7 @@ build_mbuf_cluster:
         tx_buf_factory(uint8_t qid, uint8_t port_idx) {
             using namespace memory;
 
-            sstring name = sstring(pktmbuf_pool_name) + sstring("_") +
-                           sstring("p") + to_sstring(port_idx) + sstring("q") + to_sstring(qid) +
-                           "_tx";
+            sstring name = sstring(pktmbuf_pool_name) + to_sstring(qid) + to_sstring(port_idx) + "_tx";
 
             printf("Creating Tx mbuf pool '%s' [%u mbufs] ...\n",
                    name.c_str(), mbufs_per_queue_tx);
@@ -1179,7 +1177,7 @@ build_mbuf_cluster:
             // Fill the factory with the buffers from the mempool allocated
             // above.
             //
-            init_factory();
+            // init_factory();
         }
 
         /**
@@ -1448,11 +1446,11 @@ private:
     std::vector<fragment> _frags;
     std::vector<char*> _bufs;
     size_t _num_rx_free_segs = 0;
-    reactor::poller _rx_gc_poller;
+    // reactor::poller _rx_gc_poller;
     std::unique_ptr<void, free_deleter> _rx_xmem;
     tx_buf_factory _tx_buf_factory;
     std::experimental::optional<reactor::poller> _rx_poller;
-    reactor::poller _tx_gc_poller;
+    // reactor::poller _tx_gc_poller;
     std::vector<rte_mbuf*> _tx_burst;
     uint16_t _tx_burst_idx = 0;
     static constexpr phys_addr_t page_mask = ~(memory::page_size - 1);
@@ -1790,9 +1788,7 @@ template <bool HugetlbfsMemBackend>
 bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
 {
     using namespace memory;
-    sstring name = sstring(pktmbuf_pool_name) + sstring("_") +
-                   sstring("p") + to_sstring(_dev->port_idx()) + sstring("q") + to_sstring(_qid) +
-                   "_rx";
+    sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + to_sstring(_dev->port_idx()) + "_rx";
 
     printf("Creating Rx mbuf pool '%s' [%u mbufs] ...\n",
            name.c_str(), mbufs_per_queue_rx);
@@ -1915,9 +1911,9 @@ template <bool HugetlbfsMemBackend>
 dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
      : qp(true, stats_plugin_name, qid), _dev(dev), _qid(qid),
-       _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
-       _tx_buf_factory(qid, dev->port_idx()),
-       _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))
+       // _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
+       _tx_buf_factory(qid, dev->port_idx())/*,
+       _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))*/
 {
     if (!init_rx_mbuf_pool()) {
         rte_exit(EXIT_FAILURE, "Cannot initialize mbuf pools\n");
