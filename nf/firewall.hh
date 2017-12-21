@@ -112,8 +112,7 @@ public:
 
             return mc.query(Operation::kGet,
                     sizeof(key), key_buf.get_temp_buffer(),
-                    0, temporary_buffer<char>()).then([&](mica_response response){
-
+                    0, temporary_buffer<char>()).then([&, tuple, state](mica_response response) mutable{
                 if(response.get_result() == Result::kNotFound){
 
                     check_session(&tuple,&state);
@@ -131,7 +130,7 @@ public:
 
                      return mc.query(Operation::kSet,
                               sizeof(key), key_buf.get_temp_buffer(),
-                              sizeof(state), val_buf.get_temp_buffer()).then([&](mica_response response){
+                              sizeof(state), val_buf.get_temp_buffer()).then([&, state](mica_response response){
                           assert(response.get_key_len() == 0);
                           assert(response.get_val_len() == 0);
                           assert(response.get_result() == Result::kSuccess);
