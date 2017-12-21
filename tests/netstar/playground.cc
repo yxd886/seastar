@@ -420,13 +420,13 @@ int main(int ac, char** av) {
             });
         }).then([&all_ports, &mica_clients]{
             return forwarders.start(std::ref(all_ports), std::ref(mica_clients));
-        })/*.then([]{
-            return forwarders.invoke_on_all(&forwarder::mica_test, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::mica_test, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::mica_test, 1);
-        })*/.then([]{
+        }).then([]{
+            return forwarders.invoke_on_all(&forwarder::mica_test, 1);
+        }).then([]{
             return forwarders.invoke_on_all(&forwarder::configure, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::run_udp_manager, 1);
