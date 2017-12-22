@@ -288,12 +288,12 @@ public:
                             return make_ready_future<af_action>(af_action::close_forward);
                         }
 
-                        auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
+                        auto src_ip = ac.get_flow_key_hash();
                         extendable_buffer key_buf;
                         key_buf.fill_data(src_ip);
                         return this->_mc.query(Operation::kGet, sizeof(src_ip), key_buf.get_temp_buffer(),
                                                0, temporary_buffer<char>()).then([&ac, this](mica_response response){
-                            auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
+                            auto src_ip = ac.get_flow_key_hash();
                             extendable_buffer key_buf;
                             key_buf.fill_data(src_ip);
 
