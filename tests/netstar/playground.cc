@@ -292,7 +292,7 @@ public:
                         extendable_buffer key_buf;
                         key_buf.fill_data(src_ip);
                         return this->_mc.query(Operation::kGet, sizeof(src_ip), key_buf.get_temp_buffer(),
-                                               0, temporary_buffer<char>()).then([&ac, this](mica_response response){
+                                               0, temporary_buffer<char>())/*.then([&ac, this](mica_response response){
                             auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
                             extendable_buffer key_buf;
                             key_buf.fill_data(src_ip);
@@ -317,7 +317,7 @@ public:
                                                        sizeof(src_ip), key_buf.get_temp_buffer(),
                                                        sizeof(val), val_buf.get_temp_buffer());
                             }
-                        }).then_wrapped([&ac, this](auto&& f){
+                        })*/.then_wrapped([&ac, this](auto&& f){
                             try{
                                 f.get();
                                 return af_action::forward;

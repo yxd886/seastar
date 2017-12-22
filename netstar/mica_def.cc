@@ -75,7 +75,8 @@ do_calculate_queue_mapping(boost::program_options::variables_map& opts,
                 res_pos_flag[local_queue][remote_queue] = true;
                 total--;
                 res[local_queue][remote_queue].local_port = local_port;
-                res[local_queue][remote_queue].remote_port = remote_port;     }
+                res[local_queue][remote_queue].remote_port = remote_port;
+            }
 
             if(total == 0){
                 return res;
@@ -83,7 +84,7 @@ do_calculate_queue_mapping(boost::program_options::variables_map& opts,
         }
     }
 
-    if(total!=0){
+    if(total!=0) {
         printf("Fail to find a valid queue mapping. \n");
         assert(false);
     }
