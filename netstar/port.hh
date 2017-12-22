@@ -89,14 +89,13 @@ public:
     // Send the packet out.
     // Assert that we are sending out from correct qp type.
     // Need to wait for enough space in the _queue_space.
-    inline future<> send(net::packet p){
+    inline void send(net::packet p){
         if(_sendq.size() < port_sendq_size) {
             _sendq.push_back(std::move(p));
         }
         else{
             _failed_send_count += 1;
         }
-        return make_ready_future<>();
     }
 
     inline size_t peek_sendq_size() {
