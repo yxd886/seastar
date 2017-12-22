@@ -117,7 +117,8 @@ public:
 };
 
 struct fake_val {
-    char v[64];
+    uint64_t v1;
+    uint64_t v2;
 };
 
 class forwarder;
@@ -299,7 +300,7 @@ public:
 
                             if(response.get_result() == Result::kNotFound) {
                                 // fprint(std::cout,"Key does not exist.\n");
-                                uint64_t val;
+                                fake_val val;
                                 extendable_buffer val_buf;
                                 val_buf.fill_data(val);
 
@@ -309,7 +310,7 @@ public:
                             }
                             else{
                                 // fprint(std::cout,"Key exist.\n");
-                                uint64_t val;
+                                fake_val val;
                                 extendable_buffer val_buf;
                                 val_buf.fill_data(val);
 
@@ -317,7 +318,7 @@ public:
                                                        sizeof(src_ip), key_buf.get_temp_buffer(),
                                                        sizeof(val), val_buf.get_temp_buffer());
                             }
-                        }).then([&ac, this](mica_response response){
+                        })/*.then([&ac, this](mica_response response){
                             auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
                             extendable_buffer key_buf;
                             key_buf.fill_data(src_ip);
@@ -379,7 +380,7 @@ public:
                                                            sizeof(val), val_buf.get_temp_buffer());
                                 }
                             });
-                        }).then_wrapped([&ac, this](auto&& f){
+                        })*/.then_wrapped([&ac, this](auto&& f){
                             try{
                                 f.get();
                                 return af_action::forward;
@@ -517,4 +518,4 @@ int main(int ac, char** av) {
 // 1r: 8.5M.
 // 1r1w: 5.35M
 // 2r2w: 3.4M
-// 3r3w:
+// 3r3w: 2.43M
