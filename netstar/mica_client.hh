@@ -533,7 +533,7 @@ public:
         // in case there's not enough request put into the request
         // assemblers.
         _check_ras_timer.set_callback([this, which_ra=0] () mutable{
-            for(int i=0; i<5; i++) {
+            for(int i=0; i<5; i++) { // why 5?
                 check_request_assemblers(which_ra);
                 which_ra = (which_ra+1)%(_ras.size());
             }
