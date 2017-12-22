@@ -393,7 +393,7 @@ public:
         }
 
         void consume_send_stream(){
-            while(!_send_stream.empty()){
+            while(!_send_stream.empty()) {
                 auto next_rd_idx = _send_stream.front();
                 auto& next_rd = _rds[next_rd_idx];
                 auto next_rd_size = next_rd.get_request_size();
@@ -485,9 +485,10 @@ public:
 private:
     // total_request_descriptor_count must be smaller than the max value
     // that can be represented by uint16_t.
-    static constexpr unsigned total_request_descriptor_count = 65535;
+    static constexpr unsigned total_request_descriptor_count = 2048;
     std::vector<request_descriptor> _rds;
     std::vector<request_assembler> _ras;
+    semaphore _pending_work_queue = {total_request_descriptor_count};
     circular_buffer<unsigned> _recycled_rds;
     timer<steady_clock_type> _check_ras_timer;
 public:
@@ -561,10 +562,12 @@ public:
         // in case there's not enough request put into the request
         // assemblers.
         _check_ras_timer.set_callback([this, which_ra=0] () mutable{
-            check_request_assemblers(which_ra);
-            which_ra = (which_ra+1)%(_ras.size());
+            for(int i=0; i<5; i++) {
+                check_request_assemblers(which_ra);
+                which_ra = (which_ra+1)%(_ras.size());
+            }
         });
-        _check_ras_timer.arm_periodic(50us);
+        _check_ras_timer.arm_periodic(100us);
     }
     void start_receiving(){
         mc_assert(ports().size() == 1);
@@ -574,16 +577,26 @@ public:
     future<mica_response> query(Operation op,
                size_t key_len, temporary_buffer<char> key,
                size_t val_len, temporary_buffer<char> val) {
-        if(_recycled_rds.size() == 0){
-            return make_exception_future<mica_response>(kill_flow());
+        if(_pending_work_queue.try_wait(1)){
+            auto rd_idx = _recycled_rds.front();
+            _recycled_rds.pop_front();
+            _rds[rd_idx].new_action(op, key_len, std::move(key),
+                                    val_len, std::move(val));
+            send_request_descriptor(rd_idx);
+            return _rds[rd_idx].obtain_future();
         }
-
-        auto rd_idx = _recycled_rds.front();
-        _recycled_rds.pop_front();
-        _rds[rd_idx].new_action(op, key_len, std::move(key),
-                                val_len, std::move(val));
-        send_request_descriptor(rd_idx);
-        return _rds[rd_idx].obtain_future();
+        else{
+            return _pending_work_queue.wait(1).then(
+                    [this, op, key_len, key=std::move(key),
+                     val_len, val=std::move(val)] () mutable{
+                auto rd_idx = _recycled_rds.front();
+                _recycled_rds.pop_front();
+                _rds[rd_idx].new_action(op, key_len, std::move(key),
+                                        val_len, std::move(val));
+                send_request_descriptor(rd_idx);
+                return _rds[rd_idx].obtain_future();
+            });
+        }
     }
     size_t nr_request_descriptors() {
         return _recycled_rds.size();
@@ -604,6 +617,7 @@ private:
         }
         case action::recycle_rd : {
             _recycled_rds.push_back(rd_idx);
+            _pending_work_queue.signal(1);
             break;
         }
         case action::resend_rd : {
@@ -701,6 +715,7 @@ private:
 #endif
                 // recycle the request descriptor.
                 _recycled_rds.push_back(rd_idx);
+                _pending_work_queue.signal(1);
                 break;
             }
             case action::resend_rd : {
