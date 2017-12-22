@@ -26,7 +26,7 @@ using namespace std;
 
 namespace netstar{
 
-#define ENABLE_MC_ASSERTION 1
+#define ENABLE_MC_ASSERTION 0
 
 #if ENABLE_MC_ASSERTION
 #define mc_assert(condition) assert(condition)
