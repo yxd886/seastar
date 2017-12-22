@@ -75,12 +75,7 @@ do_calculate_queue_mapping(boost::program_options::variables_map& opts,
                 res_pos_flag[local_queue][remote_queue] = true;
                 total--;
                 res[local_queue][remote_queue].local_port = local_port;
-                res[local_queue][remote_queue].remote_port = remote_port;
-#if MICA_DEBUG
-                printf("Find one valid queue mapping entry: local_queue %d <-> remote_queue %d, \\"
-                       "local_port %d, remote_port %d\n", local_queue, remote_queue, local_port, remote_port);
-#endif
-            }
+                res[local_queue][remote_queue].remote_port = remote_port;     }
 
             if(total == 0){
                 return res;

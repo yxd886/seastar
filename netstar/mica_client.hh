@@ -171,9 +171,6 @@ public:
         void new_action(Operation op,
                         size_t key_len, temporary_buffer<char> key,
                         size_t val_len, temporary_buffer<char> val){
-#if MICA_DEBUG
-            printf("Request descriptor %d is used\n", _rd_index);
-#endif
             // If this method is called, the rd must be popped out from
             // the fifo. When the rd is popped out from the fifo, it is either
             // in initialized state, or be recycled. This means that:
@@ -250,18 +247,11 @@ public:
         action match_response(RequestHeader& res_hd, net::packet response_pkt){
             auto opaque = res_hd.opaque;
             uint16_t epoch = opaque & ((1 << 16) - 1);
-#if MICA_DEBUG
-            printf("Request descriptor %d receives response with epoch %d, and it's own epoch is %d\n",
-                    _rd_index, epoch, _epoch);
-#endif
             if(epoch != _epoch){
                 // the epoch doesn't match, the response is a late response,
                 // ignore it.
                 return action::no_action;
             }
-#if MICA_DEBUG
-            printf("Request descriptor %d succeeds\n", _rd_index);
-#endif
             // the epoch matches, we got the response for this request.
             // Here, the timer should be armed and not timed out.
             // The retry count should not exceed the maximum value.
@@ -281,16 +271,8 @@ public:
         action timeout_handler(){
             // handle _to timeout
             mc_assert(_pr);
-#if MICA_DEBUG
-            printf("Request descriptor %d times out\n", _rd_index);
-#endif
-
             _retry_count++;
-
             if(_retry_count == max_retries){
-#if MICA_DEBUG
-                printf("Request descriptor %d fails with exception\n", _rd_index);
-#endif
                 // we have retried four times without receiving a response,
                 // timeout
                 _pr->set_exception(kill_flow());
@@ -416,11 +398,6 @@ public:
 
     private:
         void send_request_packet(){
-#if MICA_DEBUG
-            printf("Thread %d: In send_request_packet\n", engine().cpu_id());
-            printf("Thread %d: The source lcore is %d\n", engine().cpu_id(), _local_ei.udp_port);
-            printf("Thread %d: The destination lcore is %d\n", engine().cpu_id(), _remote_ei.udp_port);
-#endif
             scattered_message<char> msg;
             msg.reserve(1+3*_rd_idxs.size());
 
@@ -442,12 +419,6 @@ public:
             setup_request_num(p);
 
             // send
-#if MICA_DEBUG
-            printf("Thread %d: The request packet with size %d is sent out\n", engine().cpu_id(), p.len());
-            net::ethernet_address src_eth = p.get_header<net::eth_hdr>()->src_mac;
-            net::ethernet_address dst_eth = p.get_header<net::eth_hdr>()->dst_mac;
-            std::cout<<"Send request packet with src mac: "<<src_eth<<" and dst mac: "<<dst_eth<<std::endl;
-#endif
             p.linearize();
             _port.force_send(std::move(p));
 
@@ -638,49 +609,14 @@ private:
         // Here, each ra in _ras represents a partition.
         auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
                                               _ras.size());
-#if MICA_DEBUG
-        printf("Thread %d: The partition id is %d\n", engine().cpu_id(), partition_id);
-        printf("Thread %d: The key hash is %" PRIu64 "\n", engine().cpu_id(), _rds[rd_idx].get_key_hash());
-#endif
         _ras[partition_id].append_new_request_descriptor(rd_idx);
     }
     future<> receive(net::packet p){
         if (!is_valid(p) || !is_response(p) || p.nr_frags()!=1){
-#if MICA_DEBUG
-            printf("Thread %d: Receive invalid response packet\n", engine().cpu_id());
-#endif
             return make_ready_future<>();
         }
-#if MICA_DEBUG
-        auto eth_h = p.get_header<net::eth_hdr>();
-        std::cout<<"The receive packet has src eth: "<<eth_h->src_mac<<" and dst eth: "<<eth_h->dst_mac<<std::endl;
-        printf("Thread %d: Receive valid response packet with length %d\n", engine().cpu_id(), p.len());
-
-        auto hd = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
-        printf("Thread %d: source port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->src_port));
-        printf("Thread %d: destination port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->dst_port));
-        if(p.rss_hash()){
-            // printf("Thread %d: ", engine().cpu_id());
-            printf("Thread %d: The rss hash of the received flow packet is %" PRIu32 "\n", engine().cpu_id(), p.rss_hash().value());
-            uint16_t src_port = net::ntoh(hd->src_port);
-            uint16_t dst_port = net::ntoh(hd->dst_port);
-            auto ip_hdr = p.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-            net::ipv4_address src_ip(ip_hdr->src_ip);
-            src_ip = net::ntoh(src_ip);
-            net::ipv4_address dst_ip(ip_hdr->dst_ip);
-            dst_ip = net::ntoh(dst_ip);
-            std::cout<<"src_ip "<<src_ip<<", src_port "<<src_port
-                     <<", dst_ip "<<dst_ip<<", dst_port "<<dst_port<<std::endl;
-
-            net::l4connid<net::ipv4_traits> to_local{src_ip, dst_ip, src_port, dst_port};
-            net::l4connid<net::ipv4_traits> to_remote{dst_ip, src_ip, dst_port, src_port};
-            printf("Thread %d: src_ip,dst_ip %" PRIu32 "\n", engine().cpu_id(), to_local.hash(ports()[0]->get_qp_wrapper().get_rss_key()));
-            printf("Thread %d: dst_ip,src_ip %" PRIu32 "\n", engine().cpu_id(), to_remote.hash(ports()[0]->get_qp_wrapper().get_rss_key()));
-        }
-#endif
 
         size_t offset = sizeof(RequestBatchHeader);
-
         while(offset < p.len()){
             auto rh = p.get_header<RequestHeader>(offset);
 
@@ -695,24 +631,15 @@ private:
 
             size_t total_reponse_length = sizeof(RequestHeader)+
                     roundup_key_len+roundup_val_len;
-#if MICA_DEBUG
-            printf("Total response length is %zu\n", total_reponse_length);
-#endif
             unsigned rd_idx = static_cast<unsigned>(rh->opaque >> 16);
             auto action_res = _rds[rd_idx].match_response(*rh,
                                   p.share(offset, total_reponse_length));
 
             switch (action_res){
             case action::no_action : {
-#if MICA_DEBUG
-                printf("Thread %d: Response match fails, invalid response\n", engine().cpu_id());
-#endif
                 break;
             }
             case action::recycle_rd : {
-#if MICA_DEBUG
-                printf("Thread %d: Response match succeed, recycle the request descriptor\n", engine().cpu_id());
-#endif
                 // recycle the request descriptor.
                 _recycled_rds.push_back(rd_idx);
                 _pending_work_queue.signal(1);
