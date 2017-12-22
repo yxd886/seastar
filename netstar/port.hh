@@ -105,7 +105,7 @@ public:
         _receive_configured = true;
 
         return _qp_wrapper.receive([this, fn = std::move(next_packet)](net::packet pkt){
-            if(this->_port_counter < max_receiving_pkts) {
+            if((*_port_counter) < max_receiving_pkts) {
                 (*_port_counter) += 1;
                 fn(net::packet(std::move(pkt), make_deleter([pc = _port_counter] { (*pc) -= 1;})));
             }
