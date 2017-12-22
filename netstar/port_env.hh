@@ -36,6 +36,7 @@ class ports_env{
     std::vector<per_core_objs<stack_port>> _stack_ports;
     std::vector<std::shared_ptr<net::device>> _devs;
     std::vector<uint16_t> _port_ids;
+    std::vector<std::vector<unsigned>> _port_counters;
 
 public:
     explicit ports_env(){}
@@ -53,6 +54,7 @@ public:
         assert(port_check(opts, port_id));
         _ports.emplace_back();
         _port_types.push_back(pt);
+        _port_counters.push_back(std::vector<unsigned>(smp::count, 0));
         switch(pt) {
         case(port_type::netstar_dpdk) : {
             auto dev = create_netstar_dpdk_net_device(port_id, queue_num);
@@ -87,7 +89,7 @@ public:
         auto& ports = _ports.back();
         auto dev  = _devs.back().get();
 
-        return ports.start(opts, dev, port_id).then([dev]{
+        return ports.start(opts, dev, port_id, &(_port_counters.back())).then([dev]{
             return dev->link_ready();
         });
     }
