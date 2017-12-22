@@ -117,8 +117,7 @@ public:
 };
 
 struct fake_val {
-    uint64_t v1;
-    uint64_t v2;
+    uint64_t v[6];
 };
 
 class forwarder;
