@@ -16,27 +16,41 @@ using namespace seastar;
 
 namespace netstar{
 
+// For an NFV application, it needs to poll packet no matter what happened.
+// In a run-to-completion model, we can always poll fixed amount of packet,
+// process them and send them out. If the run-to-completion system overloads,
+// it can still maintain a desired throughput.
+// However, for applications built in a fully asynchronous fashion, this presents as
+// a problem. We still need to poll packets for timely processing. However, the problem
+// is that, after the packets are polled, we will not know when they are released
+// out of the system. Therefore, when a system is overloaded. We will see a tremendous performance
+// drop.
+// Here, I'm adding a counter to the port device, which serves as the front line for the
+// entire netstar application. The counter is increased whenever a valid new packet is
+// going to be received by the the upper appliaction, and decreased only when the packet is
+// deconstructed.
+
 // A regular port. Applications can directly fetch
 // and send packets from this port using the exposed
 // public methods.
 class port{
+    static constexpr size_t port_sendq_size = 500;
+
     uint16_t _port_id;
     qp_wrapper _qp_wrapper;
-    circular_buffer<net::packet> _sendq;
-    unsigned _failed_send_count;
     bool _receive_configured;
+    unsigned* _port_counter;
+    circular_buffer<net::packet> _sendq;
     std::experimental::optional<subscription<net::packet>> _sub;
-    seastar::queue<net::packet> _receiveq;
-    static constexpr size_t port_sendq_size = 500;
 public:
     explicit port(boost::program_options::variables_map opts,
-                          net::device* dev,
-                          uint16_t port_id) :
+                  net::device* dev,
+                  uint16_t port_id,
+                  std::vector<unsigned>* vec) :
         _port_id(port_id),
         _qp_wrapper(opts, dev, engine().cpu_id()),
-        _failed_send_count(0),
         _receive_configured(false),
-        _receiveq(100){
+        _port_counter(&((*vec)[engine().cpu_id()])){
 
         if(_qp_wrapper.get_qid() < _qp_wrapper.get_hw_queues_count()){
             _qp_wrapper.register_packet_provider([this](){
@@ -73,19 +87,8 @@ public:
     // Send the packet out.
     // Assert that we are sending out from correct qp type.
     // Need to wait for enough space in the _queue_space.
-    inline future<> send(net::packet p){
-        if(_sendq.size() < port_sendq_size) {
-            _sendq.push_back(std::move(p));
-        }
-        else{
-            _failed_send_count += 1;
-        }
-        return make_ready_future<>();
-    }
-
-    inline future<> force_send(net::packet p) {
+    inline void send(net::packet p) {
         _sendq.push_back(std::move(p));
-        return make_ready_future<>();
     }
 
     inline size_t peek_sendq_size() {
@@ -93,7 +96,7 @@ public:
     }
 
     inline unsigned peek_failed_send_cout () {
-        return _failed_send_count;
+        return 0;
     }
 
     // Provide a customized receive function for the underlying qp.
