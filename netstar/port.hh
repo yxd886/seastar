@@ -35,6 +35,7 @@ namespace netstar{
 // public methods.
 class port{
     static constexpr size_t port_sendq_size = 500;
+    static constexpr size_t max_receiving_pkts = 1000;
 
     uint16_t _port_id;
     qp_wrapper _qp_wrapper;
@@ -62,9 +63,7 @@ public:
                 return p;
             });
         }
-
-        // 180 is the default attempt of a single tx_poll by dpdk_qp;
-        // _queue_space = std::make_unique<semaphore>(180);
+        *_port_counter = 0;
         _sendq.reserve(port_sendq_size);
     }
 
@@ -101,10 +100,17 @@ public:
 
     // Provide a customized receive function for the underlying qp.
     subscription<net::packet>
-    receive(std::function<future<> (net::packet)> next_packet) {
+    receive(std::function<void(net::packet)> next_packet) {
         assert(!_receive_configured);
         _receive_configured = true;
-        return _qp_wrapper.receive(std::move(next_packet));
+
+        return _qp_wrapper.receive([this, fn = std::move(next_packet)](net::packet pkt){
+            if(this->_port_counter < max_receiving_pkts) {
+                (*_port_counter) += 1;
+                fn(net::packet(std::move(pkt), make_deleter([pc = _port_counter] { (*pc) -= 1;})));
+            }
+            return make_ready_future<>();
+        });
     }
 
     // Expose qp_wrapper. Some functionality in netstar
