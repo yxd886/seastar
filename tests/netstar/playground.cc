@@ -317,6 +317,37 @@ public:
                                                        sizeof(src_ip), key_buf.get_temp_buffer(),
                                                        sizeof(val), val_buf.get_temp_buffer());
                             }
+                        }).then([&ac, this](mica_response response){
+                            auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
+                            extendable_buffer key_buf;
+                            key_buf.fill_data(src_ip);
+                            return this->_mc.query(Operation::kGet, sizeof(src_ip), key_buf.get_temp_buffer(),
+                                                   0, temporary_buffer<char>()).then([&ac, this](mica_response response){
+                                auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
+                                extendable_buffer key_buf;
+                                key_buf.fill_data(src_ip);
+
+                                if(response.get_result() == Result::kNotFound) {
+                                    // fprint(std::cout,"Key does not exist.\n");
+                                    uint64_t val;
+                                    extendable_buffer val_buf;
+                                    val_buf.fill_data(val);
+
+                                    return this->_mc.query(Operation::kSet,
+                                            sizeof(src_ip), key_buf.get_temp_buffer(),
+                                            sizeof(val), val_buf.get_temp_buffer());
+                                }
+                                else{
+                                    // fprint(std::cout,"Key exist.\n");
+                                    uint64_t val;
+                                    extendable_buffer val_buf;
+                                    val_buf.fill_data(val);
+
+                                    return this->_mc.query(Operation::kSet,
+                                                           sizeof(src_ip), key_buf.get_temp_buffer(),
+                                                           sizeof(val), val_buf.get_temp_buffer());
+                                }
+                            });
                         }).then_wrapped([&ac, this](auto&& f){
                             try{
                                 f.get();
@@ -453,4 +484,4 @@ int main(int ac, char** av) {
 // This is easy to reproduce even when 1 flow with 1pps. Please check this out carefully!
 
 // 1r: 8.5M.
-// 1r1w:
+// 1r1w: 5.35M
