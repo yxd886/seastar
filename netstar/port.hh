@@ -38,7 +38,6 @@ class port{
 
     uint16_t _port_id;
     qp_wrapper _qp_wrapper;
-    unsigned _failed_send_count;
     bool _receive_configured;
     unsigned* _port_counter;
     circular_buffer<net::packet> _sendq;
@@ -50,7 +49,6 @@ public:
                   std::vector<unsigned>* vec) :
         _port_id(port_id),
         _qp_wrapper(opts, dev, engine().cpu_id()),
-        _failed_send_count(0),
         _receive_configured(false),
         _port_counter(&((*vec)[engine().cpu_id()])){
 
@@ -89,13 +87,8 @@ public:
     // Send the packet out.
     // Assert that we are sending out from correct qp type.
     // Need to wait for enough space in the _queue_space.
-    inline void send(net::packet p){
-        if(_sendq.size() < port_sendq_size) {
-            _sendq.push_back(std::move(p));
-        }
-        else{
-            _failed_send_count += 1;
-        }
+    inline void send(net::packet p) {
+        _sendq.push_back(std::move(p));
     }
 
     inline size_t peek_sendq_size() {
@@ -103,7 +96,7 @@ public:
     }
 
     inline unsigned peek_failed_send_cout () {
-        return _failed_send_count;
+        return 0;
     }
 
     // Provide a customized receive function for the underlying qp.
