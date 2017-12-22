@@ -420,7 +420,7 @@ public:
 
             // send
             p.linearize();
-            _port.force_send(std::move(p));
+            _port.send(std::move(p));
 
             for(auto rd_idx : _rd_idxs){
                 _rds[rd_idx].arm_timer();
