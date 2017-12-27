@@ -349,6 +349,15 @@ public:
                             return make_ready_future<netstar::af_action>(netstar::af_action::drop);
                         }
                     }
+                }).then_wrapped([this](auto&& f){
+                    try{
+                        f.get();
+                        return af_action::forward;
+
+                    }
+                    catch(...){
+                        return af_action::drop;
+                    }
                 });
             }
         }
