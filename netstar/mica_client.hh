@@ -60,6 +60,22 @@ struct kv_wrapper {
 
 } // namespace internal
 
+class mica_key {
+    internal::kv_wrapper _wrapper;
+
+    template<typename... T>
+    mica_key(T&&... args)
+        : internal::kv_wrapper(std::forward<T>(args)...) {}
+};
+
+class mica_value {
+    internal::kv_wrapper _wrapper;
+
+    template<typename... T>
+    mica_value(T&&... args)
+        : internal::kv_wrapper(std::forward<T>(args)...) {}
+};
+
 // The response is shared from the received
 // response packet. There for mica_response should
 // not be held indefinitely. It should be deconstructed
