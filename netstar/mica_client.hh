@@ -5,6 +5,7 @@
 #include "netstar/mica_def.hh"
 #include "netstar/roundup.hh"
 #include "netstar/port.hh"
+#include "netstar/extendable_buffer.hh"
 
 #include "mica/util/hash.h"
 
