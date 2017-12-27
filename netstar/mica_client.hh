@@ -68,7 +68,7 @@ public:
         : internal::kv_wrapper(std::forward<T>(args)...) {}
 
     temporary_buffer<char> get_roundup_buf(){
-        return _wrapper.roundup_buf;
+        return std::move(_wrapper.roundup_buf);
     }
 
     size_t get_actual_length() {
@@ -84,7 +84,7 @@ public:
         : internal::kv_wrapper(std::forward<T>(args)...) {}
 
     temporary_buffer<char> get_roundup_buf(){
-        return _wrapper.roundup_buf;
+        return std::move(_wrapper.roundup_buf);
     }
 
     size_t get_actual_length() {
