@@ -347,6 +347,18 @@ public:
         }
 
         void initialize_session_state(net::packet& pkt, firewall_flow_state& state) {
+            std::vector<rule>::iterator it;
+            auto ip_hdr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+            auto udp_hdr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+            for(it=_f.firewall.rules.begin();it!=_f.firewall.rules.end();it++){
+                if(ip_hdr->dst_ip.ip == it->_dst_addr &&
+                   udp_hdr->dst_port == it->_dst_port &&
+                   ip_hdr->src_ip.ip == it->_src_addr &&
+                   udp_hdr->src_port == it->_src_port){
+                    state.pass = false;
+                    return;
+                }
+            }
             state.pass = true;
         }
 
