@@ -302,7 +302,7 @@ public:
                 }
 
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                return this->_f._mc.query(Operation::kGet, mica_key(key),
+                return _f._mc.query(Operation::kGet, mica_key(key),
                         mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
                     if(response.get_result() == Result::kNotFound) {
                         initialize_session_state(_ac.cur_packet(), _fs);
@@ -327,8 +327,8 @@ public:
 
                 }).then_wrapped([this](auto&& f){
                     try{
-                        f.get();
-                        return af_action::forward;
+                        auto result = f.get0();
+                        return result;
 
                     }
                     catch(...){
