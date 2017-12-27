@@ -19,6 +19,8 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
+#include "nf/firewall.hh"
+
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
@@ -117,7 +119,11 @@ public:
 };
 
 struct fake_val {
-    uint64_t v[3];
+    char v[64];
+};
+
+struct firewall {
+
 };
 
 class forwarder;
@@ -134,7 +140,7 @@ class forwarder {
     sd_async_flow_manager<dummy_udp_ppr> _udp_manager;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
-
+public:
     mica_client& _mc;
 public:
     forwarder (ports_env& all_ports, per_core_objs<mica_client>& mica_clients)
@@ -271,9 +277,32 @@ public:
         }));
     }
 
-    struct wtf {
-        uint64_t v1;
-        uint64_t v2;
+    class firewall_runner {
+        sd_async_flow<dummy_udp_ppr> _ac;
+        forwarder& _f;
+    public:
+        firewall_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
+            : _ac(std::move(ac))
+            , _f(f){}
+
+        void events_registration() {
+            _ac.register_events(dummy_udp_events::pkt_in);
+        }
+
+        future<> run_firewall() {
+            return _ac.run_async_loop([this](){
+                if(_ac.cur_event().on_close_event()) {
+                    return make_ready_future<af_action>(af_action::close_forward);
+                }
+                foo();
+                bar();
+                auto& cur_pkt = _ac.cur_packet();
+                return _f.firewall.process_packet(&cur_pkt, std::ref(_f._mc));
+            });
+        }
+    private:
+        void foo() {}
+        void bar() {}
     };
 
     void run_udp_manager(int) {
@@ -288,117 +317,17 @@ public:
                             return make_ready_future<af_action>(af_action::close_forward);
                         }
 
-                        auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
-                        extendable_buffer key_buf;
-                        key_buf.fill_data(src_ip);
-                        return this->_mc.query(Operation::kGet, sizeof(src_ip), key_buf.get_temp_buffer(),
-                                               0, temporary_buffer<char>()).then([&ac, this](mica_response response){
-                            auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
-                            extendable_buffer key_buf;
-                            key_buf.fill_data(src_ip);
-
-                            if(response.get_result() == Result::kNotFound) {
-                                // fprint(std::cout,"Key does not exist.\n");
-                                fake_val val;
-                                extendable_buffer val_buf;
-                                val_buf.fill_data(val);
-
-                                return this->_mc.query(Operation::kSet,
-                                        sizeof(src_ip), key_buf.get_temp_buffer(),
-                                        sizeof(val), val_buf.get_temp_buffer());
-                            }
-                            else{
-                                // fprint(std::cout,"Key exist.\n");
-                                fake_val val;
-                                extendable_buffer val_buf;
-                                val_buf.fill_data(val);
-
-                                return this->_mc.query(Operation::kSet,
-                                                       sizeof(src_ip), key_buf.get_temp_buffer(),
-                                                       sizeof(val), val_buf.get_temp_buffer());
-                            }
-                        })/*.then([&ac, this](mica_response response){
-                            auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
-                            extendable_buffer key_buf;
-                            key_buf.fill_data(src_ip);
-                            return this->_mc.query(Operation::kGet, sizeof(src_ip), key_buf.get_temp_buffer(),
-                                                   0, temporary_buffer<char>()).then([&ac, this](mica_response response){
-                                auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
-                                extendable_buffer key_buf;
-                                key_buf.fill_data(src_ip);
-
-                                if(response.get_result() == Result::kNotFound) {
-                                    // fprint(std::cout,"Key does not exist.\n");
-                                    uint64_t val;
-                                    extendable_buffer val_buf;
-                                    val_buf.fill_data(val);
-
-                                    return this->_mc.query(Operation::kSet,
-                                            sizeof(src_ip), key_buf.get_temp_buffer(),
-                                            sizeof(val), val_buf.get_temp_buffer());
-                                }
-                                else{
-                                    // fprint(std::cout,"Key exist.\n");
-                                    uint64_t val;
-                                    extendable_buffer val_buf;
-                                    val_buf.fill_data(val);
-
-                                    return this->_mc.query(Operation::kSet,
-                                                           sizeof(src_ip), key_buf.get_temp_buffer(),
-                                                           sizeof(val), val_buf.get_temp_buffer());
-                                }
-                            });
-                        }).then([&ac, this](mica_response response){
-                            auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
-                            extendable_buffer key_buf;
-                            key_buf.fill_data(src_ip);
-                            return this->_mc.query(Operation::kGet, sizeof(src_ip), key_buf.get_temp_buffer(),
-                                                   0, temporary_buffer<char>()).then([&ac, this](mica_response response){
-                                auto src_ip = wtf{ac.get_flow_key_hash(), ac.get_flow_key_hash()};
-                                extendable_buffer key_buf;
-                                key_buf.fill_data(src_ip);
-
-                                if(response.get_result() == Result::kNotFound) {
-                                    // fprint(std::cout,"Key does not exist.\n");
-                                    uint64_t val;
-                                    extendable_buffer val_buf;
-                                    val_buf.fill_data(val);
-
-                                    return this->_mc.query(Operation::kSet,
-                                            sizeof(src_ip), key_buf.get_temp_buffer(),
-                                            sizeof(val), val_buf.get_temp_buffer());
-                                }
-                                else{
-                                    // fprint(std::cout,"Key exist.\n");
-                                    uint64_t val;
-                                    extendable_buffer val_buf;
-                                    val_buf.fill_data(val);
-
-                                    return this->_mc.query(Operation::kSet,
-                                                           sizeof(src_ip), key_buf.get_temp_buffer(),
-                                                           sizeof(val), val_buf.get_temp_buffer());
-                                }
-                            });
-                        })*/.then_wrapped([&ac, this](auto&& f){
-                            try{
-                                f.get();
-                                return af_action::forward;
-
-                            }
-                            catch(...){
-                                if(this->_mc.nr_request_descriptors() == 0){
-                                    this->_insufficient_mica_rd_erorr += 1;
-                                }
-                                else{
-                                    this->_mica_timeout_error += 1;
-                                }
-                                return af_action::drop;
-                            }
-                        });
+                        auto& cur_pkt = ac.cur_packet();
+                        return firewall.process_packet(&cur_pkt, std::ref(this->_mc));
                     });
                 }).then([](){
                     // printf("client async flow is closed.\n");
                 });
+
+                /*do_with(firewall_runner(ic.get_sd_async_flow(), (*this)), [](firewall_runner& r){
+                     r.events_registration();
+                     return r.run_firewall();
+                });*/
 
                 return stop_iteration::no;
             });
@@ -457,6 +386,9 @@ public:
             });
         });
     }
+public:
+
+    Firewall firewall;
 };
 
 int main(int ac, char** av) {
@@ -467,7 +399,7 @@ int main(int ac, char** av) {
 
     return app.run_deprecated(ac, av, [&app, &all_ports, &mica_clients, &queue_map] {
         auto& opts = app.configuration();
-        return all_ports.add_port(opts, 0, smp::count, port_type::netstar_dpdk).then([&opts, &all_ports]{
+        return all_ports.add_port(opts, 0, smp::count, port_type::original).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count, port_type::fdir);
         }).then([&mica_clients]{
            return mica_clients.start(&mica_clients);
@@ -487,13 +419,13 @@ int main(int ac, char** av) {
             });
         }).then([&all_ports, &mica_clients]{
             return forwarders.start(std::ref(all_ports), std::ref(mica_clients));
-        })/*.then([]{
-            return forwarders.invoke_on_all(&forwarder::mica_test, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::mica_test, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::mica_test, 1);
-        })*/.then([]{
+        }).then([]{
+            return forwarders.invoke_on_all(&forwarder::mica_test, 1);
+        }).then([]{
             return forwarders.invoke_on_all(&forwarder::configure, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::run_udp_manager, 1);
@@ -510,12 +442,3 @@ int main(int ac, char** av) {
 
 // 1 thread forwarder, sender use static udp traffic gen, 700000 total pps, 1000 flows
 // The system barely crashes, which is good.
-
-// When turn on mica debug mode, mica will fail to made an assertion about memory alignment in the packet
-// This is easy to reproduce even when 1 flow with 1pps. Please check this out carefully!
-
-// 1r: 8.5M.
-// 1r1w: 5.35M
-// 2r2w: 3.4M
-// 3r3w: 2.43M
-
