@@ -65,7 +65,7 @@ class mica_key {
 public:
     template<typename... T>
     mica_key(T&&... args)
-        : internal::kv_wrapper(std::forward<T>(args)...) {}
+        : _wrapper(std::forward<T>(args)...) {}
 
     temporary_buffer<char> get_roundup_buf(){
         return std::move(_wrapper.roundup_buf);
@@ -81,7 +81,7 @@ class mica_value {
 public:
     template<typename... T>
     mica_value(T&&... args)
-        : internal::kv_wrapper(std::forward<T>(args)...) {}
+        : _wrapper(std::forward<T>(args)...) {}
 
     temporary_buffer<char> get_roundup_buf(){
         return std::move(_wrapper.roundup_buf);
