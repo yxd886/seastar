@@ -48,15 +48,18 @@ public:
         // return_state->_sent_seq=tcp->seq.raw;
         // return_state->_tcp_flags=tcp->f_fin;
 
-
     }
 
-    void check_session(struct fivetuple* five,firewall_state* state){
-
+    void check_session(net::packet* pkt,firewall_state* state){
+        net::ip_hdr *iphdr;
+        net::udp_hdr *tcp;
         std::vector<rule>::iterator it;
+        iphdr =pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+        tcp = (net::udp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
         for(it=rules.begin();it!=rules.end();it++){
-            if(five->_dst_addr==it->_dst_addr&&five->_dst_port==it->_dst_port&&five->_src_addr==it->_src_addr&&five->_src_port==it->_src_port){
+            if(iphdr->dst_ip.ip==it->_dst_addr&&tcp->dst_port==it->_dst_port&&iphdr->src_ip.ip==it->_src_addr&&tcp->src_port==it->_src_port){
                 state->_pass=false;
+                return;
             }
         }
         state->_pass=true;
@@ -75,62 +78,38 @@ public:
         fs._sent_seq=0;
         fs._tcp_flags=0;
     }
-    future<netstar::af_action> process_packet(net::packet* rte_pkt, mica_client& mc){
+    future<netstar::af_action> process_packet(net::packet* rte_pkt, mica_client& mc, firewall_state state, uint64_t key ){
 
-
-        if(DEBUG==1) printf("processing firewall on core:%d\n",rte_lcore_id());
         net::ip_hdr *iphdr;
-        net::udp_hdr *tcp;
 
         iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-
 
         if (iphdr->ip_proto!=(uint8_t)net::ip_protocol_num::udp){
             //drop
             if(DEBUG==1) printf("not tcp pkt\n");
             return make_ready_future<netstar::af_action>(netstar::af_action::drop);
         }else{
-
-            tcp = (net::udp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
-            struct fivetuple tuple(iphdr->src_ip.ip,iphdr->dst_ip.ip,tcp->src_port,tcp->dst_port,iphdr->ip_proto);
-
             //printf("src_addr:%d ,iphdr->dst_addr:%d tcp->src_port:%d tcp->dst_port:%d\n ",iphdr->src_addr,iphdr->dst_addr,tcp->src_port,tcp->dst_port);
 
-
             //generate key based on five-tuples
-            struct firewall_state state;
-            init_state(state);
-
-            char* key = reinterpret_cast<char*>(&tuple);
             extendable_buffer key_buf;
             key_buf.fill_data(key);
-
-            extendable_buffer val_buf;
-            val_buf.fill_data(state);
-
             //generate rte_ring_item
-
             return mc.query(Operation::kGet,
                     sizeof(key), key_buf.get_temp_buffer(),
-                    0, temporary_buffer<char>()).then([&, tuple, state](mica_response response) mutable{
+                    0, temporary_buffer<char>()).then([&](mica_response response){
                 if(response.get_result() == Result::kNotFound){
 
-                    check_session(&tuple,&state);
-                }else{
-
-                    memcpy(&state,&(response.get_value<struct firewall_state>()),sizeof(state));
-                }
-                struct firewall_state f_state;
-                struct firewall_state* fw_state=&f_state;
-                update_state(fw_state,&state,tcp);
-                if(state_changed(&(state),fw_state)){
+                    check_session(rte_pkt,&state);
                     //write updated state into mica hash table.
-                    extendable_buffer val_set_buf;
-                    val_buf.fill_data(*fw_state);
+                    extendable_buffer key_buf;
+                    key_buf.fill_data(key);
+                    extendable_buffer val_buf;
+                    val_buf.fill_data(state);
 
                      return mc.query(Operation::kSet,
                               sizeof(key), key_buf.get_temp_buffer(),
-                              sizeof(state), val_buf.get_temp_buffer()).then([&, state](mica_response response){
+                              sizeof(state), val_buf.get_temp_buffer()).then([&](mica_response response){
                           assert(response.get_key_len() == 0);
                           assert(response.get_val_len() == 0);
                           assert(response.get_result() == Result::kSuccess);
@@ -143,21 +122,22 @@ public:
                                return make_ready_future<netstar::af_action>(netstar::af_action::drop);
                            }
                       });
-                }
-
-                if(state._pass==true){
-                    //pass
-                    return make_ready_future<netstar::af_action>(netstar::af_action::forward);
                 }else{
-                    //drop
-                    return make_ready_future<netstar::af_action>(netstar::af_action::drop);
+
+                    memcpy(&state,&(response.get_value<struct firewall_state>()),sizeof(state));
+                    if(state._pass==true){
+                        //pass
+                        return make_ready_future<netstar::af_action>(netstar::af_action::forward);
+                    }else{
+                        //drop
+                        return make_ready_future<netstar::af_action>(netstar::af_action::drop);
+                    }
                 }
 
             });
 
 
         }
-
 
     }
 

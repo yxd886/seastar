@@ -318,7 +318,8 @@ public:
                         }
 
                         auto& cur_pkt = ac.cur_packet();
-                        return firewall.process_packet(&cur_pkt, std::ref(this->_mc));
+                        firewall_state state;
+                        return firewall.process_packet(&cur_pkt, std::ref(this->_mc), state, ac.get_flow_key_hash());
                     });
                 }).then([](){
                     // printf("client async flow is closed.\n");
