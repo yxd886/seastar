@@ -324,7 +324,7 @@ public:
                                                sizeof(src_ip), key_buf.get_temp_buffer(),
                                                sizeof(val), val_buf.get_temp_buffer());
                     }
-                }).then_wrapped([&ac, this](auto&& f){
+                }).then_wrapped([this](auto&& f){
                     try{
                         f.get();
                         return af_action::forward;
