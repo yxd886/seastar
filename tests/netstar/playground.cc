@@ -280,6 +280,7 @@ public:
     class firewall_runner {
         sd_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
+        firewall_state state;
     public:
         firewall_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
             : _ac(std::move(ac))
@@ -294,15 +295,78 @@ public:
                 if(_ac.cur_event().on_close_event()) {
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
-                foo();
-                bar();
-                auto& cur_pkt = _ac.cur_packet();
-                return _f.firewall.process_packet(&cur_pkt, std::ref(_f._mc));
+                return process_packet();
             });
         }
-    private:
-        void foo() {}
-        void bar() {}
+
+        future<af_action> process_packet() {
+            auto& pkt_ref = _ac.cur_packet();
+            auto ip_hdr = pkt_ref.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+
+            if (ip_hdr->ip_proto != static_cast<uint8_t>(net::ip_protocol_num::udp)){
+                return make_ready_future<netstar::af_action>(netstar::af_action::drop);
+            }
+            else {
+                auto key = _ac.get_flow_key_hash();
+                extendable_buffer key_buf;
+                key_buf.fill_data(key);
+
+                return _f._mc.query(Operation::kGet,
+                                sizeof(key), key_buf.get_temp_buffer(),
+                                0, temporary_buffer<char>()).then([this](mica_response response){
+                    if(response.get_result() == Result::kNotFound){
+                        auto key = _ac.get_flow_key_hash();
+                        extendable_buffer key_buf;
+                        key_buf.fill_data(key);
+
+                        auto& pkt_ref = _ac.cur_packet();
+                        check_session(&pkt_ref, &state);
+                        extendable_buffer val_buf;
+                        val_buf.fill_data(state);
+
+                         return _f._mc.query(Operation::kSet,
+                                  sizeof(key), key_buf.get_temp_buffer(),
+                                  sizeof(state), val_buf.get_temp_buffer()).then([this](mica_response response){
+                              assert(response.get_key_len() == 0);
+                              assert(response.get_val_len() == 0);
+                              assert(response.get_result() == Result::kSuccess);
+
+                              if(state._pass==true){
+                                   //pass
+                                   return make_ready_future<netstar::af_action>(netstar::af_action::forward);
+                               }else{
+                                   //drop
+                                   return make_ready_future<netstar::af_action>(netstar::af_action::drop);
+                               }
+                          });
+                    }else{
+                        memcpy(&state,&(response.get_value<struct firewall_state>()),sizeof(state));
+                        if(state._pass==true){
+                            //pass
+                            return make_ready_future<netstar::af_action>(netstar::af_action::forward);
+                        }else{
+                            //drop
+                            return make_ready_future<netstar::af_action>(netstar::af_action::drop);
+                        }
+                    }
+                });
+            }
+        }
+
+        void check_session(net::packet* pkt,firewall_state* state){
+            net::ip_hdr *iphdr;
+            net::udp_hdr *tcp;
+            std::vector<rule>::iterator it;
+            iphdr =pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+            tcp = (net::udp_hdr *)((unsigned char *)iphdr +sizeof(net::ip_hdr));
+            for(it=_f.firewall.rules.begin();it!=_f.firewall.rules.end();it++){
+                if(iphdr->dst_ip.ip==it->_dst_addr&&tcp->dst_port==it->_dst_port&&iphdr->src_ip.ip==it->_src_addr&&tcp->src_port==it->_src_port){
+                    state->_pass=false;
+                    return;
+                }
+            }
+            state->_pass=true;
+        }
     };
 
     void run_udp_manager(int) {
