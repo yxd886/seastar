@@ -41,21 +41,21 @@ public:
 namespace internal {
 
 struct kv_wrapper {
-    temporary_buffer<char> _roundup_buf;
-    size_t _actual_length;
+    temporary_buffer<char> roundup_buf;
+    size_t actual_length;
 
     // Create a kv_wrapper from an lvalue reference
     template<typename T>
     kv_wrapper(T& t) {
-        _actual_length = sizeof(t);
+        actual_length = sizeof(t);
         extendable_buffer eb;
         eb.fill_data(t);
-        _roundup_buf = eb.get_temp_buffer();
+        roundup_buf = eb.get_temp_buffer();
     }
 
     kv_wrapper(temporary_buffer<char> roundup_buf, size_t actual_length)
-        : _roundup_buf(std::move(roundup_buf))
-        , _actual_length(actual_length) {}
+        : roundup_buf(std::move(roundup_buf))
+        , actual_length(actual_length) {}
 };
 
 } // namespace internal
@@ -66,6 +66,14 @@ class mica_key {
     template<typename... T>
     mica_key(T&&... args)
         : internal::kv_wrapper(std::forward<T>(args)...) {}
+
+    temporary_buffer<char> get_roundup_buf(){
+        return _wrapper.roundup_buf;
+    }
+
+    size_t get_actual_length() {
+        return _wrapper.actual_length;
+    }
 };
 
 class mica_value {
@@ -74,6 +82,14 @@ class mica_value {
     template<typename... T>
     mica_value(T&&... args)
         : internal::kv_wrapper(std::forward<T>(args)...) {}
+
+    temporary_buffer<char> get_roundup_buf(){
+        return _wrapper.roundup_buf;
+    }
+
+    size_t get_actual_length() {
+        return _wrapper.actual_length;
+    }
 };
 
 // The response is shared from the received
