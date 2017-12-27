@@ -53,7 +53,7 @@ struct kv_wrapper {
         roundup_buf = eb.get_temp_buffer();
     }
 
-    kv_wrapper(temporary_buffer<char> roundup_buf, size_t actual_length)
+    kv_wrapper(size_t actual_length, temporary_buffer<char> roundup_buf)
         : roundup_buf(std::move(roundup_buf))
         , actual_length(actual_length) {}
 };

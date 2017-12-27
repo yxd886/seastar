@@ -298,31 +298,16 @@ public:
                 }
 
                 auto key = wtf{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                extendable_buffer key_buf;
-                key_buf.fill_data(key);
-                return this->_f._mc.query(Operation::kGet, sizeof(key), key_buf.get_temp_buffer(),
-                                       0, temporary_buffer<char>()).then([this](mica_response response){
+                return this->_f._mc.query(Operation::kGet, mica_key(key),
+                        mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
                     auto key = wtf{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                    extendable_buffer key_buf;
-                    key_buf.fill_data(key);
-
                     if(response.get_result() == Result::kNotFound) {
                         fake_val val;
-                        extendable_buffer val_buf;
-                        val_buf.fill_data(val);
-
-                        return this->_f._mc.query(Operation::kSet,
-                                sizeof(key), key_buf.get_temp_buffer(),
-                                sizeof(val), val_buf.get_temp_buffer());
+                        return this->_f._mc.query(Operation::kSet, mica_key(key), mica_value(val));
                     }
                     else{
                         fake_val val;
-                        extendable_buffer val_buf;
-                        val_buf.fill_data(val);
-
-                        return this->_f._mc.query(Operation::kSet,
-                                               sizeof(key), key_buf.get_temp_buffer(),
-                                               sizeof(val), val_buf.get_temp_buffer());
+                        return this->_f._mc.query(Operation::kSet, mica_key(key), mica_value(val));
                     }
                 }).then_wrapped([this](auto&& f){
                     try{
