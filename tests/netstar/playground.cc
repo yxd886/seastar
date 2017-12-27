@@ -305,20 +305,20 @@ public:
                 return _f._mc.query(Operation::kGet, mica_key(key),
                         mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
                     if(response.get_result() == Result::kNotFound) {
-                        fprint(std::cout, "the key is not found on the mica server.\n");
                         initialize_session_state(_ac.cur_packet(), _fs);
                         auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                        return _f._mc.query(Operation::kSet, mica_key(key), mica_value(_fs)).then([this](mica_response response){
+                        return _f._mc.query(Operation::kSet, mica_key(key),
+                                mica_value(_fs)).then([this](mica_response response){
                             return forward_packet(_fs);
                         });
                     }
                     else {
                         _fs = response.get_value<firewall_flow_state>();
-                        assert(_fs.pass);
                         auto state_changed = update_session_state(_ac.cur_packet(), _fs);
                         if(state_changed) {
                             auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                            return _f._mc.query(Operation::kSet, mica_key(key), mica_value(_fs)).then([this](mica_response response){
+                            return _f._mc.query(Operation::kSet, mica_key(key),
+                                    mica_value(_fs)).then([this](mica_response response){
                                 return forward_packet(_fs);
                             });
                         }
@@ -355,14 +355,10 @@ public:
         }
 
         af_action forward_packet(firewall_flow_state& fs) {
-            assert(fs.pass);
-
             if(fs.pass) {
-                // fprint(std::cout, "in forward_packet: forward.\n");
                 return af_action::forward;
             }
             else {
-                // fprint(std::cout, "in forward_packet: drop.\n");
                 return af_action::drop;
             }
         }
