@@ -625,7 +625,7 @@ public:
         }
     }
     future<mica_response> query(Operation op, mica_key key, mica_value value) {
-        query(op, key.get_actual_length(), key.get_roundup_buf(), value.get_actual_length(), value.get_roundup_buf());
+        return query(op, key.get_actual_length(), key.get_roundup_buf(), value.get_actual_length(), value.get_roundup_buf());
     }
     size_t nr_request_descriptors() {
         return _recycled_rds.size();
