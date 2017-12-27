@@ -37,6 +37,24 @@ public:
     }
 };
 
+namespace internal {
+
+class kv_wrapper {
+    temporary_buffer<char> _roundup_buf;
+    size_t _actual_length;
+public:
+    // Create a kv_wrapper from an lvalue reference
+    template<typename T>
+    kv_wrapper(const T& t) {
+        _actual_length = sizeof(t);
+        extendable_buffer eb;
+        eb.fill_data(t);
+        _roundup_buf = eb.get_temp_buffer();
+    }
+};
+
+} // namespace internal
+
 // The response is shared from the received
 // response packet. There for mica_response should
 // not be held indefinitely. It should be deconstructed
