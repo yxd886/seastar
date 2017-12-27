@@ -374,7 +374,7 @@ public:
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
 
-                do_with(ic.get_sd_async_flow(), [this](sd_async_flow<dummy_udp_ppr>& ac){
+                /*do_with(ic.get_sd_async_flow(), [this](sd_async_flow<dummy_udp_ppr>& ac){
                     ac.register_events(dummy_udp_events::pkt_in);
                     return ac.run_async_loop([&ac, this](){
                         if(ac.cur_event().on_close_event()) {
@@ -387,12 +387,12 @@ public:
                     });
                 }).then([](){
                     // printf("client async flow is closed.\n");
-                });
+                });*/
 
-                /*do_with(firewall_runner(ic.get_sd_async_flow(), (*this)), [](firewall_runner& r){
+                do_with(firewall_runner(ic.get_sd_async_flow(), (*this)), [](firewall_runner& r){
                      r.events_registration();
                      return r.run_firewall();
-                });*/
+                });
 
                 return stop_iteration::no;
             });
