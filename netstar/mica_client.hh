@@ -40,18 +40,22 @@ public:
 
 namespace internal {
 
-class kv_wrapper {
+struct kv_wrapper {
     temporary_buffer<char> _roundup_buf;
     size_t _actual_length;
-public:
+
     // Create a kv_wrapper from an lvalue reference
     template<typename T>
-    kv_wrapper(const T& t) {
+    kv_wrapper(T& t) {
         _actual_length = sizeof(t);
         extendable_buffer eb;
         eb.fill_data(t);
         _roundup_buf = eb.get_temp_buffer();
     }
+
+    kv_wrapper(temporary_buffer<char> roundup_buf, size_t actual_length)
+        : _roundup_buf(std::move(roundup_buf))
+        , _actual_length(actual_length) {}
 };
 
 } // namespace internal
