@@ -24,8 +24,7 @@
 #define AHO_MAX_PATTERN_LEN (1024)
 #define AHO_MAX_THREADS 28
 
-#define AHO_MAX_DFA 200
-
+#define AHO_MAX_DFA 450
 /*
  * DFAs patterns captured with the following configuration:
  * snort 2.9.7, conf: config detection: search-method ac-q
