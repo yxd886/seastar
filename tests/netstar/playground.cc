@@ -118,11 +118,25 @@ public:
     };
 };
 
+struct rule{
+public:
+
+    uint32_t _src_addr;
+    uint32_t _dst_addr;
+    uint16_t _src_port;
+    uint16_t _dst_port;
+    rule(uint32_t src_addr,uint32_t dst_addr,uint16_t src_port,uint16_t dst_port):
+        _src_addr(src_addr),_dst_addr(dst_addr),_src_port(src_port),_dst_port(dst_port){
+
+    }
+
+};
+
 class Firewall{
 public:
     Firewall() {
 
-        if(DEBUG==1) printf("Initializing a firewall\n");
+
     }
     std::vector<rule> rules;
 };
