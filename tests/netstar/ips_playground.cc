@@ -424,6 +424,49 @@ public:
            }
            return true;
        }
+       struct mp_list_t {
+           int num_match;
+           uint16_t ptrn_id[MAX_MATCH];
+       };
+       void process_batch(const struct aho_dfa *dfa_arr,
+           const struct aho_pkt *pkts, struct mp_list_t *mp_list, struct ips_state* ips_state)
+       {
+           int I, j;
+
+           for(I = 0; I < BATCH_SIZE; I++) {
+               int dfa_id = pkts[I].dfa_id;
+               int len = pkts[I].len;
+               struct aho_state *st_arr = dfa_arr[dfa_id].root;
+
+               int state = ips_state->_state;
+           //  if(state>=dfa_arr[dfa_id].num_used_states){
+           //      state=0;
+           //  }
+
+
+               for(j = 0; j < len; j++) {
+                   int count = st_arr[state].output.count;
+
+                   if(count != 0) {
+                       /* This state matches some patterns: copy the pattern IDs
+                         *  to the output */
+                       int offset = mp_list[I].num_match;
+                       memcpy(&mp_list[I].ptrn_id[offset],
+                           st_arr[state].out_arr, count * sizeof(uint16_t));
+                       mp_list[I].num_match += count;
+                       ips_state->_alert=true;
+                       ips_state->_state=state;
+                       return;
+
+                   }
+                   int inp = pkts[I].content[j];
+                   state = st_arr[state].G[inp];
+               }
+               ips_state->_state=state;
+           }
+
+
+       }
        void ids_func(struct aho_ctrl_blk *cb,struct ips_flow_state* state)
        {
            int i, j;
