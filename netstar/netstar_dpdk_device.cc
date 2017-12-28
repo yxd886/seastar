@@ -1177,7 +1177,7 @@ build_mbuf_cluster:
             // Fill the factory with the buffers from the mempool allocated
             // above.
             //
-            // init_factory();
+            init_factory();
         }
 
         /**
@@ -1446,11 +1446,11 @@ private:
     std::vector<fragment> _frags;
     std::vector<char*> _bufs;
     size_t _num_rx_free_segs = 0;
-    // reactor::poller _rx_gc_poller;
+    reactor::poller _rx_gc_poller;
     std::unique_ptr<void, free_deleter> _rx_xmem;
     tx_buf_factory _tx_buf_factory;
     std::experimental::optional<reactor::poller> _rx_poller;
-    // reactor::poller _tx_gc_poller;
+    reactor::poller _tx_gc_poller;
     std::vector<rte_mbuf*> _tx_burst;
     uint16_t _tx_burst_idx = 0;
     static constexpr phys_addr_t page_mask = ~(memory::page_size - 1);
@@ -1523,11 +1523,10 @@ int dpdk_device::init_port_start()
         _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOVLANOFFL;
     }
 
-    // Disable TSO.
-    /*if (!(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO) &&
+    if (!(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO) &&
         !(_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_TSO)) {
         _dev_info.default_txconf.txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS;
-    }*/
+    }
 
     /* for port configuration all features are off by default */
     rte_eth_conf port_conf = { 0 };
@@ -1593,8 +1592,6 @@ int dpdk_device::init_port_start()
     // Enable HW CRC stripping
     port_conf.rxmode.hw_strip_crc = 1;
 
-    // Remove LRO.
-/*
 #ifdef RTE_ETHDEV_HAS_LRO_SUPPORT
     // Enable LRO
     if (_use_lro && (_dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_LRO)) {
@@ -1604,7 +1601,7 @@ int dpdk_device::init_port_start()
     } else
 #endif
         printf("LRO is off\n");
-*/
+
     // Check that all CSUM features are either all set all together or not set
     // all together. If this assumption breaks we need to rework the below logic
     // by splitting the csum offload feature bit into separate bits for IPv4,
@@ -1630,12 +1627,11 @@ int dpdk_device::init_port_start()
         _hw_features.tx_csum_ip_offload = 1;
     }
 
-    // Disable TSO
     // TSO is supported starting from DPDK v1.8
-    /* if (_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO) {
+    if (_dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_TSO) {
         printf("TSO is supported\n");
         _hw_features.tx_tso = 1;
-    }*/
+    }
 
     // There is no UFO support in the PMDs yet.
 #if 0
@@ -1911,9 +1907,9 @@ template <bool HugetlbfsMemBackend>
 dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
      : qp(true, stats_plugin_name, qid), _dev(dev), _qid(qid),
-       // _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
-       _tx_buf_factory(qid, dev->port_idx())/*,
-       _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))*/
+       _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
+       _tx_buf_factory(qid, dev->port_idx()),
+       _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))
 {
     if (!init_rx_mbuf_pool()) {
         rte_exit(EXIT_FAILURE, "Cannot initialize mbuf pools\n");

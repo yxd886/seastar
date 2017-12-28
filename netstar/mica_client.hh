@@ -5,6 +5,7 @@
 #include "netstar/mica_def.hh"
 #include "netstar/roundup.hh"
 #include "netstar/port.hh"
+#include "netstar/extendable_buffer.hh"
 
 #include "mica/util/hash.h"
 
@@ -34,6 +35,60 @@ class kill_flow : public std::exception {
 public:
     virtual const char* what() const noexcept override {
         return "killflow";
+    }
+};
+
+namespace internal {
+
+struct kv_wrapper {
+    temporary_buffer<char> roundup_buf;
+    size_t actual_length;
+
+    // Create a kv_wrapper from an lvalue reference
+    template<typename T>
+    kv_wrapper(T& t) {
+        actual_length = sizeof(t);
+        extendable_buffer eb;
+        eb.fill_data(t);
+        roundup_buf = eb.get_temp_buffer();
+    }
+
+    kv_wrapper(size_t actual_length, temporary_buffer<char> roundup_buf)
+        : roundup_buf(std::move(roundup_buf))
+        , actual_length(actual_length) {}
+};
+
+} // namespace internal
+
+class mica_key {
+    internal::kv_wrapper _wrapper;
+public:
+    template<typename... T>
+    mica_key(T&&... args)
+        : _wrapper(std::forward<T>(args)...) {}
+
+    temporary_buffer<char> get_roundup_buf(){
+        return std::move(_wrapper.roundup_buf);
+    }
+
+    size_t get_actual_length() {
+        return _wrapper.actual_length;
+    }
+};
+
+class mica_value {
+    internal::kv_wrapper _wrapper;
+public:
+    template<typename... T>
+    mica_value(T&&... args)
+        : _wrapper(std::forward<T>(args)...) {}
+
+    temporary_buffer<char> get_roundup_buf(){
+        return std::move(_wrapper.roundup_buf);
+    }
+
+    size_t get_actual_length() {
+        return _wrapper.actual_length;
     }
 };
 
@@ -171,9 +226,6 @@ public:
         void new_action(Operation op,
                         size_t key_len, temporary_buffer<char> key,
                         size_t val_len, temporary_buffer<char> val){
-#if MICA_DEBUG
-            printf("Request descriptor %d is used\n", _rd_index);
-#endif
             // If this method is called, the rd must be popped out from
             // the fifo. When the rd is popped out from the fifo, it is either
             // in initialized state, or be recycled. This means that:
@@ -250,18 +302,11 @@ public:
         action match_response(RequestHeader& res_hd, net::packet response_pkt){
             auto opaque = res_hd.opaque;
             uint16_t epoch = opaque & ((1 << 16) - 1);
-#if MICA_DEBUG
-            printf("Request descriptor %d receives response with epoch %d, and it's own epoch is %d\n",
-                    _rd_index, epoch, _epoch);
-#endif
             if(epoch != _epoch){
                 // the epoch doesn't match, the response is a late response,
                 // ignore it.
                 return action::no_action;
             }
-#if MICA_DEBUG
-            printf("Request descriptor %d succeeds\n", _rd_index);
-#endif
             // the epoch matches, we got the response for this request.
             // Here, the timer should be armed and not timed out.
             // The retry count should not exceed the maximum value.
@@ -281,16 +326,8 @@ public:
         action timeout_handler(){
             // handle _to timeout
             mc_assert(_pr);
-#if MICA_DEBUG
-            printf("Request descriptor %d times out\n", _rd_index);
-#endif
-
             _retry_count++;
-
             if(_retry_count == max_retries){
-#if MICA_DEBUG
-                printf("Request descriptor %d fails with exception\n", _rd_index);
-#endif
                 // we have retried four times without receiving a response,
                 // timeout
                 _pr->set_exception(kill_flow());
@@ -393,7 +430,7 @@ public:
         }
 
         void consume_send_stream(){
-            while(!_send_stream.empty()){
+            while(!_send_stream.empty()) {
                 auto next_rd_idx = _send_stream.front();
                 auto& next_rd = _rds[next_rd_idx];
                 auto next_rd_size = next_rd.get_request_size();
@@ -416,11 +453,6 @@ public:
 
     private:
         void send_request_packet(){
-#if MICA_DEBUG
-            printf("Thread %d: In send_request_packet\n", engine().cpu_id());
-            printf("Thread %d: The source lcore is %d\n", engine().cpu_id(), _local_ei.udp_port);
-            printf("Thread %d: The destination lcore is %d\n", engine().cpu_id(), _remote_ei.udp_port);
-#endif
             scattered_message<char> msg;
             msg.reserve(1+3*_rd_idxs.size());
 
@@ -442,14 +474,8 @@ public:
             setup_request_num(p);
 
             // send
-#if MICA_DEBUG
-            printf("Thread %d: The request packet with size %d is sent out\n", engine().cpu_id(), p.len());
-            net::ethernet_address src_eth = p.get_header<net::eth_hdr>()->src_mac;
-            net::ethernet_address dst_eth = p.get_header<net::eth_hdr>()->dst_mac;
-            std::cout<<"Send request packet with src mac: "<<src_eth<<" and dst mac: "<<dst_eth<<std::endl;
-#endif
             p.linearize();
-            _port.force_send(std::move(p));
+            _port.send(std::move(p));
 
             for(auto rd_idx : _rd_idxs){
                 _rds[rd_idx].arm_timer();
@@ -485,9 +511,10 @@ public:
 private:
     // total_request_descriptor_count must be smaller than the max value
     // that can be represented by uint16_t.
-    static constexpr unsigned total_request_descriptor_count = 65535;
+    static constexpr unsigned total_request_descriptor_count = 2048;
     std::vector<request_descriptor> _rds;
     std::vector<request_assembler> _ras;
+    semaphore _pending_work_queue = {total_request_descriptor_count};
     circular_buffer<unsigned> _recycled_rds;
     timer<steady_clock_type> _check_ras_timer;
 public:
@@ -561,10 +588,12 @@ public:
         // in case there's not enough request put into the request
         // assemblers.
         _check_ras_timer.set_callback([this, which_ra=0] () mutable{
-            check_request_assemblers(which_ra);
-            which_ra = (which_ra+1)%(_ras.size());
+            for(int i=0; i<5; i++) { // why 5?
+                check_request_assemblers(which_ra);
+                which_ra = (which_ra+1)%(_ras.size());
+            }
         });
-        _check_ras_timer.arm_periodic(50us);
+        _check_ras_timer.arm_periodic(100us);
     }
     void start_receiving(){
         mc_assert(ports().size() == 1);
@@ -574,16 +603,29 @@ public:
     future<mica_response> query(Operation op,
                size_t key_len, temporary_buffer<char> key,
                size_t val_len, temporary_buffer<char> val) {
-        if(_recycled_rds.size() == 0){
-            return make_exception_future<mica_response>(kill_flow());
+        if(_pending_work_queue.try_wait(1)){
+            auto rd_idx = _recycled_rds.front();
+            _recycled_rds.pop_front();
+            _rds[rd_idx].new_action(op, key_len, std::move(key),
+                                    val_len, std::move(val));
+            send_request_descriptor(rd_idx);
+            return _rds[rd_idx].obtain_future();
         }
-
-        auto rd_idx = _recycled_rds.front();
-        _recycled_rds.pop_front();
-        _rds[rd_idx].new_action(op, key_len, std::move(key),
-                                val_len, std::move(val));
-        send_request_descriptor(rd_idx);
-        return _rds[rd_idx].obtain_future();
+        else{
+            return _pending_work_queue.wait(1).then(
+                    [this, op, key_len, key=std::move(key),
+                     val_len, val=std::move(val)] () mutable{
+                auto rd_idx = _recycled_rds.front();
+                _recycled_rds.pop_front();
+                _rds[rd_idx].new_action(op, key_len, std::move(key),
+                                        val_len, std::move(val));
+                send_request_descriptor(rd_idx);
+                return _rds[rd_idx].obtain_future();
+            });
+        }
+    }
+    future<mica_response> query(Operation op, mica_key key, mica_value value) {
+        return query(op, key.get_actual_length(), key.get_roundup_buf(), value.get_actual_length(), value.get_roundup_buf());
     }
     size_t nr_request_descriptors() {
         return _recycled_rds.size();
@@ -604,6 +646,7 @@ private:
         }
         case action::recycle_rd : {
             _recycled_rds.push_back(rd_idx);
+            _pending_work_queue.signal(1);
             break;
         }
         case action::resend_rd : {
@@ -624,49 +667,14 @@ private:
         // Here, each ra in _ras represents a partition.
         auto partition_id = calc_partition_id(_rds[rd_idx].get_key_hash(),
                                               _ras.size());
-#if MICA_DEBUG
-        printf("Thread %d: The partition id is %d\n", engine().cpu_id(), partition_id);
-        printf("Thread %d: The key hash is %" PRIu64 "\n", engine().cpu_id(), _rds[rd_idx].get_key_hash());
-#endif
         _ras[partition_id].append_new_request_descriptor(rd_idx);
     }
     future<> receive(net::packet p){
         if (!is_valid(p) || !is_response(p) || p.nr_frags()!=1){
-#if MICA_DEBUG
-            printf("Thread %d: Receive invalid response packet\n", engine().cpu_id());
-#endif
             return make_ready_future<>();
         }
-#if MICA_DEBUG
-        auto eth_h = p.get_header<net::eth_hdr>();
-        std::cout<<"The receive packet has src eth: "<<eth_h->src_mac<<" and dst eth: "<<eth_h->dst_mac<<std::endl;
-        printf("Thread %d: Receive valid response packet with length %d\n", engine().cpu_id(), p.len());
-
-        auto hd = p.get_header<net::udp_hdr>(sizeof(net::eth_hdr)+sizeof(net::ip_hdr));
-        printf("Thread %d: source port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->src_port));
-        printf("Thread %d: destination port of this udp packet is %d\n", engine().cpu_id(), net::ntoh(hd->dst_port));
-        if(p.rss_hash()){
-            // printf("Thread %d: ", engine().cpu_id());
-            printf("Thread %d: The rss hash of the received flow packet is %" PRIu32 "\n", engine().cpu_id(), p.rss_hash().value());
-            uint16_t src_port = net::ntoh(hd->src_port);
-            uint16_t dst_port = net::ntoh(hd->dst_port);
-            auto ip_hdr = p.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-            net::ipv4_address src_ip(ip_hdr->src_ip);
-            src_ip = net::ntoh(src_ip);
-            net::ipv4_address dst_ip(ip_hdr->dst_ip);
-            dst_ip = net::ntoh(dst_ip);
-            std::cout<<"src_ip "<<src_ip<<", src_port "<<src_port
-                     <<", dst_ip "<<dst_ip<<", dst_port "<<dst_port<<std::endl;
-
-            net::l4connid<net::ipv4_traits> to_local{src_ip, dst_ip, src_port, dst_port};
-            net::l4connid<net::ipv4_traits> to_remote{dst_ip, src_ip, dst_port, src_port};
-            printf("Thread %d: src_ip,dst_ip %" PRIu32 "\n", engine().cpu_id(), to_local.hash(ports()[0]->get_qp_wrapper().get_rss_key()));
-            printf("Thread %d: dst_ip,src_ip %" PRIu32 "\n", engine().cpu_id(), to_remote.hash(ports()[0]->get_qp_wrapper().get_rss_key()));
-        }
-#endif
 
         size_t offset = sizeof(RequestBatchHeader);
-
         while(offset < p.len()){
             auto rh = p.get_header<RequestHeader>(offset);
 
@@ -681,26 +689,18 @@ private:
 
             size_t total_reponse_length = sizeof(RequestHeader)+
                     roundup_key_len+roundup_val_len;
-#if MICA_DEBUG
-            printf("Total response length is %zu\n", total_reponse_length);
-#endif
             unsigned rd_idx = static_cast<unsigned>(rh->opaque >> 16);
             auto action_res = _rds[rd_idx].match_response(*rh,
                                   p.share(offset, total_reponse_length));
 
             switch (action_res){
             case action::no_action : {
-#if MICA_DEBUG
-                printf("Thread %d: Response match fails, invalid response\n", engine().cpu_id());
-#endif
                 break;
             }
             case action::recycle_rd : {
-#if MICA_DEBUG
-                printf("Thread %d: Response match succeed, recycle the request descriptor\n", engine().cpu_id());
-#endif
                 // recycle the request descriptor.
                 _recycled_rds.push_back(rd_idx);
+                _pending_work_queue.signal(1);
                 break;
             }
             case action::resend_rd : {

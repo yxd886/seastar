@@ -19,6 +19,7 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
+
 #include "nf/firewall.hh"
 
 #include "core/reactor.hh"
@@ -118,11 +119,6 @@ public:
     };
 };
 
-struct fake_val {
-    char v[64];
-};
-
-
 class forwarder;
 distributed<forwarder> forwarders;
 
@@ -137,7 +133,7 @@ class forwarder {
     sd_async_flow_manager<dummy_udp_ppr> _udp_manager;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
-public:
+
     mica_client& _mc;
 public:
     forwarder (ports_env& all_ports, per_core_objs<mica_client>& mica_clients)
@@ -274,10 +270,24 @@ public:
         }));
     }
 
+    struct firewall_flow_state {
+        uint8_t tcp_flags;
+        uint32_t sent_seq;
+        uint32_t recv_ack;
+        bool pass;
+    };
+
+    struct query_key {
+        uint64_t v1;
+        uint64_t v2;
+    };
+
     class firewall_runner {
         sd_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
-        firewall_state _state;
+
+
+        firewall_flow_state _fs;
     public:
         firewall_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
             : _ac(std::move(ac))
@@ -292,35 +302,85 @@ public:
                 if(_ac.cur_event().on_close_event()) {
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
-                foo();
-                bar();
-                auto& cur_pkt = _ac.cur_packet();
-                return _f.firewall.process_packet(&cur_pkt, std::ref(_f._mc),_state,_ac.get_flow_key_hash());
+                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                return _f._mc.query(Operation::kGet, mica_key(key),
+                        mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
+                    if(response.get_result() == Result::kNotFound) {
+                        initialize_session_state(_ac.cur_packet(), _fs);
+                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                        return _f._mc.query(Operation::kSet, mica_key(key),
+                                mica_value(_fs)).then([this](mica_response response){
+                            return forward_packet(_fs);
+                        });
+                    }
+                    else {
+                        _fs = response.get_value<firewall_flow_state>();
+                        auto state_changed = update_session_state(_ac.cur_packet(), _fs);
+                        if(state_changed) {
+                            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                            return _f._mc.query(Operation::kSet, mica_key(key),
+                                    mica_value(_fs)).then([this](mica_response response){
+                                return forward_packet(_fs);
+                            });
+                        }
+                        else{
+                            return make_ready_future<af_action>(forward_packet(_fs));
+                        }
+                    }
+
+                }).then_wrapped([this](auto&& f){
+                    try{
+                        auto result = f.get0();
+                        return result;
+
+                    }
+                    catch(...){
+                        if(_f._mc.nr_request_descriptors() == 0){
+                            _f._insufficient_mica_rd_erorr += 1;
+                        }
+                        else{
+                            _f._mica_timeout_error += 1;
+                        }
+                        return af_action::drop;
+                    }
+                });
             });
         }
-    private:
-        void foo() {}
-        void bar() {}
+
+        void initialize_session_state(net::packet& pkt, firewall_flow_state& state) {
+            auto ip_hdr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+            auto udp_hdr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+
+            for(auto& rule : _f.firewall.rules){
+                if(ip_hdr->dst_ip.ip == rule._dst_addr &&
+                   udp_hdr->dst_port == rule._dst_port &&
+                   ip_hdr->src_ip.ip == rule._src_addr &&
+                   udp_hdr->src_port == rule._src_port){
+                    state.pass = false;
+                    return;
+                }
+            }
+            state.pass = true;
+        }
+
+        bool update_session_state(net::packet& pkt, firewall_flow_state& state) {
+            return false;
+        }
+
+        af_action forward_packet(firewall_flow_state& fs) {
+            if(fs.pass) {
+                return af_action::forward;
+            }
+            else {
+                return af_action::drop;
+            }
+        }
     };
 
     void run_udp_manager(int) {
         repeat([this]{
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
-
-                /*do_with(ic.get_sd_async_flow(), [this](sd_async_flow<dummy_udp_ppr>& ac){
-                    ac.register_events(dummy_udp_events::pkt_in);
-                    return ac.run_async_loop([&ac, this](){
-                        if(ac.cur_event().on_close_event()) {
-                            return make_ready_future<af_action>(af_action::close_forward);
-                        }
-
-                        auto& cur_pkt = ac.cur_packet();
-                        return firewall.process_packet(&cur_pkt, std::ref(this->_mc));
-                    });
-                }).then([](){
-                    // printf("client async flow is closed.\n");
-                });*/
 
                 do_with(firewall_runner(ic.get_sd_async_flow(), (*this)), [](firewall_runner& r){
                      r.events_registration();
@@ -385,7 +445,6 @@ public:
         });
     }
 public:
-
     Firewall firewall;
 };
 
@@ -397,7 +456,7 @@ int main(int ac, char** av) {
 
     return app.run_deprecated(ac, av, [&app, &all_ports, &mica_clients, &queue_map] {
         auto& opts = app.configuration();
-        return all_ports.add_port(opts, 0, smp::count, port_type::original).then([&opts, &all_ports]{
+        return all_ports.add_port(opts, 0, smp::count, port_type::netstar_dpdk).then([&opts, &all_ports]{
             return all_ports.add_port(opts, 1, smp::count, port_type::fdir);
         }).then([&mica_clients]{
            return mica_clients.start(&mica_clients);
@@ -417,13 +476,13 @@ int main(int ac, char** av) {
             });
         }).then([&all_ports, &mica_clients]{
             return forwarders.start(std::ref(all_ports), std::ref(mica_clients));
-        }).then([]{
+        })/*.then([]{
             return forwarders.invoke_on_all(&forwarder::mica_test, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::mica_test, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::mica_test, 1);
-        }).then([]{
+        })*/.then([]{
             return forwarders.invoke_on_all(&forwarder::configure, 1);
         }).then([]{
             return forwarders.invoke_on_all(&forwarder::run_udp_manager, 1);
@@ -440,3 +499,11 @@ int main(int ac, char** av) {
 
 // 1 thread forwarder, sender use static udp traffic gen, 700000 total pps, 1000 flows
 // The system barely crashes, which is good.
+
+// When turn on mica debug mode, mica will fail to made an assertion about memory alignment in the packet
+// This is easy to reproduce even when 1 flow with 1pps. Please check this out carefully!
+
+// 1r: 8.5M.
+// 1r1w: 5.35M
+// 2r2w: 3.4M
+// 3r3w: 2.43M
