@@ -438,7 +438,7 @@ public:
 
                int state = ips_state->_state;
              if(state>=dfa_arr[dfa_id].num_used_states){
-                 ips_state->_alert=true;
+                 ips_state->_alert=false;
                  ips_state->_state=state;
                  return;
              }
@@ -520,7 +520,8 @@ public:
            worker_cb.num_pkts = 1;
 
            ids_func(&worker_cb,state);
-
+           free(pkts->content);
+           free(pkts);
 
        }
 
