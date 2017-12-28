@@ -419,7 +419,6 @@ public:
            aho_pkt->len=rte_pkt->len();
        }
        bool state_updated(struct ips_flow_state* old_,struct ips_flow_state* new_){
-           if(DEBUG) printf("old_->_alert:%d new_->_alert:%d old_->_dfa_id:%d new_->_dfa_id:%d old_->_state:%d new_->_state:%d\n",old_->_alert,new_->_alert,old_->_dfa_id,new_->_dfa_id,old_->_state,new_->_state);
            if(old_->_alert==new_->_alert&&old_->_dfa_id==new_->_dfa_id&&old_->_state==new_->_state){
                return false;
            }
