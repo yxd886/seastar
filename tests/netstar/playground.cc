@@ -326,6 +326,7 @@ public:
     }
 
     struct ips_flow_state{
+        uint8_t tag;
         uint32_t _state;
         uint32_t _dfa_id;
         bool _alert;
@@ -436,12 +437,15 @@ public:
                struct aho_state *st_arr = dfa_arr[dfa_id].root;
 
                int state = ips_state->_state;
-           //  if(state>=dfa_arr[dfa_id].num_used_states){
-           //      state=0;
-           //  }
+             if(state>=dfa_arr[dfa_id].num_used_states){
+                 ips_state->_alert=true;
+                 ips_state->_state=state;
+                 return;
+             }
 
 
                for(j = 0; j < len; j++) {
+
                    int count = st_arr[state].output.count;
 
                    if(count != 0) {
