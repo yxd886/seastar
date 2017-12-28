@@ -46,6 +46,7 @@
 
 using namespace seastar;
 using namespace netstar;
+using namespace std;
 using namespace std::chrono_literals;
 using std::vector;
 
