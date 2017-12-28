@@ -330,7 +330,10 @@ public:
         uint32_t _dfa_id;
         bool _alert;
     };
-
+    struct mp_list_t {
+        int num_match;
+        uint16_t ptrn_id[MAX_MATCH];
+    };
 
     struct query_key {
         uint64_t v1;
@@ -340,8 +343,6 @@ public:
     class ips_runner {
         sd_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
-
-
         ips_flow_state _fs;
     public:
         ips_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
@@ -424,12 +425,9 @@ public:
            }
            return true;
        }
-       struct mp_list_t {
-           int num_match;
-           uint16_t ptrn_id[MAX_MATCH];
-       };
+
        void process_batch(const struct aho_dfa *dfa_arr,
-           const struct aho_pkt *pkts, struct mp_list_t *mp_list, struct ips_state* ips_state)
+           const struct aho_pkt *pkts, struct mp_list_t *mp_list, struct ips_flow_state* ips_state)
        {
            int I, j;
 
