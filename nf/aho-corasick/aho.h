@@ -15,7 +15,7 @@
 
 #define AHO_SHM_KEY 1
 
-#define AHO_MAX_STATES 3276	/* Per-DFA max states */
+#define AHO_MAX_STATES 32768	/* Per-DFA max states */
 #define AHO_FAIL 65535
 #define AHO_ALPHA_SIZE 256
 
