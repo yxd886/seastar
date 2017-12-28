@@ -20,8 +20,6 @@
  */
 
 
-#include "nf/firewall.hh"
-
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
@@ -117,6 +115,15 @@ public:
                                net::ntoh(udp_hd_ptr->src_port)};
         }
     };
+};
+
+class Firewall{
+public:
+    Firewall() {
+
+        if(DEBUG==1) printf("Initializing a firewall\n");
+    }
+    std::vector<rule> rules;
 };
 
 class forwarder;
@@ -276,6 +283,7 @@ public:
         uint32_t recv_ack;
         bool pass;
     };
+
 
     struct query_key {
         uint64_t v1;
