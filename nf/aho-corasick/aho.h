@@ -24,13 +24,13 @@
 #define AHO_MAX_PATTERN_LEN (1024)
 #define AHO_MAX_THREADS 28
 
-#define AHO_MAX_DFA 450
+#define AHO_MAX_DFA 200
 
 /*
  * DFAs patterns captured with the following configuration:
  * snort 2.9.7, conf: config detection: search-method ac-q
  */
-#define AHO_PATTERN_FILE "../../../../nf/aho-corasick/snort_dfa_patterns"
+#define AHO_PATTERN_FILE "../../../../nf/aho-corasick/snort_dfa_pattern"
 
 #define AHO_PACKET_FILE "../../../data_dump/snort/snort_packets"
 #define AHO_MAX_PKTS (128 * 1024)	/* Reading 2M packets takes a long time */
