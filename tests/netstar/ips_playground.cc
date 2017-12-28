@@ -326,6 +326,7 @@ public:
     }
 
     struct ips_flow_state{
+        uint8_t tag;
         uint32_t _state;
         uint32_t _dfa_id;
         bool _alert;
@@ -414,7 +415,7 @@ public:
        void parse_pkt(net::packet *rte_pkt, struct ips_flow_state* state,struct aho_pkt*  aho_pkt){
 
            aho_pkt->content=(uint8_t*)malloc(rte_pkt->len());
-           memcpy(aho_pkt->content,rte_pkt->get_header(0,sizeof(char)),rte_pkt->len());
+           memcpy(aho_pkt->content,reinterpret_cast<uint8_t*>(rte_pkt->get_header(0,sizeof(char))),rte_pkt->len()-1);
            aho_pkt->dfa_id=state->_dfa_id;
            aho_pkt->len=rte_pkt->len();
        }
@@ -436,12 +437,15 @@ public:
                struct aho_state *st_arr = dfa_arr[dfa_id].root;
 
                int state = ips_state->_state;
-           //  if(state>=dfa_arr[dfa_id].num_used_states){
-           //      state=0;
-           //  }
+             if(state>=dfa_arr[dfa_id].num_used_states){
+                 ips_state->_alert=false;
+                 ips_state->_state=state;
+                 return;
+             }
 
 
                for(j = 0; j < len; j++) {
+
                    int count = st_arr[state].output.count;
 
                    if(count != 0) {
@@ -516,7 +520,8 @@ public:
            worker_cb.num_pkts = 1;
 
            ids_func(&worker_cb,state);
-
+           free(pkts->content);
+           free(pkts);
 
        }
 
