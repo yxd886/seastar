@@ -363,7 +363,7 @@ public:
                                             mica_value(_fs)).then([this](mica_response response){
                                         net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
                                         _fs._dst_ip_addr=ip_hd->src_ip.ip;
-                                        auto udp_hdr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+                                        auto udp_hdr = _ac.cur_packet().get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
                                         _fs._dst_port=udp_hdr->src_port;
                                         auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                                         return _f._mc.query(Operation::kSet, mica_key(key),
@@ -388,7 +388,7 @@ public:
                                         mica_value(_fs)).then([this](mica_response response){
                                     net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
                                     _fs._dst_ip_addr=ip_hd->src_ip.ip;
-                                    auto udp_hdr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+                                    auto udp_hdr = _ac.cur_packet().get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
                                     _fs._dst_port=udp_hdr->src_port;
                                     auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                                     return _f._mc.query(Operation::kSet, mica_key(key),
@@ -457,14 +457,6 @@ public:
             return;
         }
 
-        af_action forward_packet(nat_flow_state& fs) {
-            if(!fs._alert) {
-                return af_action::forward;
-            }
-            else {
-                return af_action::drop;
-            }
-        }
     };
 
     void run_udp_manager(int) {
