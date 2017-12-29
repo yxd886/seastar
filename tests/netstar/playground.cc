@@ -345,6 +345,7 @@ public:
                                 mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
                             if(response.get_result() == Result::kNotFound) {
 
+                                printf("not find!\n");
                                 auto key = query_key{_f.nat._cluster_id, _f.nat._cluster_id};
                                 return _f._mc.query(Operation::kSet, mica_key(key),
                                         mica_value(ip_port_list_bit)).then([this](mica_response response){
