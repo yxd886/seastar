@@ -372,8 +372,7 @@ public:
                                     });
                                 });
                             }else {
-                                _fs = response.get_value<nat_flow_state>();
-                                ip_port_list_bit=_fs._ip_port_list;
+                                ip_port_list_bit = response.get_value<uint64_t>();
                                 form_list(ip_port_list_bit);
                                 uint32_t select_ip=0;
                                 uint16_t select_port=0;
