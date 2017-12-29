@@ -308,10 +308,6 @@ public:
         uint64_t _ip_port_list;
 
     };
-    struct mp_list_t {
-        int num_match;
-        uint16_t ptrn_id[MAX_MATCH];
-    };
 
     struct query_key {
         uint64_t v1;
