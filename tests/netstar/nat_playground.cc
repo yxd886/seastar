@@ -308,10 +308,6 @@ public:
         uint64_t _ip_port_list;
 
     };
-    struct mp_list_t {
-        int num_match;
-        uint16_t ptrn_id[MAX_MATCH];
-    };
 
     struct query_key {
         uint64_t v1;
@@ -349,6 +345,7 @@ public:
                                 mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
                             if(response.get_result() == Result::kNotFound) {
 
+                                printf("not find!\n");
                                 auto key = query_key{_f.nat._cluster_id, _f.nat._cluster_id};
                                 return _f._mc.query(Operation::kSet, mica_key(key),
                                         mica_value(ip_port_list_bit)).then([this](mica_response response){
@@ -363,7 +360,7 @@ public:
                                             mica_value(_fs)).then([this](mica_response response){
                                         net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
                                         _fs._dst_ip_addr=ip_hd->src_ip.ip;
-                                        auto udp_hdr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+                                        auto udp_hdr = _ac.cur_packet().get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
                                         _fs._dst_port=udp_hdr->src_port;
                                         auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                                         return _f._mc.query(Operation::kSet, mica_key(key),
@@ -375,8 +372,7 @@ public:
                                     });
                                 });
                             }else {
-                                _fs = response.get_value<nat_flow_state>();
-                                ip_port_list_bit=_fs._ip_port_list;
+                                ip_port_list_bit = response.get_value<uint64_t>();
                                 form_list(ip_port_list_bit);
                                 uint32_t select_ip=0;
                                 uint16_t select_port=0;
@@ -388,7 +384,7 @@ public:
                                         mica_value(_fs)).then([this](mica_response response){
                                     net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
                                     _fs._dst_ip_addr=ip_hd->src_ip.ip;
-                                    auto udp_hdr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+                                    auto udp_hdr = _ac.cur_packet().get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
                                     _fs._dst_port=udp_hdr->src_port;
                                     auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                                     return _f._mc.query(Operation::kSet, mica_key(key),
@@ -457,14 +453,6 @@ public:
             return;
         }
 
-        af_action forward_packet(nat_flow_state& fs) {
-            if(!fs._alert) {
-                return af_action::forward;
-            }
-            else {
-                return af_action::drop;
-            }
-        }
     };
 
     void run_udp_manager(int) {
