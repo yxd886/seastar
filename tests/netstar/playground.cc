@@ -145,7 +145,15 @@ public:
 class Firewall{
 public:
     Firewall() {
+        struct rule firewall_rule(0,0,0,0);
+        for(int i=0;i<200;i++){
+            firewall_rule._dst_addr++;
+            firewall_rule._src_addr++;
+            firewall_rule._dst_port++;
+            firewall_rule._src_port++;
+            rules.push_back(firewall_rule);
 
+        }
 
     }
     std::vector<rule> rules;
