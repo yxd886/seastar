@@ -1,5 +1,5 @@
 /*
- * firewall_playground.cc
+ *lb_playground.cc
  *
  *  Created on: Dec 28, 2017
  *      Author: Admin
@@ -52,8 +52,11 @@
 
 #include "bess/bess_flow_gen.hh"
 
-#include <vector>
 
+#include <vector>
+#include <iostream>
+#include <stdlib.h>
+#include <time.h>
 using namespace seastar;
 using namespace netstar;
 using namespace std;
@@ -128,35 +131,21 @@ public:
     };
 };
 
-struct rule{
-public:
 
-    uint32_t _src_addr;
-    uint32_t _dst_addr;
-    uint16_t _src_port;
-    uint16_t _dst_port;
-    rule(uint32_t src_addr,uint32_t dst_addr,uint16_t src_port,uint16_t dst_port):
-        _src_addr(src_addr),_dst_addr(dst_addr),_src_port(src_port),_dst_port(dst_port){
+
+std::string lists[64]={"192.168.122.131","192.168.122.132","192.168.122.133","192.168.122.134",
+                "192.168.122.135","192.168.122.136","192.168.122.137","192.168.122.138",
+                "192.168.122.139","192.168.122.140","192.168.122.141","192.168.122.142"};
+
+class Load_balancer{
+public:
+    Load_balancer(): _cluster_id(0){
 
     }
 
-};
 
-class Firewall{
-public:
-    Firewall() {
-        struct rule firewall_rule(0,0,0,0);
-        for(int i=0;i<200;i++){
-            firewall_rule._dst_addr++;
-            firewall_rule._src_addr++;
-            firewall_rule._dst_port++;
-            firewall_rule._src_port++;
-            rules.push_back(firewall_rule);
+    uint32_t _cluster_id;
 
-        }
-
-    }
-    std::vector<rule> rules;
 };
 
 class forwarder;
@@ -175,6 +164,7 @@ class forwarder {
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
 
     mica_client& _mc;
+
 public:
     forwarder (ports_env& all_ports, per_core_objs<mica_client>& mica_clients)
         : _ingress_port(std::ref(all_ports.local_port(0)))
@@ -310,27 +300,27 @@ public:
         }));
     }
 
-    struct firewall_flow_state {
-        uint8_t tcp_flags;
-        uint32_t sent_seq;
-        uint32_t recv_ack;
-        bool pass;
-    };
+    struct lb_flow_state{
+        uint32_t _dst_ip_addr;
+        uint64_t _backend_list;
 
+
+    };
 
     struct query_key {
         uint64_t v1;
         uint64_t v2;
     };
 
-    class firewall_runner {
+    class lb_runner {
         sd_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
-
-
-        firewall_flow_state _fs;
+        lb_flow_state _fs;
+        std::vector<uint32_t> _backend_list;
+        uint64_t backend_list_bit;
+        uint32_t server;
     public:
-        firewall_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
+        lb_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
             : _ac(std::move(ac))
             , _f(f){}
 
@@ -338,35 +328,61 @@ public:
             _ac.register_events(dummy_udp_events::pkt_in);
         }
 
-        future<> run_firewall() {
+        future<> run_lb() {
             return _ac.run_async_loop([this](){
                 if(_ac.cur_event().on_close_event()) {
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
+
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                 return _f._mc.query(Operation::kGet, mica_key(key),
                         mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
                     if(response.get_result() == Result::kNotFound) {
-                        initialize_session_state(_ac.cur_packet(), _fs);
-                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                        return _f._mc.query(Operation::kSet, mica_key(key),
-                                mica_value(_fs)).then([this](mica_response response){
-                            return forward_packet(_fs);
+                        backend_list_bit=0x1111111;
+                        auto key = query_key{_f.lb._cluster_id, _f.lb._cluster_id};
+                        return _f._mc.query(Operation::kGet, mica_key(key),
+                                mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
+                            if(response.get_result() == Result::kNotFound) {
+
+
+                                _fs._backend_list=backend_list_bit;
+                                auto key = query_key{_f.lb._cluster_id, _f.lb._cluster_id};
+                                return _f._mc.query(Operation::kSet, mica_key(key),
+                                        mica_value(_fs)).then([this](mica_response response){
+                                    form_list(backend_list_bit);
+                                    server=next_server();
+                                    _fs._dst_ip_addr=server;
+                                    auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                                    return _f._mc.query(Operation::kSet, mica_key(key),
+                                            mica_value(_fs)).then([this](mica_response response){
+                                        net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+                                        ip_hd->dst_ip.ip=server;
+                                        return af_action::forward;
+                                    });
+                                });
+                            }else {
+                                _fs = response.get_value<lb_flow_state>();
+                                backend_list_bit=_fs._backend_list;
+                                form_list(backend_list_bit);
+                                server=next_server();
+                                _fs._dst_ip_addr=server;
+                                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                                return _f._mc.query(Operation::kSet, mica_key(key),
+                                        mica_value(_fs)).then([this](mica_response response){
+                                    net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+                                    ip_hd->dst_ip.ip=server;
+                                    return af_action::forward;
+                                });
+                            }
+
                         });
                     }
                     else {
-                        _fs = response.get_value<firewall_flow_state>();
-                        auto state_changed = update_session_state(_ac.cur_packet(), _fs);
-                        if(state_changed) {
-                            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                            return _f._mc.query(Operation::kSet, mica_key(key),
-                                    mica_value(_fs)).then([this](mica_response response){
-                                return forward_packet(_fs);
-                            });
-                        }
-                        else{
-                            return make_ready_future<af_action>(forward_packet(_fs));
-                        }
+                        _fs = response.get_value<lb_flow_state>();
+                        server=_fs._dst_ip_addr;
+                        net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+                        ip_hd->dst_ip.ip=server;
+                        return make_ready_future<af_action>(af_action::forward);
                     }
 
                 }).then_wrapped([this](auto&& f){
@@ -387,35 +403,21 @@ public:
                 });
             });
         }
-
-        void initialize_session_state(net::packet& pkt, firewall_flow_state& state) {
-            auto ip_hdr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-            auto udp_hdr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
-
-            for(auto& rule : _f.firewall.rules){
-                if(ip_hdr->dst_ip.ip == rule._dst_addr &&
-                   udp_hdr->dst_port == rule._dst_port &&
-                   ip_hdr->src_ip.ip == rule._src_addr &&
-                   udp_hdr->src_port == rule._src_port){
-                    state.pass = false;
-                    return;
-                }
-            }
-            state.pass = true;
-        }
-
-        bool update_session_state(net::packet& pkt, firewall_flow_state& state) {
-            return false;
-        }
-
-        af_action forward_packet(firewall_flow_state& fs) {
-            if(fs.pass) {
-                return af_action::forward;
-            }
-            else {
-                return af_action::drop;
+        void form_list(uint64_t backend_list_bit){
+            _backend_list.clear();
+            for (uint32_t i=0;i<sizeof(backend_list_bit);i++){
+                uint64_t t=backend_list_bit&0x1;
+                if(t==1) _backend_list.push_back(::net::ipv4_address(lists[i].c_str()).ip);
+                backend_list_bit=backend_list_bit>>1;
             }
         }
+
+        uint32_t next_server(){
+            srand((unsigned)time(nullptr));
+            long unsigned int index=(long unsigned int)rand()%_backend_list.size();
+            return _backend_list[index];
+        }
+
     };
 
     void run_udp_manager(int) {
@@ -423,9 +425,9 @@ public:
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
 
-                do_with(firewall_runner(ic.get_sd_async_flow(), (*this)), [](firewall_runner& r){
+                do_with(lb_runner(ic.get_sd_async_flow(), (*this)), [](lb_runner& r){
                      r.events_registration();
-                     return r.run_firewall();
+                     return r.run_lb();
                 });
 
                 return stop_iteration::no;
@@ -486,7 +488,7 @@ public:
         });
     }
 public:
-    Firewall firewall;
+    Load_balancer lb;
 };
 
 int main(int ac, char** av) {
