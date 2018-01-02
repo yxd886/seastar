@@ -139,14 +139,13 @@ std::string lists[64]={"192.168.122.131","192.168.122.132","192.168.122.133","19
 
 class Load_balancer{
 public:
-    Load_balancer(uint32_t cluster_id): _cluster_id(cluster_id),_drop(false){
+    Load_balancer(): _cluster_id(0){
 
     }
 
 
     uint32_t _cluster_id;
-    std::vector<uint32_t> _backend_list;
-    bool _drop;
+
 };
 
 class forwarder;
