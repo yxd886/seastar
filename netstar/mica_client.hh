@@ -261,13 +261,6 @@ public:
 
             setup_request_header(op);
         }
-#if MICA_USE_CB
-        void new_action_with_cb(Operation op,
-                        size_t key_len, temporary_buffer<char> key,
-                        size_t val_len, temporary_buffer<char> val,
-                        mica_cb cb){
-        }
-#endif
 
         future<mica_response> obtain_future(){
             // This is called after new_action is called. So we
