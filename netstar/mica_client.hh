@@ -169,6 +169,10 @@ public:
 
 class mica_client : public work_unit<mica_client>{
 public:
+#if MICA_USE_CB
+    using mica_cb = std::function<void(int, mica_response)>;
+#endif
+
     static constexpr unsigned max_req_len =
             ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
 
@@ -205,7 +209,7 @@ public:
         std::experimental::optional<promise<mica_response>> _pr;
 
 #if MICA_USE_CB
-        std::experimental::optional<std::function<void(int, mica_response)>> _cb;
+        std::experimental::optional<mica_cb> _cb;
 #endif
 
         // the size of the request
@@ -257,6 +261,13 @@ public:
 
             setup_request_header(op);
         }
+#if MICA_USE_CB
+        void new_action_with_cb(Operation op,
+                        size_t key_len, temporary_buffer<char> key,
+                        size_t val_len, temporary_buffer<char> val,
+                        mica_cb cb){
+        }
+#endif
 
         future<mica_response> obtain_future(){
             // This is called after new_action is called. So we
@@ -631,6 +642,13 @@ public:
     future<mica_response> query(Operation op, mica_key key, mica_value value) {
         return query(op, key.get_actual_length(), key.get_roundup_buf(), value.get_actual_length(), value.get_roundup_buf());
     }
+#if MICA_USE_CB
+    void query_with_cb(Operation op,
+               size_t key_len, temporary_buffer<char> key,
+               size_t val_len, temporary_buffer<char> val,
+               mica_cb cb) {
+    }
+#endif
     size_t nr_request_descriptors() {
         return _recycled_rds.size();
     }
