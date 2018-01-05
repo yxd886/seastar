@@ -669,7 +669,7 @@ public:
             _rds[rd_idx].set_up_cb(std::move(cb));
         }
         else{
-            return _pending_work_queue.wait(1).then(
+             _pending_work_queue.wait(1).then(
                     [this, op, key_len, key=std::move(key),
                      val_len, val=std::move(val), cb=std::move(cb)] () mutable{
                 auto rd_idx = _recycled_rds.front();
@@ -678,7 +678,7 @@ public:
                                         val_len, std::move(val));
                 send_request_descriptor(rd_idx);
                 _rds[rd_idx].set_up_cb(std::move(cb));
-            });
+             });
         }
     }
     void query_with_cb(Operation op, mica_key key, mica_value value, mica_cb cb) {
