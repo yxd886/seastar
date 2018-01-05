@@ -169,9 +169,7 @@ public:
 
 class mica_client : public work_unit<mica_client>{
 public:
-#if MICA_USE_CB
     using mica_cb = std::function<void(int, mica_response)>;
-#endif
 
     static constexpr unsigned max_req_len =
             ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
@@ -686,6 +684,14 @@ public:
             key.get_actual_length(), key.get_roundup_buf(),
             value.get_actual_length(), value.get_roundup_buf(),
             std::move(cb));
+    }
+#else
+    void query_with_cb(Operation op,
+               size_t key_len, temporary_buffer<char> key,
+               size_t val_len, temporary_buffer<char> val,
+               mica_cb cb) {
+    }
+    void query_with_cb(Operation op, mica_key key, mica_value value, mica_cb cb) {
     }
 #endif
     size_t nr_request_descriptors() {
