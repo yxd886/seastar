@@ -34,7 +34,7 @@ namespace netstar{
 #define mc_assert(condition) ((void)0)
 #endif
 
-#define MICA_USE_CB 0
+#define MICA_USE_CB 1
 
 #if MICA_USE_CB
 static_assert(ENABLE_MC_ASSERTION==0, "We must disable the mica assertion if we use mica callback mode");
