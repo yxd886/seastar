@@ -204,6 +204,10 @@ public:
         // the associated promise with this request
         std::experimental::optional<promise<mica_response>> _pr;
 
+#if MICA_USE_CB
+        std::experimental::optional<std::function<void(int, mica_response)>> _cb;
+#endif
+
         // the size of the request
         size_t _request_size;
 
