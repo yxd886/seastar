@@ -55,7 +55,7 @@ class cb_async_flow_impl : public enable_lw_shared_from_this<cb_async_flow_impl<
 public:
     // Internal interfaces, exposed to async_flow and
     // async_flow manager.
-    cb_async_flow_impl(sd_async_flow_manager<Ppr>& manager,
+    cb_async_flow_impl(cb_async_flow_manager<Ppr>& manager,
                        uint8_t client_direction,
                        FlowKeyType* client_flow_key)
         : _manager(manager)
@@ -64,7 +64,7 @@ public:
         , _initial_context_destroyed(false)
         , _pkt_cb(nullptr)
         , _pkt_cb_registered(false)
-        , _close_cb(nullptr){
+        , _close_cb(nullptr) {
         _client.flow_key = *client_flow_key;
         _flow_key_hash = mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(FlowKeyType));
         _flow_rss = 0;
