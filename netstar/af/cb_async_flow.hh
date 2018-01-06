@@ -78,6 +78,45 @@ public:
         _initial_context_destroyed = true;
     }
 
+    void handle_packet_send(net::packet pkt, uint8_t direction) {
+        async_flow_debug("sd_async_flow_impl: handle_packet_send is called\n");
+        async_flow_assert(direction == _client.direction);
+
+        // a patch
+        if(_flow_rss == 0 && pkt.rss_hash()){
+            _flow_rss = pkt.rss_hash().value();
+        }
+
+        if( _pkts_in_pipeline >= Ppr::async_flow_config::max_event_context_queue_size ||
+             _client.ppr_close ||
+             !_initial_context_destroyed) {
+            // Unconditionally drop the packet.
+            return;
+        }
+
+        _pkts_in_pipeline += 1;
+
+        if(_pkt_cb!=nullptr){
+            if(!_client.cur_context) {
+                async_flow_assert(_client.buffer_q.empty());
+                auto fe = preprocess_packet(pkt);
+                if(fe.no_event()) {
+                    internal_packet_forward(std::move(pkt));
+                }
+                else{
+                    _client.cur_context.emplace(std::move(pkt), fe, true);
+                    _pkt_cb();
+                }
+            }
+            else{
+                _client.buffer_q.emplace_back(std::move(pkt), true);
+            }
+        }
+        else{
+            preprocess_and_forward(std::move(pkt));
+        }
+    }
+
 private:
     // Async loop initialization sequences after acquring the
     // initial packet context.
@@ -116,45 +155,6 @@ private:
         _pkts_in_pipeline -= 1;
         _client.cur_context = {};
         forward_drop_post_handler();
-    }
-
-    void handle_packet_send(net::packet pkt, uint8_t direction) {
-        async_flow_debug("sd_async_flow_impl: handle_packet_send is called\n");
-        async_flow_assert(direction == _client.direction);
-
-        // a patch
-        if(_flow_rss == 0 && pkt.rss_hash()){
-            _flow_rss = pkt.rss_hash().value();
-        }
-
-        if( _pkts_in_pipeline >= Ppr::async_flow_config::max_event_context_queue_size ||
-             _client.ppr_close ||
-             !_initial_context_destroyed) {
-            // Unconditionally drop the packet.
-            return;
-        }
-
-        _pkts_in_pipeline += 1;
-
-        if(_pkt_cb!=nullptr){
-            if(!_client.cur_context) {
-                async_flow_assert(_client.buffer_q.empty());
-                auto fe = preprocess_packet(pkt);
-                if(fe.no_event()) {
-                    internal_packet_forward(std::move(pkt));
-                }
-                else{
-                    _client.cur_context.emplace(std::move(pkt), fe, true);
-                    _pkt_cb();
-                }
-            }
-            else{
-                _client.buffer_q.emplace_back(std::move(pkt), true);
-            }
-        }
-        else{
-            preprocess_and_forward(std::move(pkt));
-        }
     }
 
 private:
