@@ -99,7 +99,7 @@ private:
     }
 
     void forward_cur_packet() {
-        internal_packet_forward(std::move(context.pkt));
+        internal_packet_forward(std::move(_client.cur_context.pkt));
         _client.cur_context = {};
         forward_drop_post_handler();
     }
