@@ -74,6 +74,10 @@ public:
         async_flow_debug("cb_asyn_flow_impl: deconstruction.\n");
     }
 
+    void destroy_initial_context() {
+        _initial_context_destroyed = true;
+    }
+
 private:
     // Async loop initialization sequences after acquring the
     // initial packet context.
@@ -115,9 +119,6 @@ private:
     }
 
 private:
-    void destroy_initial_context() {
-        _initial_context_destroyed = true;
-    }
     void forward_drop_post_handler() {
         while(!_client.buffer_q.empty()) {
             auto& next_pkt = _client.buffer_q.front();
