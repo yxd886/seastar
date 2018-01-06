@@ -36,6 +36,7 @@
 #include "netstar/work_unit.hh"
 #include "netstar/port_env.hh"
 #include "netstar/af/sd_async_flow.hh"
+#include "netstar/af/cb_async_flow.hh"
 
 #include "bess/bess_flow_gen.hh"
 
