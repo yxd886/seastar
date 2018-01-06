@@ -35,7 +35,6 @@
 
 #include "netstar/work_unit.hh"
 #include "netstar/port_env.hh"
-#include "netstar/af/sd_async_flow.hh"
 #include "netstar/af/cb_async_flow.hh"
 
 #include "bess/bess_flow_gen.hh"
@@ -123,9 +122,9 @@ class forwarder {
     std::experimental::optional<subscription<net::packet>> _egress_port_sub;
 
 
-    sd_async_flow_manager<dummy_udp_ppr> _udp_manager;
-    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
-    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
+    cb_async_flow_manager<dummy_udp_ppr> _udp_manager;
+    cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
+    cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
 
 public:
     forwarder (ports_env& all_ports)
@@ -204,23 +203,46 @@ public:
         }));
     }
 
+    class cb_async_flow_shell {
+        cb_async_flow<dummy_udp_ppr> _af;
+    public:
+        cb_async_flow_shell(cb_async_flow<dummy_udp_ppr> af)
+            : _af(std::move(af)) {
+        }
+
+        void register_event(){
+            _af.register_events(dummy_udp_events::pkt_in);
+        }
+
+        void register_cb(){
+            _af.register_cbs([this]{pkt_cb();}, [this]{close_cb();});
+        }
+
+    private:
+        void pkt_cb() {
+            if(_af.cur_event().on_close_event()) {
+                _af.drop_cur_packet();
+                _af.unregister_packet_cb();
+                return;
+            }
+            _af.forward_cur_packet();
+        }
+        void close_cb(){
+            delete this;
+        }
+
+    };
+
     void run_udp_manager(int) {
         repeat([this]{
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
 
-                do_with(ic.get_sd_async_flow(), [](sd_async_flow<dummy_udp_ppr>& ac){
-                    ac.register_events(dummy_udp_events::pkt_in);
-                    return ac.run_async_loop([&ac](){
-                        // printf("client async loop runs!\n");
-                        if(ac.cur_event().on_close_event()) {
-                            return make_ready_future<af_action>(af_action::close_forward);
-                        }
-                        return make_ready_future<af_action>(af_action::forward);
-                    });
-                }).then([](){
-                    // printf("client async flow is closed.\n");
-                });
+                auto cb_af = ic.get_cb_async_flow();
+
+                auto shell = new cb_async_flow_shell(ic.get_cb_async_flow());
+                shell->register_event();
+                shell->register_cb();
 
                 return stop_iteration::no;
             });
