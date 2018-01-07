@@ -38,6 +38,7 @@
 
 #include "netstar/work_unit.hh"
 #include "netstar/port_env.hh"
+// Change #1
 #include "netstar/af/cb_async_flow.hh"
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
@@ -130,7 +131,7 @@ class forwarder {
     port& _egress_port;
     std::experimental::optional<subscription<net::packet>> _egress_port_sub;
 
-
+    // Change #2
     cb_async_flow_manager<dummy_udp_ppr> _udp_manager;
     cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
     cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
@@ -283,6 +284,7 @@ public:
         uint64_t v2;
     };
 
+    // Change #3.
     class firewall_runner {
         cb_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
