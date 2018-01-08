@@ -353,21 +353,26 @@ public:
             bool state_changed = true;
             if(res.get_result() == Result::kNotFound) {
                 initialize_session_state(_ac.cur_packet(), _fs);
-            }
-            else{
-                _fs = res.get_value<firewall_flow_state>();
-               state_changed = update_session_state(_ac.cur_packet(), _fs);
-            }
-
-            if(state_changed) {
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                 _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
                     db_write_cb(err_code, std::move(res));
                 });
             }
             else{
-                forward_packet(_fs);
+                _fs = res.get_value<firewall_flow_state>();
+               state_changed = update_session_state(_ac.cur_packet(), _fs);
+               if(state_changed) {
+                   auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                   _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
+                       db_write_cb(err_code, std::move(res));
+                   });
+               }
+               else{
+                   forward_packet(_fs);
+               }
             }
+
+
         }
 
         void pkt_cb() {
