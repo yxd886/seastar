@@ -597,12 +597,12 @@ public:
         }
 
 
-        af_action forward_packet(ips_flow_state& fs) {
+        void forward_packet(ips_flow_state& fs) {
             if(!fs._alert) {
-                return af_action::forward;
+                _ac.forward_cur_packet();
             }
             else {
-                return af_action::drop;
+                _ac.drop_cur_packet();
             }
         }
 
