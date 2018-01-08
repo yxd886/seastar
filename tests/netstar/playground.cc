@@ -125,18 +125,20 @@ public:
         }
     };
 };
-std::string lists[64]={"192.168.122.131","192.168.122.132","192.168.122.133","192.168.122.134",
+
+std::string ip_lists[64]={"192.168.122.131","192.168.122.132","192.168.122.133","192.168.122.134",
                 "192.168.122.135","192.168.122.136","192.168.122.137","192.168.122.138",
                 "192.168.122.139","192.168.122.140","192.168.122.141","192.168.122.142"};
+uint16_t port_lists[64]={10012,10013,10014,10015,10016,10017,10018,10019,10020,10021,10022,10023,10024,10025,10026,10027,10028};
 
-class Load_balancer{
+class NAT{
 public:
-    Load_balancer(): _cluster_id(0){
+    NAT():
+        _cluster_id(1){
 
     }
 
-
-    uint32_t _cluster_id;
+uint64_t _cluster_id;
 
 };
 
@@ -293,10 +295,10 @@ public:
         }));
     }
 
-    struct lb_flow_state{
+    struct nat_flow_state{
         uint32_t _dst_ip_addr;
-        uint64_t _backend_list;
-
+        uint16_t _dst_port;
+        uint64_t _ip_port_list;
 
     };
 
@@ -307,15 +309,15 @@ public:
 
 
     // Change #3.
-    class lb_runner {
+    class nat_runner {
         cb_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
-        lb_flow_state _fs;
-        std::vector<uint32_t> _backend_list;
-        uint64_t backend_list_bit;
-        uint32_t server;
+        nat_flow_state _fs;
+        std::vector<uint32_t> _ip_list;
+        std::vector<uint16_t> _port_list;
+        uint64_t ip_port_list_bit;
     public:
-        lb_runner(cb_async_flow<dummy_udp_ppr> ac, forwarder& f)
+        nat_runner(cb_async_flow<dummy_udp_ppr> ac, forwarder& f)
 
             : _ac(std::move(ac))
             , _f(f){}
@@ -335,7 +337,21 @@ public:
                 return;
             }
             net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-            ip_hd->dst_ip.ip=server;
+            _fs._dst_ip_addr=ip_hd->src_ip.ip;
+            auto udp_hdr = _ac.cur_packet().get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+            _fs._dst_port=udp_hdr->src_port;
+            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+            _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
+                reverse_flow_write_cb(err_code, std::move(res));
+            });
+
+        }
+        void reverse_flow_write_cb(int err_code, mica_response res) {
+            if(err_code!=0){
+                _ac.drop_cur_packet();
+                return;
+            }
+
             _ac.forward_cur_packet();
         }
         void cluster_write_cb(int err_code, mica_response res) {
@@ -343,9 +359,12 @@ public:
                 _ac.drop_cur_packet();
                 return;
             }
-            form_list(backend_list_bit);
-            server=next_server();
-            _fs._dst_ip_addr=server;
+            form_list(ip_port_list_bit);
+            uint32_t select_ip=0;
+            uint16_t select_port=0;
+            select_ip_port(&select_ip,&select_port);
+            _fs._dst_ip_addr=select_ip;
+            _fs._dst_port=select_port;
             auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
             _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
                 flow_write_cb(err_code, std::move(res));
@@ -357,18 +376,15 @@ public:
                 return;
             }
             if(res.get_result() == Result::kNotFound) {
-                backend_list_bit=0x1111111;
-                auto key = query_key{_f.lb._cluster_id, _f.lb._cluster_id};
+                auto key = query_key{_f.nat._cluster_id, _f.nat._cluster_id};
                 _f._mc.query_with_cb(Operation::kGet, mica_key(key),
                             mica_value(0, temporary_buffer<char>()), [this](int err_code, mica_response res){
                     cluster_read_cb(err_code, std::move(res));
                 });
             }
             else{
-                _fs = res.get_value<lb_flow_state>();
-                server=_fs._dst_ip_addr;
-                net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-                ip_hd->dst_ip.ip=server;
+                _fs = res.get_value<nat_flow_state>();
+                update_packet_header(_fs._dst_ip_addr,_fs._dst_port,&(_ac.cur_packet()));
                 _ac.forward_cur_packet();
             }
 
@@ -380,18 +396,19 @@ public:
                 return;
             }
             if(res.get_result() == Result::kNotFound) {
-                _fs._backend_list=backend_list_bit;
-                auto key = query_key{_f.lb._cluster_id, _f.lb._cluster_id};
-                _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
+                auto key = query_key{_f.nat._cluster_id, _f.nat._cluster_id};
+                _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(ip_port_list_bit), [this](int err_code, mica_response res){
                     cluster_write_cb(err_code, std::move(res));
                 });
             }
             else{
-                _fs = res.get_value<lb_flow_state>();
-                backend_list_bit=_fs._backend_list;
-                form_list(backend_list_bit);
-                server=next_server();
-                _fs._dst_ip_addr=server;
+                ip_port_list_bit = res.get_value<uint64_t>();
+                form_list(ip_port_list_bit);
+                uint32_t select_ip=0;
+                uint16_t select_port=0;
+                select_ip_port(&select_ip,&select_port);
+                _fs._dst_ip_addr=select_ip;
+                _fs._dst_port=select_port;
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                 _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
                     flow_write_cb(err_code, std::move(res));
@@ -407,6 +424,7 @@ public:
                 _ac.unregister_packet_cb();
                 return;
             }
+            ip_port_list_bit=0x111111;
 
             auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
             _f._mc.query_with_cb(Operation::kGet, mica_key(key),
@@ -415,11 +433,11 @@ public:
             });
         }
 
-        void run_lb() {
+        void run_nat() {
             _ac.register_cbs([this]{pkt_cb();}, [this]{close_cb();});
         }
 
-        /*future<> run_lb() {
+        /*future<> run_nat() {
 
             return _ac.run_async_loop([this](){
                 if(_ac.cur_event().on_close_event()) {
@@ -434,7 +452,7 @@ public:
                        initialize_session_state(_ac.cur_packet(), _fs);
                    }
                    else{
-                       _fs = res.get_value<lb_flow_state>();
+                       _fs = res.get_value<nat_flow_state>();
                       state_changed = update_session_state(_ac.cur_packet(), _fs);
                    }
 
@@ -465,18 +483,34 @@ public:
         }*/
 
         void form_list(uint64_t backend_list_bit){
-            _backend_list.clear();
+            _ip_list.clear();
             for (uint32_t i=0;i<sizeof(backend_list_bit);i++){
                 uint64_t t=backend_list_bit&0x1;
-                if(t==1) _backend_list.push_back(::net::ipv4_address(lists[i].c_str()).ip);
+                if(t==1){
+                    _ip_list.push_back(::net::ipv4_address(ip_lists[i].c_str()).ip);
+                    _port_list.push_back(port_lists[i]);
+                }
+
                 backend_list_bit=backend_list_bit>>1;
             }
         }
 
-        uint32_t next_server(){
+        void select_ip_port(uint32_t* ip,uint16_t* port){
             srand((unsigned)time(nullptr));
-            long unsigned int index=(long unsigned int)rand()%_backend_list.size();
-            return _backend_list[index];
+            long unsigned int index=(long unsigned int)rand()%_ip_list.size();
+            *port=_port_list[index];
+            *ip=_ip_list[index];
+            return;
+        }
+
+        void update_packet_header(uint32_t ip, uint16_t port,net::packet* rte_pkt){
+            net::ip_hdr *iphdr;
+            net::udp_hdr *tcp;
+            iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+            tcp = ( net::udp_hdr *)((unsigned char *)iphdr +sizeof(struct ipv4_hdr));
+            iphdr->dst_ip.ip=ip;
+            tcp->dst_port=port;
+            return;
         }
 
     };
@@ -487,9 +521,9 @@ public:
                 auto ic = _udp_manager.get_initial_context();
 
 
-                auto runner = new lb_runner(ic.get_cb_async_flow(), (*this));
+                auto runner = new nat_runner(ic.get_cb_async_flow(), (*this));
                 runner->events_registration();
-                runner->run_lb();
+                runner->run_nat();
                 return stop_iteration::no;
             });
         });
@@ -549,7 +583,7 @@ public:
     }
 public:
 
-    Load_balancer lb;
+    NAT nat;
 
 };
 
