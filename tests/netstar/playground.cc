@@ -20,10 +20,6 @@
  */
 
 
-
-#include "nf/firewall.hh"
-
-
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
@@ -129,7 +125,28 @@ public:
         }
     };
 };
+struct rule{
+public:
 
+    uint32_t _src_addr;
+    uint32_t _dst_addr;
+    uint16_t _src_port;
+    uint16_t _dst_port;
+    rule(uint32_t src_addr,uint32_t dst_addr,uint16_t src_port,uint16_t dst_port):
+        _src_addr(src_addr),_dst_addr(dst_addr),_src_port(src_port),_dst_port(dst_port){
+
+    }
+
+};
+
+class Firewall{
+public:
+    Firewall() {
+
+
+    }
+    std::vector<rule> rules;
+};
 
 class forwarder;
 
@@ -284,19 +301,19 @@ public:
         }));
     }
 
-
     struct firewall_flow_state {
         uint8_t tcp_flags;
         uint32_t sent_seq;
         uint32_t recv_ack;
         bool pass;
-
     };
+
 
     struct query_key {
         uint64_t v1;
         uint64_t v2;
     };
+
 
 
     // Change #3.
