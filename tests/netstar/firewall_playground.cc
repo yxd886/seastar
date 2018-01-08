@@ -1,14 +1,4 @@
 /*
- * firewall_playground.cc
- *
- *  Created on: Dec 28, 2017
- *      Author: Admin
- */
-
-
-
-
-/*
  * This file is open source software, licensed to you under the terms
  * of the Apache License, Version 2.0 (the "License").  See the NOTICE file
  * distributed with this work for additional information regarding copyright
@@ -46,13 +36,21 @@
 
 #include "netstar/work_unit.hh"
 #include "netstar/port_env.hh"
-#include "netstar/af/sd_async_flow.hh"
+// Change #1
+#include "netstar/af/cb_async_flow.hh"
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
 
 #include "bess/bess_flow_gen.hh"
 
+
 #include <vector>
+#include <iostream>
+#include "nf/aho-corasick/fpp.h"
+#include "nf/aho-corasick/aho.h"
+#define MAX_MATCH 8192
+#include <stdlib.h>
+#include <time.h>
 
 using namespace seastar;
 using namespace netstar;
@@ -127,7 +125,6 @@ public:
         }
     };
 };
-
 struct rule{
 public:
 
@@ -152,6 +149,7 @@ public:
 };
 
 class forwarder;
+
 distributed<forwarder> forwarders;
 
 class forwarder {
@@ -161,12 +159,13 @@ class forwarder {
     port& _egress_port;
     std::experimental::optional<subscription<net::packet>> _egress_port_sub;
 
-
-    sd_async_flow_manager<dummy_udp_ppr> _udp_manager;
-    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
-    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
+    // Change #2
+    cb_async_flow_manager<dummy_udp_ppr> _udp_manager;
+    cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
+    cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
 
     mica_client& _mc;
+
 public:
     forwarder (ports_env& all_ports, per_core_objs<mica_client>& mica_clients)
         : _ingress_port(std::ref(all_ports.local_port(0)))
@@ -315,14 +314,16 @@ public:
         uint64_t v2;
     };
 
+
+
+    // Change #3.
     class firewall_runner {
-        sd_async_flow<dummy_udp_ppr> _ac;
+        cb_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
-
-
         firewall_flow_state _fs;
     public:
-        firewall_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
+        firewall_runner(cb_async_flow<dummy_udp_ppr> ac, forwarder& f)
+
             : _ac(std::move(ac))
             , _f(f){}
 
@@ -330,7 +331,70 @@ public:
             _ac.register_events(dummy_udp_events::pkt_in);
         }
 
-        future<> run_firewall() {
+
+        void close_cb() {
+            delete this;
+        }
+
+        void db_write_cb(int err_code, mica_response res) {
+            if(err_code!=0){
+                _ac.drop_cur_packet();
+                return;
+            }
+            forward_packet(_fs);
+        }
+
+        void db_read_cb(int err_code, mica_response res) {
+            if(err_code!=0){
+                _ac.drop_cur_packet();
+                return;
+            }
+
+            bool state_changed = true;
+            if(res.get_result() == Result::kNotFound) {
+                initialize_session_state(_ac.cur_packet(), _fs);
+                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
+                    db_write_cb(err_code, std::move(res));
+                });
+            }
+            else{
+                _fs = res.get_value<firewall_flow_state>();
+               state_changed = update_session_state(_ac.cur_packet(), _fs);
+               if(state_changed) {
+                   auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                   _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
+                       db_write_cb(err_code, std::move(res));
+                   });
+               }
+               else{
+                   forward_packet(_fs);
+               }
+            }
+
+
+        }
+
+        void pkt_cb() {
+            if(_ac.cur_event().on_close_event()) {
+                _ac.drop_cur_packet();
+                _ac.unregister_packet_cb();
+                return;
+            }
+
+            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+            _f._mc.query_with_cb(Operation::kGet, mica_key(key),
+                        mica_value(0, temporary_buffer<char>()), [this](int err_code, mica_response res){
+                db_read_cb(err_code, std::move(res));
+            });
+        }
+
+        void run_firewall() {
+            _ac.register_cbs([this]{pkt_cb();}, [this]{close_cb();});
+        }
+
+        /*future<> run_firewall() {
+
             return _ac.run_async_loop([this](){
                 if(_ac.cur_event().on_close_event()) {
                     return make_ready_future<af_action>(af_action::close_forward);
@@ -338,28 +402,26 @@ public:
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                 return _f._mc.query(Operation::kGet, mica_key(key),
                         mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
-                    if(response.get_result() == Result::kNotFound) {
-                        initialize_session_state(_ac.cur_packet(), _fs);
-                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                        return _f._mc.query(Operation::kSet, mica_key(key),
-                                mica_value(_fs)).then([this](mica_response response){
-                            return forward_packet(_fs);
-                        });
-                    }
-                    else {
-                        _fs = response.get_value<firewall_flow_state>();
-                        auto state_changed = update_session_state(_ac.cur_packet(), _fs);
-                        if(state_changed) {
-                            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                            return _f._mc.query(Operation::kSet, mica_key(key),
-                                    mica_value(_fs)).then([this](mica_response response){
-                                return forward_packet(_fs);
-                            });
-                        }
-                        else{
-                            return make_ready_future<af_action>(forward_packet(_fs));
-                        }
-                    }
+
+                    bool state_changed = true;
+                   if(res.get_result() == Result::kNotFound) {
+                       initialize_session_state(_ac.cur_packet(), _fs);
+                   }
+                   else{
+                       _fs = res.get_value<firewall_flow_state>();
+                      state_changed = update_session_state(_ac.cur_packet(), _fs);
+                   }
+
+                   if(state_changed) {
+                       auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                       return _f._mc.query(Operation::kSet, mica_key(key),
+                               mica_value(_fs)).then([this](mica_response response){
+                           return forward_packet(_fs);
+                       });
+                   }
+                   else{
+                       forward_packet(_fs);
+                   }
 
                 }).then_wrapped([this](auto&& f){
                     try{
@@ -368,17 +430,13 @@ public:
 
                     }
                     catch(...){
-                        if(_f._mc.nr_request_descriptors() == 0){
-                            _f._insufficient_mica_rd_erorr += 1;
-                        }
-                        else{
-                            _f._mica_timeout_error += 1;
-                        }
+
+
                         return af_action::drop;
                     }
                 });
             });
-        }
+        }*/
 
         void initialize_session_state(net::packet& pkt, firewall_flow_state& state) {
             auto ip_hdr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
@@ -393,6 +451,7 @@ public:
                     return;
                 }
             }
+
             state.pass = true;
         }
 
@@ -400,14 +459,15 @@ public:
             return false;
         }
 
-        af_action forward_packet(firewall_flow_state& fs) {
-            if(fs.pass) {
-                return af_action::forward;
+        void forward_packet(firewall_flow_state& fs) {
+            if(fs.pass){
+                _ac.forward_cur_packet();
             }
-            else {
-                return af_action::drop;
+            else{
+                _ac.drop_cur_packet();
             }
         }
+
     };
 
     void run_udp_manager(int) {
@@ -415,11 +475,10 @@ public:
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
 
-                do_with(firewall_runner(ic.get_sd_async_flow(), (*this)), [](firewall_runner& r){
-                     r.events_registration();
-                     return r.run_firewall();
-                });
 
+                auto runner = new firewall_runner(ic.get_cb_async_flow(), (*this));
+                runner->events_registration();
+                runner->run_firewall();
                 return stop_iteration::no;
             });
         });
@@ -478,7 +537,9 @@ public:
         });
     }
 public:
+
     Firewall firewall;
+
 };
 
 int main(int ac, char** av) {
