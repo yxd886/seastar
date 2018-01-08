@@ -1,14 +1,4 @@
 /*
- *lb_playground.cc
- *
- *  Created on: Dec 28, 2017
- *      Author: Admin
- */
-
-
-
-
-/*
  * This file is open source software, licensed to you under the terms
  * of the Apache License, Version 2.0 (the "License").  See the NOTICE file
  * distributed with this work for additional information regarding copyright
@@ -46,7 +36,8 @@
 
 #include "netstar/work_unit.hh"
 #include "netstar/port_env.hh"
-#include "netstar/af/sd_async_flow.hh"
+// Change #1
+#include "netstar/af/cb_async_flow.hh"
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
 
@@ -55,8 +46,12 @@
 
 #include <vector>
 #include <iostream>
+#include "nf/aho-corasick/fpp.h"
+#include "nf/aho-corasick/aho.h"
+#define MAX_MATCH 8192
 #include <stdlib.h>
 #include <time.h>
+
 using namespace seastar;
 using namespace netstar;
 using namespace std;
@@ -130,9 +125,6 @@ public:
         }
     };
 };
-
-
-
 std::string lists[64]={"192.168.122.131","192.168.122.132","192.168.122.133","192.168.122.134",
                 "192.168.122.135","192.168.122.136","192.168.122.137","192.168.122.138",
                 "192.168.122.139","192.168.122.140","192.168.122.141","192.168.122.142"};
@@ -149,6 +141,7 @@ public:
 };
 
 class forwarder;
+
 distributed<forwarder> forwarders;
 
 class forwarder {
@@ -158,10 +151,10 @@ class forwarder {
     port& _egress_port;
     std::experimental::optional<subscription<net::packet>> _egress_port_sub;
 
-
-    sd_async_flow_manager<dummy_udp_ppr> _udp_manager;
-    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
-    sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
+    // Change #2
+    cb_async_flow_manager<dummy_udp_ppr> _udp_manager;
+    cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
+    cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
 
     mica_client& _mc;
 
@@ -312,15 +305,18 @@ public:
         uint64_t v2;
     };
 
+
+    // Change #3.
     class lb_runner {
-        sd_async_flow<dummy_udp_ppr> _ac;
+        cb_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
         lb_flow_state _fs;
         std::vector<uint32_t> _backend_list;
         uint64_t backend_list_bit;
         uint32_t server;
     public:
-        lb_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
+        lb_runner(cb_async_flow<dummy_udp_ppr> ac, forwarder& f)
+
             : _ac(std::move(ac))
             , _f(f){}
 
@@ -328,62 +324,130 @@ public:
             _ac.register_events(dummy_udp_events::pkt_in);
         }
 
-        future<> run_lb() {
+
+        void close_cb() {
+            delete this;
+        }
+
+        void flow_write_cb(int err_code, mica_response res) {
+            if(err_code!=0){
+                _ac.drop_cur_packet();
+                return;
+            }
+            net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+            ip_hd->dst_ip.ip=server;
+            _ac.forward_cur_packet();
+        }
+        void cluster_write_cb(int err_code, mica_response res) {
+            if(err_code!=0){
+                _ac.drop_cur_packet();
+                return;
+            }
+            form_list(backend_list_bit);
+            server=next_server();
+            _fs._dst_ip_addr=server;
+            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+            _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
+                flow_write_cb(err_code, std::move(res));
+            });
+        }
+        void flow_read_cb(int err_code, mica_response res) {
+            if(err_code!=0){
+                _ac.drop_cur_packet();
+                return;
+            }
+            if(res.get_result() == Result::kNotFound) {
+                backend_list_bit=0x1111111;
+                auto key = query_key{_f.lb._cluster_id, _f.lb._cluster_id};
+                _f._mc.query_with_cb(Operation::kGet, mica_key(key),
+                            mica_value(0, temporary_buffer<char>()), [this](int err_code, mica_response res){
+                    cluster_read_cb(err_code, std::move(res));
+                });
+            }
+            else{
+                _fs = res.get_value<lb_flow_state>();
+                server=_fs._dst_ip_addr;
+                net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+                ip_hd->dst_ip.ip=server;
+                _ac.forward_cur_packet();
+            }
+
+
+        }
+        void cluster_read_cb(int err_code, mica_response res) {
+            if(err_code!=0){
+                _ac.drop_cur_packet();
+                return;
+            }
+            if(res.get_result() == Result::kNotFound) {
+                _fs._backend_list=backend_list_bit;
+                auto key = query_key{_f.lb._cluster_id, _f.lb._cluster_id};
+                _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
+                    cluster_write_cb(err_code, std::move(res));
+                });
+            }
+            else{
+                _fs = res.get_value<lb_flow_state>();
+                backend_list_bit=_fs._backend_list;
+                form_list(backend_list_bit);
+                server=next_server();
+                _fs._dst_ip_addr=server;
+                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
+                    flow_write_cb(err_code, std::move(res));
+                });
+
+            }
+
+
+        }
+        void pkt_cb() {
+            if(_ac.cur_event().on_close_event()) {
+                _ac.drop_cur_packet();
+                _ac.unregister_packet_cb();
+                return;
+            }
+
+            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+            _f._mc.query_with_cb(Operation::kGet, mica_key(key),
+                        mica_value(0, temporary_buffer<char>()), [this](int err_code, mica_response res){
+                flow_read_cb(err_code, std::move(res));
+            });
+        }
+
+        void run_lb() {
+            _ac.register_cbs([this]{pkt_cb();}, [this]{close_cb();});
+        }
+
+        /*future<> run_lb() {
+
             return _ac.run_async_loop([this](){
                 if(_ac.cur_event().on_close_event()) {
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
-
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                 return _f._mc.query(Operation::kGet, mica_key(key),
                         mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
-                    if(response.get_result() == Result::kNotFound) {
-                        backend_list_bit=0x1111111;
-                        auto key = query_key{_f.lb._cluster_id, _f.lb._cluster_id};
-                        return _f._mc.query(Operation::kGet, mica_key(key),
-                                mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
-                            if(response.get_result() == Result::kNotFound) {
 
+                    bool state_changed = true;
+                   if(res.get_result() == Result::kNotFound) {
+                       initialize_session_state(_ac.cur_packet(), _fs);
+                   }
+                   else{
+                       _fs = res.get_value<lb_flow_state>();
+                      state_changed = update_session_state(_ac.cur_packet(), _fs);
+                   }
 
-                                _fs._backend_list=backend_list_bit;
-                                auto key = query_key{_f.lb._cluster_id, _f.lb._cluster_id};
-                                return _f._mc.query(Operation::kSet, mica_key(key),
-                                        mica_value(_fs)).then([this](mica_response response){
-                                    form_list(backend_list_bit);
-                                    server=next_server();
-                                    _fs._dst_ip_addr=server;
-                                    auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                                    return _f._mc.query(Operation::kSet, mica_key(key),
-                                            mica_value(_fs)).then([this](mica_response response){
-                                        net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-                                        ip_hd->dst_ip.ip=server;
-                                        return af_action::forward;
-                                    });
-                                });
-                            }else {
-                                _fs = response.get_value<lb_flow_state>();
-                                backend_list_bit=_fs._backend_list;
-                                form_list(backend_list_bit);
-                                server=next_server();
-                                _fs._dst_ip_addr=server;
-                                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                                return _f._mc.query(Operation::kSet, mica_key(key),
-                                        mica_value(_fs)).then([this](mica_response response){
-                                    net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-                                    ip_hd->dst_ip.ip=server;
-                                    return af_action::forward;
-                                });
-                            }
-
-                        });
-                    }
-                    else {
-                        _fs = response.get_value<lb_flow_state>();
-                        server=_fs._dst_ip_addr;
-                        net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-                        ip_hd->dst_ip.ip=server;
-                        return make_ready_future<af_action>(af_action::forward);
-                    }
+                   if(state_changed) {
+                       auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                       return _f._mc.query(Operation::kSet, mica_key(key),
+                               mica_value(_fs)).then([this](mica_response response){
+                           return forward_packet(_fs);
+                       });
+                   }
+                   else{
+                       forward_packet(_fs);
+                   }
 
                 }).then_wrapped([this](auto&& f){
                     try{
@@ -392,17 +456,14 @@ public:
 
                     }
                     catch(...){
-                        if(_f._mc.nr_request_descriptors() == 0){
-                            _f._insufficient_mica_rd_erorr += 1;
-                        }
-                        else{
-                            _f._mica_timeout_error += 1;
-                        }
+
+
                         return af_action::drop;
                     }
                 });
             });
-        }
+        }*/
+
         void form_list(uint64_t backend_list_bit){
             _backend_list.clear();
             for (uint32_t i=0;i<sizeof(backend_list_bit);i++){
@@ -425,11 +486,10 @@ public:
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
 
-                do_with(lb_runner(ic.get_sd_async_flow(), (*this)), [](lb_runner& r){
-                     r.events_registration();
-                     return r.run_lb();
-                });
 
+                auto runner = new lb_runner(ic.get_cb_async_flow(), (*this));
+                runner->events_registration();
+                runner->run_lb();
                 return stop_iteration::no;
             });
         });
@@ -488,7 +548,9 @@ public:
         });
     }
 public:
+
     Load_balancer lb;
+
 };
 
 int main(int ac, char** av) {
