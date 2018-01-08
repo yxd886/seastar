@@ -169,6 +169,8 @@ public:
 
 class mica_client : public work_unit<mica_client>{
 public:
+    using mica_cb = std::function<void(int, mica_response)>;
+
     static constexpr unsigned max_req_len =
             ETHER_MAX_LEN - ETHER_CRC_LEN - sizeof(RequestBatchHeader);
 
@@ -203,6 +205,10 @@ public:
 
         // the associated promise with this request
         std::experimental::optional<promise<mica_response>> _pr;
+
+#if MICA_USE_CB
+        mica_cb _cb;
+#endif
 
         // the size of the request
         size_t _request_size;
@@ -264,6 +270,11 @@ public:
             _pr = promise<mica_response>();
             return _pr->get_future();
         }
+#if MICA_USE_CB
+        void set_up_cb(mica_cb cb){
+            _cb = std::move(cb);
+        }
+#endif
 
         void append_frags(scattered_message<char>& msg){
             // RequestHeader is a plain old object,
@@ -317,8 +328,11 @@ public:
             mc_assert(_to.armed());
             mc_assert(_retry_count < max_retries);
             mc_assert(_pr);
-
+#if MICA_USE_CB
+            _cb(0, std::move(response_pkt));
+#else
             _pr->set_value(mica_response(std::move(response_pkt)));
+#endif
             normal_recycle_prep();
             return action::recycle_rd;
         }
@@ -330,7 +344,11 @@ public:
             if(_retry_count == max_retries){
                 // we have retried four times without receiving a response,
                 // timeout
+#if MICA_USE_CB
+                _cb(-1, mica_response(net::packet::make_null_packet()));
+#else
                 _pr->set_exception(kill_flow());
+#endif
                 timeout_recycle_prep();
                 return action::recycle_rd;
             }
@@ -372,7 +390,11 @@ public:
             // cancel the _to timer
             _to.cancel();
             // clear the promise
+#if MICA_USE_CB
+            _cb = nullptr;
+#else
             _pr = std::experimental::nullopt;
+#endif
             // no need to touch the _rq_hd
         }
         void timeout_recycle_prep(){
@@ -385,7 +407,11 @@ public:
 
             _epoch++;
             _retry_count = 0;
+#if MICA_USE_CB
+            _cb = nullptr;
+#else
             _pr = std::experimental::nullopt;
+#endif
         }
     };
 
@@ -627,6 +653,47 @@ public:
     future<mica_response> query(Operation op, mica_key key, mica_value value) {
         return query(op, key.get_actual_length(), key.get_roundup_buf(), value.get_actual_length(), value.get_roundup_buf());
     }
+#if MICA_USE_CB
+    void query_with_cb(Operation op,
+               size_t key_len, temporary_buffer<char> key,
+               size_t val_len, temporary_buffer<char> val,
+               mica_cb cb) {
+        if(_pending_work_queue.try_wait(1)){
+            auto rd_idx = _recycled_rds.front();
+            _recycled_rds.pop_front();
+            _rds[rd_idx].new_action(op, key_len, std::move(key),
+                                    val_len, std::move(val));
+            send_request_descriptor(rd_idx);
+            _rds[rd_idx].set_up_cb(std::move(cb));
+        }
+        else{
+             _pending_work_queue.wait(1).then(
+                    [this, op, key_len, key=std::move(key),
+                     val_len, val=std::move(val), cb=std::move(cb)] () mutable{
+                auto rd_idx = _recycled_rds.front();
+                _recycled_rds.pop_front();
+                _rds[rd_idx].new_action(op, key_len, std::move(key),
+                                        val_len, std::move(val));
+                send_request_descriptor(rd_idx);
+                _rds[rd_idx].set_up_cb(std::move(cb));
+             });
+        }
+    }
+    void query_with_cb(Operation op, mica_key key, mica_value value, mica_cb cb) {
+        query_with_cb(op,
+            key.get_actual_length(), key.get_roundup_buf(),
+            value.get_actual_length(), value.get_roundup_buf(),
+            std::move(cb));
+    }
+#else
+    void query_with_cb(Operation op,
+               size_t key_len, temporary_buffer<char> key,
+               size_t val_len, temporary_buffer<char> val,
+               mica_cb cb) {
+    }
+    void query_with_cb(Operation op, mica_key key, mica_value value, mica_cb cb) {
+    }
+#endif
     size_t nr_request_descriptors() {
         return _recycled_rds.size();
     }
