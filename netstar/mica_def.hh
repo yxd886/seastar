@@ -34,6 +34,12 @@ namespace netstar{
 #define mc_assert(condition) ((void)0)
 #endif
 
+#define MICA_USE_CB 0
+
+#if MICA_USE_CB
+static_assert(ENABLE_MC_ASSERTION==0, "We must disable the mica assertion if we use mica callback mode");
+#endif
+
 struct endpoint_info{
     net::ethernet_address eth_addr;
     net::ipv4_address ip_addr;
