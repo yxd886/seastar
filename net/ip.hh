@@ -415,6 +415,12 @@ public:
         _pkt_providers.push_back(std::move(func));
     }
     future<ethernet_address> get_l2_dst_address(ipv4_address to);
+    // patch by djp
+    // Add a way to hijack ARP.
+public:
+    arp_for<ipv4>& get_arp_for(){
+        return _arp;
+    }
 };
 
 template <ip_protocol_num ProtoNum>

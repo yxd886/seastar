@@ -53,7 +53,10 @@ void create_native_net_device(boost::program_options::variables_map opts) {
     if (opts.count("dpdk-pmd")) {
         // Hardcoded port index 0.
         // TODO: Inherit it from the opts
-        dev = create_dpdk_net_device(0, smp::count,
+        // patch by djp
+        // Pass opts["dpdk-port-idx"].as<unsigned>() as the port index
+        // to create_dpdk_net_device function.
+        dev = create_dpdk_net_device(opts["dpdk-port-idx"].as<unsigned>(), smp::count,
             !(opts.count("lro") && opts["lro"].as<std::string>() == "off"),
             !(opts.count("hw-fc") && opts["hw-fc"].as<std::string>() == "off"));
     } else

@@ -1137,10 +1137,14 @@ build_mbuf_cluster:
         //
         static constexpr int gc_count = 1;
     public:
-        tx_buf_factory(uint8_t qid) {
+        // patch by djp
+        // Add uint8_t port_idx to tx_buf_factory
+        tx_buf_factory(uint8_t qid, uint8_t port_idx) {
             using namespace memory;
 
-            sstring name = sstring(pktmbuf_pool_name) + to_sstring(qid) + "_tx";
+            // patch by djp
+            // modify the name of the pktmbuf_pool.
+            sstring name = sstring(pktmbuf_pool_name) + to_sstring(qid) + to_sstring(port_idx) + "_tx";
             printf("Creating Tx mbuf pool '%s' [%u mbufs] ...\n",
                    name.c_str(), mbufs_per_queue_tx);
            
@@ -1798,7 +1802,10 @@ template <bool HugetlbfsMemBackend>
 bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
 {
     using namespace memory;
-    sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + "_rx";
+
+    // patch by djp
+    // Modify the name of the pktmbuf_pool.
+    sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + to_sstring(_dev->port_idx()) + "_rx";
 
     printf("Creating Rx mbuf pool '%s' [%u mbufs] ...\n",
            name.c_str(), mbufs_per_queue_rx);
@@ -1922,7 +1929,9 @@ dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
      : qp(true, stats_plugin_name, qid), _dev(dev), _qid(qid),
        _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
-       _tx_buf_factory(qid),
+       // patch by djp
+       // Pass the dev->port_idx() to construct _tx_buf_factory.
+       _tx_buf_factory(qid, dev->port_idx()),
        _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))
 {
     if (!init_rx_mbuf_pool()) {
@@ -2261,12 +2270,14 @@ std::unique_ptr<net::device> create_dpdk_net_device(
                                     bool use_lro,
                                     bool enable_fc)
 {
-    static bool called = false;
+    // patch by djp
+    // Remove the called assertion check, so that we can create multiple dpdk_net_device.
+    // static bool called = false;
 
-    assert(!called);
+    // assert(!called);
     assert(dpdk::eal::initialized);
 
-    called = true;
+    // called = true;
 
     // Check that we have at least one DPDK-able port
     if (rte_eth_dev_count() == 0) {
@@ -2288,7 +2299,27 @@ get_dpdk_net_options_description()
     opts.add_options()
         ("hw-fc",
                 boost::program_options::value<std::string>()->default_value("on"),
-                "Enable HW Flow Control (on / off)");
+                "Enable HW Flow Control (on / off)")
+        // patch by djp
+        // All additional command line parameters created by NetStar goes here.
+        ("dpdk-port-idx",
+                        boost::program_options::value<unsigned>()->default_value(0),
+                        "the index of the dpdk NIC to use")
+        ("mica-sever-smp-count",
+                boost::program_options::value<uint16_t>()->default_value(10),
+                "The number of the cores used by the mica server.")
+        ("mica-server-mac",
+                boost::program_options::value<std::string>()->default_value("3c:fd:fe:06:07:82"),
+                "The MAC address of the port on the mica server.")
+        ("mica-server-ip",
+                boost::program_options::value<std::string>()->default_value("10.0.0.2"),
+                "The IP address of the port on the mica server.")
+        ("mica-server-port-id",
+                boost::program_options::value<uint16_t>()->default_value(1),
+                "The port id of the port on the mica server.")
+        ("mica-client-ip",
+                boost::program_options::value<std::string>()->default_value("10.0.1.2"),
+                "The IP address of the port for contacting mica server.");
 #if 0
     opts.add_options()
         ("csum-offload",

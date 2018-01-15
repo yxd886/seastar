@@ -253,6 +253,20 @@ public:
     }
     bool poll_tx();
     friend class device;
+    // patch by djp
+    // Expose several fields of _stats;
+    uint64_t rx_bytes() {
+        return _stats.rx.good.bytes;
+    }
+    uint64_t rx_pkts() {
+        return _stats.rx.good.packets;
+    }
+    uint64_t tx_bytes() {
+        return _stats.tx.good.bytes;
+    }
+    uint64_t tx_pkts() {
+        return _stats.tx.good.packets;
+    }
 };
 
 class device {
@@ -292,6 +306,12 @@ public:
         // there is an assumption here that qid == cpu_id which will
         // not necessary be true in the future
         return forward_dst(hash2qid(hash), [hash] { return hash; });
+    }
+    // patch by djp
+    // Add update_local_queue function
+    void update_local_queue(qp* qp){
+        assert(!_queues[engine().cpu_id()]);
+        _queues[engine().cpu_id()] = qp;
     }
 };
 
