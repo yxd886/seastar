@@ -36,7 +36,7 @@ public:
    // Move construct/asign
    rte_packet(rte_packet&& other) noexcept
        : _mbuf(other._mbuf) {
-       other.invalidate_mbuf();
+       other._mbuf = nullptr;
    }
    rte_packet& operator=(rte_packet&& other) noexcept {
        if(this != &other) {
