@@ -33,6 +33,10 @@
 #include "const.hh"
 #include <unordered_map>
 
+// patch by djp
+// include rte_packet.hh
+#include "netstar/rte_packet.hh"
+
 namespace seastar {
 
 namespace net {
