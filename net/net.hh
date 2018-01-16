@@ -304,6 +304,9 @@ public:
     qp& queue_for_cpu(unsigned cpu) { return *_queues[cpu]; }
     qp& local_queue() { return queue_for_cpu(engine().cpu_id()); }
     void l2receive(packet p) { _queues[engine().cpu_id()]->_rx_stream.produce(std::move(p)); }
+    // patch by djp
+    // deliver rte_packet to upper_layer
+    void l2receive_rte_packet(netstar::rte_packet p) {_queues[engine().cpu_id()]->_rte_pkt_rx_stream.produce(std::move(p));}
     subscription<packet> receive(std::function<future<> (packet)> next_packet);
     virtual ethernet_address hw_address() = 0;
     virtual net::hw_features hw_features() = 0;

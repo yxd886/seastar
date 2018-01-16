@@ -1324,6 +1324,41 @@ public:
         return sent;
     }
 
+    // by djp
+    // process received rte_mbuf and deliver rte_packet
+    void process_packets_with_rte_packets(struct rte_mbuf **bufs, uint16_t count) {
+        uint64_t nr_frags = 0, bytes = 0;
+
+        for (uint16_t i = 0; i < count; i++) {
+            struct rte_mbuf *m = bufs[i];
+            rte_packet p(m);
+
+            if (_dev->hw_features().rx_csum_offload) {
+                if (m->ol_flags & (PKT_RX_IP_CKSUM_BAD | PKT_RX_L4_CKSUM_BAD)) {
+                    // Packet with bad checksum, just drop it.
+                    _stats.rx.bad.inc_csum_err();
+                    continue;
+                }
+                // Note that when _hw_features.rx_csum_offload is on, the receive
+                // code for ip, tcp and udp will assume they don't need to check
+                // the checksum again, because we did this here.
+            }
+
+            nr_frags += m->nb_segs;
+            bytes    += m->pkt_len;
+
+            _dev->l2receive_rte_packet(std::move(p));
+        }
+
+        _stats.rx.good.update_pkts_bunch(count);
+        _stats.rx.good.update_frags_stats(nr_frags, bytes);
+
+        if (!HugetlbfsMemBackend) {
+            _stats.rx.good.copy_frags = _stats.rx.good.nr_frags;
+            _stats.rx.good.copy_bytes = _stats.rx.good.bytes;
+        }
+    }
+
     dpdk_device& port() const { return *_dev; }
     tx_buf* get_tx_buf() { return _tx_buf_factory.get(); }
 private:
@@ -2223,7 +2258,9 @@ bool dpdk_qp<HugetlbfsMemBackend>::poll_rx_once()
 
     /* Now process the NIC packets read */
     if (likely(rx_count > 0)) {
-        process_packets(buf, rx_count);
+        // by djp
+        // process_packets(buf, rx_count);
+        process_packets_with_rte_packets(buf, rx_count);
     }
 
     return rx_count;

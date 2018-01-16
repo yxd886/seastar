@@ -14,11 +14,6 @@ class rte_packet {
 
 public:
    // Explicit constructors.
-   rte_packet(rte_mbuf* mbuf) {
-       assert(mbuf);
-       assert(rte_pktmbuf_is_contiguous(mbuf));
-       _mbuf = mbuf;
-   }
    rte_packet()
        : _mbuf(nullptr) {}
 
@@ -131,6 +126,14 @@ public:
        rte_mbuf* tmp = _mbuf;
        _mbuf = nullptr;
        return tmp;
+   }
+
+   // How are you going to call this constructor, if you
+   // can't build a mbuf from the rte_mpool?
+   rte_packet(rte_mbuf* mbuf) {
+       assert(mbuf);
+       assert(rte_pktmbuf_is_contiguous(mbuf));
+       _mbuf = mbuf;
    }
 
 #endif // HAVE_DPDK
