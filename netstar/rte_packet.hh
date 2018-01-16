@@ -7,6 +7,10 @@
 
 namespace netstar{
 
+namespace standard_device {
+    class dpdk_qp;
+}
+
 class rte_packet {
 #ifdef HAVE_DPDK
 
@@ -123,7 +127,7 @@ public:
 private:
    // Explicitly invalidate _mbuf and return the original
    // _mbuf.
-   friend class seastar::net::qp;
+   friend class standard_device::dpdk_qp;
    rte_mbuf* release_mbuf() {
        rte_mbuf* tmp = _mbuf;
        _mbuf = nullptr;
