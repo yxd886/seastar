@@ -3,7 +3,7 @@
 
 #include "net/packet.hh"
 
-#include <rte_ethdev.h>
+#include <rte_mbuf.h>
 
 namespace netstar{
 
