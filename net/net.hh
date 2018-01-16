@@ -268,10 +268,10 @@ public:
     // patch by djp
     // add poll function to retrieve rte_packet
     bool poll_tx_rte_pkt();
-    virtual uint32_t send_rte_pkts(circular_buffer<netstar::rte_packet>& p) {
+    virtual uint32_t send_rte_pkts(circular_buffer<netstar::rte_packet>& pb) {
         uint32_t sent=0;
-        while(!p.empty()) {
-            p.pop_front();
+        while(!pb.empty()) {
+            pb.pop_front();
             sent++;
         }
         return sent;

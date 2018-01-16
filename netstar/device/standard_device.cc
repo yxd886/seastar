@@ -1288,6 +1288,12 @@ public:
         }
     }
 
+    // patch by djp
+    // override send_rte_pkts
+    virtual uint32_t send_rte_pkts(circular_buffer<rte_packet>& p) override {
+        return 0;
+    }
+
     dpdk_device& port() const { return *_dev; }
     tx_buf* get_tx_buf() { return _tx_buf_factory.get(); }
 private:

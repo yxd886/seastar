@@ -7,9 +7,9 @@
 
 namespace netstar{
 
+class rte_packet {
 #ifdef HAVE_DPDK
 
-class rte_packet {
    rte_mbuf* _mbuf;
 
 public:
@@ -125,9 +125,9 @@ public:
    void invalidate_mbuf() {
        _mbuf = nullptr;
    }
-};
 
 #endif // HAVE_DPDK
+};
 
 } // namespace netstar
 
