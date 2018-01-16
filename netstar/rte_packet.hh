@@ -7,10 +7,6 @@
 
 namespace netstar{
 
-namespace standard_device {
-    class dpdk_qp;
-}
-
 class rte_packet {
 #ifdef HAVE_DPDK
 
@@ -124,10 +120,12 @@ public:
        }
    }
 
-private:
+public:
    // Explicitly invalidate _mbuf and return the original
    // _mbuf.
-   friend class standard_device::dpdk_qp;
+   // Be extra careful!! This is used internally by different
+   // devices to directly send an rte_packet. User should not
+   // call this API by any means.
    rte_mbuf* release_mbuf() {
        rte_mbuf* tmp = _mbuf;
        _mbuf = nullptr;
