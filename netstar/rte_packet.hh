@@ -34,11 +34,11 @@ public:
    rte_packet& operator=(const rte_packet& other) = delete;
 
    // Move construct/asign
-   rte_packet(rte_packet&& other)
+   rte_packet(rte_packet&& other) noexcept
        : _mbuf(other._mbuf) {
        other.invalidate_mbuf();
    }
-   rte_packet& operator=(rte_packet&& other) {
+   rte_packet& operator=(rte_packet&& other) noexcept {
        if(this != &other) {
            this->~rte_packet();
            new (this) rte_packet(std::move(other));
