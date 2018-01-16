@@ -6,5 +6,5 @@
 
 int main(){
     netstar::rte_packet pkt();
-    return hash;
+    return 1;
 }
