@@ -1288,10 +1288,10 @@ public:
         }
     }
 
-    // patch by djp
+    // by djp
     // override send_rte_pkts
-    virtual uint32_t send_rte_pkts(circular_buffer<rte_packet>& p) override {
-        return 0;
+    virtual uint32_t send_rte_pkts(circular_buffer<rte_packet>& pb) override {
+       return 0;
     }
 
     dpdk_device& port() const { return *_dev; }
@@ -1458,6 +1458,8 @@ private:
     std::experimental::optional<reactor::poller> _rx_poller;
     reactor::poller _tx_gc_poller;
     std::vector<rte_mbuf*> _tx_burst;
+    // by djp
+    std::vector<rte_mbuf*> _rte_packet_tx_burst;
     uint16_t _tx_burst_idx = 0;
     static constexpr phys_addr_t page_mask = ~(memory::page_size - 1);
 };
