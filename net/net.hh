@@ -264,6 +264,18 @@ public:
     }
     bool poll_tx();
     friend class device;
+
+    // patch by djp
+    // add poll function to retrieve rte_packet
+    bool poll_tx_rte_pkt();
+    virtual uint32_t send_rte_pkts(circular_buffer<netstar::rte_packet>& p) {
+        uint32_t sent=0;
+        while(!p.empty()) {
+            p.pop_front();
+            sent++;
+        }
+        return sent;
+    }
     // patch by djp
     // Expose several fields of _stats;
     uint64_t rx_bytes() {

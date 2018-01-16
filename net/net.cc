@@ -84,6 +84,35 @@ bool qp::poll_tx() {
     return false;
 }
 
+// patch by djp
+// the definition of poll_tx_rte_pkt
+inline
+bool qp::poll_tx_rte_pkt() {
+    if (_tx_rte_packetq.size() < 16) {
+        // refill send queue from upper layers
+        uint32_t work;
+        do {
+            work = 0;
+            for (auto&& pr : _rte_pkt_providers) {
+                auto p = pr();
+                if (p) {
+                    work++;
+                    _tx_rte_packetq.push_back(std::move(p.value()));
+                    if (_tx_rte_packetq.size() == 128) {
+                        break;
+                    }
+                }
+            }
+        } while (work && _tx_rte_packetq.size() < 128);
+    }
+    if (!_tx_rte_packetq.empty()) {
+        _stats.tx.good.update_pkts_bunch(send_rte_pkts(_tx_rte_packetq));
+        return true;
+    }
+
+    return false;
+}
+
 qp::qp(bool register_copy_stats,
        const std::string stats_plugin_name, uint8_t qid)
         : _tx_poller(reactor::poller::simple([this] { return poll_tx(); }))
