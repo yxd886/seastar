@@ -2,8 +2,10 @@
 #include <rte_ethdev.h>
 #include <experimental/optional>
 #include <stdio.h>
+#include "netstar/rte_packet.hh"
 
 int main(){
+    netstar::rte_packet pkt();
     int num = 512;
     auto hash = mica::util::hash_cityhash(&num, sizeof(num));
     std::experimental::optional<rte_mbuf*> tester;

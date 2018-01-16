@@ -1,0 +1,134 @@
+#ifndef _RTE_PACKET_HH
+#define _RTE_PACKET_HH
+
+#include "net/packet.hh"
+
+#include <rte_ethdev.h>
+
+namespace netstar{
+
+#ifdef HAVE_DPDK
+
+class rte_packet {
+   rte_mbuf* _mbuf;
+
+public:
+   // Explicit constructors.
+   rte_packet(rte_mbuf* mbuf) {
+       assert(mbuf);
+       assert(rte_pktmbuf_is_contiguous(mbuf));
+       _mbuf = mbuf;
+   }
+   rte_packet()
+       : _mbuf(nullptr) {}
+
+   // Deconstructors
+   ~rte_packet() {
+       if(_mbuf) {
+           rte_pktmbuf_free(_mbuf);
+       }
+   }
+
+   // Copy construct/assign
+   rte_packet(const rte_packet& other) = delete;
+   rte_packet& operator=(const rte_packet& other) = delete;
+
+   // Move construct/asign
+   rte_packet(rte_packet&& other)
+       : _mbuf(other._mbuf) {
+       other.invalidate_mbuf();
+   }
+   rte_packet& operator=(rte_packet&& other) {
+       if(this != &other) {
+           this->~rte_packet();
+           new (this) rte_packet(std::move(other));
+       }
+       return *this;
+   }
+
+   // Boolean operator overloads
+   explicit operator bool() {
+       return bool(_mbuf);
+   }
+
+   // Get a header pointer.
+   template <typename Header>
+   Header* get_header(size_t offset = 0) {
+       assert(offset+sizeof(Header) <= rte_pktmbuf_pkt_len(_mbuf));
+       return reinterpret_cast<Header*>(rte_pktmbuf_mtod_offset(_mbuf, void, offset));
+   }
+
+   // Trim some payload from front of the packet
+   void trim_front(size_t how_much) {
+       assert(how_much <= rte_pktmbuf_pkt_len(_mbuf));
+       rte_pktmbuf_adj(_mbuf, how_much);
+   }
+
+   // Trim some payload from the back of the packet
+   void trim_back(size_t how_much) {
+       assert(how_much <= rte_pktmbuf_pkt_len(_mbuf));
+       rte_pktmbuf_trim(_mbuf, how_much);
+   }
+
+   // Append some content to the back of the packet
+   void append(size_t how_much) {
+       assert(how_much <= rte_pktmbuf_tailroom(_mbuf));
+       rte_pktmbuf_append(_mbuf, how_much);
+   }
+
+   // Prepend a header to the front of the packet.
+   template <typename Header>
+   Header* prepend_header(size_t extra_size = 0) {
+       assert(sizeof(Header)+extra_size <= rte_pktmbuf_headroom(_mbuf));
+       auto h = rte_pktmbuf_prepend(_mbuf, sizeof(Header) + extra_size);
+       return new (h) Header{};
+   }
+
+   // Obtain the length of the packet.
+   unsigned len() const {
+       return rte_pktmbuf_pkt_len(_mbuf);
+   }
+
+   // Get copy of the packet represented in net::packet
+   std::experimental::optional<seastar::net::packet>
+   get_packet() {
+       // Fast path, consider removing it for stable code.
+       assert(_mbuf);
+
+       auto len = rte_pktmbuf_data_len(_mbuf);
+       char* buf = (char*)malloc(len);
+
+       if (!buf) {
+           // Return nullopt if allocation fails.
+           return std::experimental::nullopt;
+       } else {
+           // Build up the packet.
+           rte_memcpy(buf, rte_pktmbuf_mtod(_mbuf, char*), len);
+           seastar::net::packet pkt(seastar::net::fragment{buf, len},
+                                    seastar::make_free_deleter(buf));
+
+           // Set up theoffload info.
+           seastar::net::offload_info oi;
+           if (_mbuf->ol_flags & PKT_RX_VLAN_PKT) {
+               oi.vlan_tci = _mbuf->vlan_tci;
+           }
+           if (_mbuf->ol_flags & PKT_RX_RSS_HASH) {
+               pkt.set_rss_hash(_mbuf->hash.rss);
+           }
+
+           return std::move(pkt);
+       }
+   }
+
+private:
+   // Explicitly invalidate _mbuf.
+   void invalidate_mbuf() {
+       _mbuf = nullptr;
+   }
+};
+
+#endif // HAVE_DPDK
+
+} // namespace netstar
+
+#endif // _RTE_PACKET_HH
