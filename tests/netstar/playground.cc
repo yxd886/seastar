@@ -1,3 +1,3 @@
-int main(int i){
+int main(){
     return 1;
 }
