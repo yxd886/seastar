@@ -118,6 +118,9 @@ qp::qp(bool register_copy_stats,
         : _tx_poller(reactor::poller::simple([this] { return poll_tx(); }))
         , _stats_plugin_name(stats_plugin_name)
         , _queue_name(std::string("queue") + std::to_string(qid))
+        // patch by djp
+        // initialize a poller for _rte_pkt_tx_poller
+        , _rte_pkt_tx_poller(reactor::poller::simple([this] { return poll_tx_rte_pkt(); }))
 {
     namespace sm = metrics;
 

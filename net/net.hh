@@ -228,7 +228,7 @@ class qp {
     using rte_packet_provider_type = std::function<std::experimental::optional<netstar::rte_packet> ()>;
     std::vector<rte_packet_provider_type> _rte_pkt_providers;
     stream<netstar::rte_packet> _rte_pkt_rx_stream;
-    // reactor::poller _rte_pkt_tx_poller;
+    reactor::poller _rte_pkt_tx_poller;
     circular_buffer<netstar::rte_packet> _tx_rte_packetq;
 
 protected:
