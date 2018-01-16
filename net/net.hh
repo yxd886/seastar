@@ -223,6 +223,13 @@ class qp {
     stream<packet> _rx_stream;
     reactor::poller _tx_poller;
     circular_buffer<packet> _tx_packetq;
+    // patch by djp
+    // add private memberes for interfacing with rte_packet
+    using rte_packet_provider_type = std::function<std::experimental::optional<netstar::rte_packet> ()>;
+    std::vector<rte_packet_provider_type> _rte_pkt_providers;
+    stream<netstar::rte_packet> _rte_pkt_rx_stream;
+    // reactor::poller _rte_pkt_tx_poller;
+    circular_buffer<netstar::rte_packet> _tx_rte_packetq;
 
 protected:
     const std::string _stats_plugin_name;
