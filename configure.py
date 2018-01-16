@@ -266,6 +266,7 @@ tests = [
     'tests/tuple_utils_test',
     'tests/tls_echo_server',
     'tests/tls_simple_client',
+    'tests/netstar/playground',
     ]
 
 apps = [
@@ -493,6 +494,7 @@ deps = {
     'tests/tuple_utils_test': ['tests/tuple_utils_test.cc'],
     'tests/tls_echo_server': ['tests/tls_echo_server.cc'] + core + libnet,
     'tests/tls_simple_client': ['tests/tls_simple_client.cc'] + core + libnet,
+    'tests/netstar/playground': ['tests/netstar/playground.cc'] + core + libnet + libnetstar,
 }
 
 boost_tests = [
