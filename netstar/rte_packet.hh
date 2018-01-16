@@ -120,9 +120,10 @@ public:
        }
    }
 
-// private:
+private:
    // Explicitly invalidate _mbuf and return the original
    // _mbuf.
+   friend class seastar::net::qp;
    rte_mbuf* release_mbuf() {
        rte_mbuf* tmp = _mbuf;
        _mbuf = nullptr;
