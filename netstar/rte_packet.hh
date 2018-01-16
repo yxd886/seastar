@@ -121,9 +121,12 @@ public:
    }
 
 // private:
-   // Explicitly invalidate _mbuf.
-   void invalidate_mbuf() {
+   // Explicitly invalidate _mbuf and return the original
+   // _mbuf.
+   rte_mbuf* release_mbuf() {
+       rte_mbuf* tmp = _mbuf;
        _mbuf = nullptr;
+       return tmp;
    }
 
 #endif // HAVE_DPDK

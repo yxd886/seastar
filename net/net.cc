@@ -97,11 +97,9 @@ bool qp::poll_tx_rte_pkt() {
                 auto p = pr();
                 if (p) {
                     work++;
-                    if(p.value()) {
-                        _tx_rte_packetq.push_back(std::move(p.value()));
-                        if (_tx_rte_packetq.size() == 128) {
-                            break;
-                        }
+                    _tx_rte_packetq.push_back(std::move(p.value()));
+                    if (_tx_rte_packetq.size() == 128) {
+                        break;
                     }
                 }
             }
