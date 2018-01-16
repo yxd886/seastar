@@ -9,7 +9,6 @@
 
 #include <memory>
 #include "net/net.hh"
-#include "core/sstring.hh"
 
 namespace netstar{
 
