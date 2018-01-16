@@ -332,6 +332,10 @@ libnet = [
     'net/tls.cc',
     'net/dns.cc',
     ]
+    
+libnetstar = [
+    'netstar/mica/util/cityhash/city_mod.cc',
+    ]
 
 core = [
     'core/reactor.cc',
