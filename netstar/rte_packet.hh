@@ -124,8 +124,9 @@ public:
    // Explicitly invalidate _mbuf and return the original
    // _mbuf.
    // Be extra careful!! This is used internally by different
-   // devices to directly send an rte_packet. User should not
-   // call this API by any means.
+   // devices to directly send an rte_packet. And I don't know
+   // hide it from public access. User should not
+   // call this function by any means.
    rte_mbuf* release_mbuf() {
        rte_mbuf* tmp = _mbuf;
        _mbuf = nullptr;
