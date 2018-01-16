@@ -120,7 +120,7 @@ public:
        }
    }
 
-private:
+// private:
    // Explicitly invalidate _mbuf.
    void invalidate_mbuf() {
        _mbuf = nullptr;
