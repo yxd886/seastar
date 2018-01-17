@@ -5,5 +5,6 @@
 
 int main(){
     netstar::rte_packet pkt();
+    netstar::port_manager::get();
     return 1;
 }
