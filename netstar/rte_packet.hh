@@ -8,17 +8,13 @@
 namespace netstar{
 
 namespace fdir_device {
-
 template <bool HugetlbfsMemBackend>
 class dpdk_qp;
-
 } // namespace fdir_device
 
 namespace standard_device {
-
 template <bool HugetlbfsMemBackend>
 class dpdk_qp;
-
 } // namespace standard_device
 
 class rte_packet {

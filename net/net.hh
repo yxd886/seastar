@@ -262,6 +262,11 @@ public:
     void register_packet_provider(packet_provider_type func) {
         _pkt_providers.push_back(std::move(func));
     }
+    // patch by djp
+    // Add rte_packet provider registration.
+    void register_rte_packet_provider(rte_packet_provider_type func) {
+        _rte_pkt_providers.push_back(std::move(func));
+    }
     bool poll_tx();
     friend class device;
 
@@ -304,10 +309,11 @@ public:
     qp& queue_for_cpu(unsigned cpu) { return *_queues[cpu]; }
     qp& local_queue() { return queue_for_cpu(engine().cpu_id()); }
     void l2receive(packet p) { _queues[engine().cpu_id()]->_rx_stream.produce(std::move(p)); }
+    subscription<packet> receive(std::function<future<> (packet)> next_packet);
     // patch by djp
     // deliver rte_packet to upper_layer
     void l2receive_rte_packet(netstar::rte_packet p) {_queues[engine().cpu_id()]->_rte_pkt_rx_stream.produce(std::move(p));}
-    subscription<packet> receive(std::function<future<> (packet)> next_packet);
+    subscription<netstar::rte_packet> receive_rte_packet(std::function<future<> (netstar::rte_packet)> next_packet);
     virtual ethernet_address hw_address() = 0;
     virtual net::hw_features hw_features() = 0;
     virtual const rss_key_type& rss_key() const { return default_rsskey_40bytes; }

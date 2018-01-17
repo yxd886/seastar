@@ -249,6 +249,15 @@ device::receive(std::function<future<> (packet)> next_packet) {
     return sub;
 }
 
+// patch by djp
+// receive_rte_packet implementation
+subscription<netstar::rte_packet>
+device::receive_rte_packet(std::function<future<> (netstar::rte_packet)> next_packet) {
+    auto sub = _queues[engine().cpu_id()]->_rte_pkt_rx_stream.listen(std::move(next_packet));
+    _queues[engine().cpu_id()]->rx_start();
+    return sub;
+}
+
 void device::set_local_queue(std::unique_ptr<qp> dev) {
     assert(!_queues[engine().cpu_id()]);
     _queues[engine().cpu_id()] = dev.get();
