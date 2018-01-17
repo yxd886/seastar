@@ -44,6 +44,15 @@ class port_manager {
     std::vector<std::unique_ptr<seastar::net::device>> _devs;
     std::vector<uint16_t> _port_ids;
 
+    port_manager() {
+    }
+
+public:
+    static port_manager& get() {
+        static port_manager pm;
+        return pm;
+    }
+
 public:
     seastar::future<> add_port(boost::program_options::variables_map& opts,
                                uint16_t port_id,
