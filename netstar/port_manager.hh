@@ -85,9 +85,9 @@ public:
         auto& shard = _port_shard.back();
         auto dev  = _devs.back().get();
 
-        seastar::engine().at_exit([&shard] {
-            return shard.stop();
-        });
+        // seastar::engine().at_exit([&shard] {
+        //     return shard.stop();
+        // });
 
         return shard.start(opts, dev, port_id).then([dev]{
             return dev->link_ready();
