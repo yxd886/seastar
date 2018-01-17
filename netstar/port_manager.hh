@@ -84,6 +84,7 @@ public:
         }
 
         seastar::engine().at_exit([this, which_one] {
+           seastar::fprint(std::cout, "Stop the %dth port.\n", which_one);
            return _port_shard.at(which_one).stop();
         });
 
