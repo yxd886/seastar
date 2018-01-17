@@ -61,6 +61,7 @@ public:
                                uint16_t port_id,
                                port_type pt){
         assert(port_check(opts, port_id));
+        unsigned which_one = _port_shard.size();
 
         _port_shard.emplace_back();
         _port_types.push_back(pt);
@@ -82,14 +83,12 @@ public:
         }
         }
 
-        auto& shard = _port_shard.back();
-        auto dev  = _devs.back().get();
-
-        seastar::engine().at_exit([&shard] {
-           return shard.stop();
+        seastar::engine().at_exit([this, which_one] {
+           return _port_shard.at(which_one).stop();
         });
 
-        return shard.start(opts, dev, port_id).then([dev]{
+        auto dev  = _devs.back().get();
+        return _port_shard.at(which_one).start(opts, dev, port_id).then([dev]{
             return dev->link_ready();
         });
     }
