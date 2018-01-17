@@ -12,6 +12,13 @@
 
 namespace netstar{
 
+namespace fdir_device {
+
+template <bool HugetlbfsMemBackend>
+class dpdk_qp;
+
+} // fdir_device
+
 std::unique_ptr<seastar::net::device> create_fdir_device(
                                     uint8_t port_idx = 0,
                                     uint8_t num_queues = 4,
