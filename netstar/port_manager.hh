@@ -102,7 +102,7 @@ public:
         return _port_types.at(i);
     }
 
-    uint16_t dev_idx(unsigned i) {
+    uint16_t dpdk_dev_idx(unsigned i) {
         return _port_ids.at(i);
     }
 
