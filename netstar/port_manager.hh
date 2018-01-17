@@ -27,7 +27,6 @@ struct shard_container {
     }
 
     seastar::future<> stop() {
-        seastar::fprint(std::cout, "shared_container on core %d is stopped.\n", seastar::engine().cpu_id());
         return seastar::make_ready_future<>();
     }
 
@@ -85,7 +84,6 @@ public:
         }
 
         seastar::engine().at_exit([this, which_one] {
-           seastar::fprint(std::cout, "Stop the %dth port.\n", which_one);
            return _port_shard.at(which_one).stop();
         });
 
