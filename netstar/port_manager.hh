@@ -94,7 +94,7 @@ public:
         });
     }
 
-    port& port(unsigned i) {
+    netstar::port& port(unsigned i) {
         return _port_shard.at(i).local().get_contained();
     }
 
