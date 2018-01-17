@@ -5,6 +5,6 @@
 
 int main(){
     netstar::rte_packet pkt();
-    auto wtf = netstar::port_manager::get();
+    auto& wtf = netstar::port_manager::get();
     return 1;
 }
