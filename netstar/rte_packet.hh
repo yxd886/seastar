@@ -49,24 +49,28 @@ public:
    // Get a header pointer.
    template <typename Header>
    Header* get_header(size_t offset = 0) {
+       assert(_mbuf);
        assert(offset+sizeof(Header) <= rte_pktmbuf_pkt_len(_mbuf));
        return reinterpret_cast<Header*>(rte_pktmbuf_mtod_offset(_mbuf, void, offset));
    }
 
    // Trim some payload from front of the packet
    void trim_front(size_t how_much) {
+       assert(_mbuf);
        assert(how_much <= rte_pktmbuf_pkt_len(_mbuf));
        rte_pktmbuf_adj(_mbuf, how_much);
    }
 
    // Trim some payload from the back of the packet
    void trim_back(size_t how_much) {
+       assert(_mbuf);
        assert(how_much <= rte_pktmbuf_pkt_len(_mbuf));
        rte_pktmbuf_trim(_mbuf, how_much);
    }
 
    // Append some content to the back of the packet
    void append(size_t how_much) {
+       assert(_mbuf);
        assert(how_much <= rte_pktmbuf_tailroom(_mbuf));
        rte_pktmbuf_append(_mbuf, how_much);
    }
@@ -74,6 +78,7 @@ public:
    // Prepend a header to the front of the packet.
    template <typename Header>
    Header* prepend_header(size_t extra_size = 0) {
+       assert(_mbuf);
        assert(sizeof(Header)+extra_size <= rte_pktmbuf_headroom(_mbuf));
        auto h = rte_pktmbuf_prepend(_mbuf, sizeof(Header) + extra_size);
        return new (h) Header{};
@@ -81,6 +86,7 @@ public:
 
    // Obtain the length of the packet.
    unsigned len() const {
+       assert(_mbuf);
        return rte_pktmbuf_pkt_len(_mbuf);
    }
 
