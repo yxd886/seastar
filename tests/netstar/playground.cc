@@ -44,7 +44,6 @@ int main(int ac, char** av) {
             return port_manager::get().add_port(opts, 1, port_type::fdir);
         }).then([]{
             printf("All the devices are successfully created\n");
-            engine().exit(0);
         });
     });
 }
