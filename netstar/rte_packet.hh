@@ -129,6 +129,9 @@ public:
    }
 
 public:
+   friend class fdir_device::dpdk_qp<true>;
+   friend class fdir_device::dpdk_qp<false>;
+
    // Explicitly invalidate _mbuf and return the original
    // _mbuf.
    // Be extra careful!! This is used internally by different
