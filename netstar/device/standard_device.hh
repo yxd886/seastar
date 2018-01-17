@@ -12,12 +12,12 @@
 
 namespace netstar{
 
-namespace standard_device {
+/*namespace standard_device {
 
 template <bool HugetlbfsMemBackend>
 class dpdk_qp;
 
-} // namespace standard_device
+}*/ // namespace standard_device
 
 std::unique_ptr<seastar::net::device> create_standard_device(
                                     uint8_t port_idx = 0,
