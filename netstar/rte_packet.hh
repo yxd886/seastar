@@ -12,7 +12,14 @@ namespace fdir_device {
 template <bool HugetlbfsMemBackend>
 class dpdk_qp;
 
-}
+} // namespace fdir_device
+
+namespace standard_device {
+
+template <bool HugetlbfsMemBackend>
+class dpdk_qp;
+
+} // namespace standard_device
 
 class rte_packet {
 #ifdef HAVE_DPDK
@@ -131,6 +138,8 @@ public:
 public:
    friend class fdir_device::dpdk_qp<true>;
    friend class fdir_device::dpdk_qp<false>;
+   friend class standard_device::dpdk_qp<true>;
+   friend class standard_device::dpdk_qp<false>;
 
    // Explicitly invalidate _mbuf and return the original
    // _mbuf.
