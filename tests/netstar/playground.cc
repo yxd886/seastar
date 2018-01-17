@@ -5,6 +5,7 @@
 
 class wtf {
     int _i;
+public:
     explicit wtf(int i) : _i(i) {}
 };
 
