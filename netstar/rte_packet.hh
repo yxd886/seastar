@@ -7,6 +7,10 @@
 
 namespace netstar{
 
+namespace fdir_device {
+
+}
+
 class rte_packet {
 #ifdef HAVE_DPDK
 
