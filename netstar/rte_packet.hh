@@ -9,6 +9,9 @@ namespace netstar{
 
 namespace fdir_device {
 
+template <bool HugetlbfsMemBackend>
+class dpdk_qp;
+
 }
 
 class rte_packet {
