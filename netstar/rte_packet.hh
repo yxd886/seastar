@@ -135,7 +135,7 @@ public:
        }
    }
 
-public:
+private:
    friend class fdir_device::dpdk_qp<true>;
    friend class fdir_device::dpdk_qp<false>;
    friend class standard_device::dpdk_qp<true>;
