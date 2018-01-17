@@ -37,7 +37,7 @@ struct shard_container {
 
 } // namespace internal
 
-enum class port_type{
+enum class port_type {
     standard,
     fdir
 };
@@ -98,7 +98,7 @@ public:
         return _port_shard.at(i).local().get_contained();
     }
 
-    port_type port_type(unsigned i) {
+    port_type type(unsigned i) {
         return _port_types.at(i);
     }
 
