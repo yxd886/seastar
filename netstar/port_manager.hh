@@ -29,6 +29,10 @@ struct shard_container {
     seastar::future<> stop() {
         return seastar::make_ready_future<>();
     }
+
+    T& get_contained() {
+        return *t;
+    }
 };
 
 } // namespace internal
@@ -53,7 +57,6 @@ public:
         return pm;
     }
 
-public:
     seastar::future<> add_port(boost::program_options::variables_map& opts,
                                uint16_t port_id,
                                port_type pt){
@@ -91,8 +94,23 @@ public:
         });
     }
 
-private:
+    port& port(unsigned i) {
+        return _port_shard.at(i).local().get_contained();
+    }
 
+    port_type port_type(unsigned i) {
+        return _port_types.at(i);
+    }
+
+    uint16_t port_dpdk_dev_index(unsigned i) {
+        return _port_ids.at(i);
+    }
+
+    unsigned num_ports() {
+        return _port_shard.size();
+    }
+
+private:
     bool port_check(boost::program_options::variables_map& opts, uint16_t port_id){
         if(opts.count("network-stack") &&
            opts["network-stack"].as<std::string>() == "native"){
