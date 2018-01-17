@@ -3,8 +3,6 @@
 
 #include "net/packet.hh"
 
-#include "netstar/device/fdir_device.hh"
-
 #include <rte_mbuf.h>
 
 namespace netstar{
