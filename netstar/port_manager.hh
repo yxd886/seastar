@@ -27,6 +27,7 @@ struct shard_container {
     }
 
     seastar::future<> stop() {
+        seastar::fprint(std::cout, "shared_container on core %d is stopped.\n", seastar::engine().cpu_id());
         return seastar::make_ready_future<>();
     }
 
