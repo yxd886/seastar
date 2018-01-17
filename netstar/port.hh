@@ -79,6 +79,11 @@ public:
         });
     }
 
+    port(port&& other) = delete;
+    port(const port& other) = delete;
+    port& operator=(const port& other) = delete;
+    port& operator=(const port&& other) = delete;
+
 public:
     inline void send_seastar_packet(seastar::net::packet p) {
         _seastar_packet_sendq.push_back(std::move(p));
