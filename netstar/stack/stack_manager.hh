@@ -15,6 +15,7 @@ class stack_manager {
     std::vector<seastar::distributed<internal::multi_stack>> _stacks;
     std::vector<std::string> _ipv4_addrs;
 
+public:
     seastar::future<> add_stack(unsigned port_id, std::string ipv4_addr,
                    std::string gw_addr, std::string netmask) {
         assert(stack_check(port_id, ipv4_addr));
@@ -25,9 +26,30 @@ class stack_manager {
         _dummy_devices.push_back(std::make_shared<internal::dummy_device>(port_manager::get().dev(port_id)));
         _stacks.emplace_back();
 
+        seastar::engine().at_exit([this, which_one] {
+           return _stacks.at(which_one).stop();
+        });
+
         auto sptr = _dummy_devices.at(which_one);
         return _stacks.at(which_one).start(sptr, &(port_manager::get().pOrt(port_id)),
                                            ipv4_addr, gw_addr, netmask);
+    }
+
+    static stack_manager& get() {
+        static stack_manager sm;
+        return sm;
+    }
+
+    unsigned port_id(unsigned stack_id) {
+        return _port_ids.at(stack_id);
+    }
+
+    std::string ipv4_addr(unsigned stack_id) {
+        return _ipv4_addrs.at(stack_id);
+    }
+
+    seastar::net::network_stack& stack(unsigned stack_id) {
+        return *(_stacks.at(stack_id).local().get_stack());
     }
 
 private:
