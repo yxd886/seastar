@@ -23,6 +23,8 @@
 #include "core/app-template.hh"
 #include "netstar/port_manager.hh"
 
+#include "netstar/stack/dummy_device.hh"
+
 using namespace seastar;
 using namespace netstar;
 
