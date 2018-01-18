@@ -96,8 +96,12 @@ public:
         return _stack_ptr.get();
     }
 
-    void put_arp_for(std::shared_ptr<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>> vec) {
+    void retrieve_arp_for(std::shared_ptr<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>> vec) {
         vec->at(seastar::engine().cpu_id()) = &(_stack_ptr->get_inet().get_arp_for());
+    }
+
+    void set_arp_for(std::shared_ptr<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>> vec){
+        _stack_ptr->get_inet().get_arp_for().set_other_arp_fors(*vec);
     }
 };
 

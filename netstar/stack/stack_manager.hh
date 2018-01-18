@@ -35,7 +35,9 @@ public:
 
         return _stacks.at(which_one).start(sptr, &(port_manager::get().pOrt(port_id)),
                                            ipv4_addr, gw_addr, netmask).then([vec, this, which_one]{
-            // _stacks.at(which_one).
+            return _stacks.at(which_one).invoke_on_all(&internal::multi_stack::retrieve_arp_for, vec);
+        }).then([vec, this, which_one]{
+            return _stacks.at(which_one).invoke_on_all(&internal::multi_stack::set_arp_for, vec);
         });
     }
 
