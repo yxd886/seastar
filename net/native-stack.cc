@@ -97,7 +97,9 @@ void create_native_net_device(boost::program_options::variables_map opts) {
 }
 
 // native_network_stack
-class native_network_stack : public network_stack {
+// patch by djp
+// Move this to header file.
+/*class native_network_stack : public network_stack {
 public:
     static thread_local promise<std::unique_ptr<network_stack>> ready_promise;
 private:
@@ -136,7 +138,7 @@ public:
                          std::string ipv4_addr,
                          std::string gw_addr="192.168.122.1",
                          std::string netmask="255.255.255.0");
-};
+};*/
 
 thread_local promise<std::unique_ptr<network_stack>> native_network_stack::ready_promise;
 

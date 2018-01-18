@@ -25,13 +25,58 @@
 #include "net/net.hh"
 #include <boost/program_options.hpp>
 
+// patch by djp
+// Add header files.
+#include "net/ip.hh"
+#include "net/dhcp.hh"
+#include "native-stack-impl.hh"
+
 namespace seastar {
 
 namespace net {
 
 // patch by djp
 // Expose native_network_stack
-class native_network_stack;
+class native_network_stack : public network_stack {
+public:
+    static thread_local promise<std::unique_ptr<network_stack>> ready_promise;
+private:
+    interface _netif;
+    ipv4 _inet;
+    bool _dhcp = false;
+    promise<> _config;
+    timer<> _timer;
+
+    future<> run_dhcp(bool is_renew = false, const dhcp::lease & res = dhcp::lease());
+    void on_dhcp(bool, const dhcp::lease &, bool);
+    void set_ipv4_packet_filter(ip_packet_filter* filter) {
+        _inet.set_packet_filter(filter);
+    }
+    using tcp4 = tcp<ipv4_traits>;
+public:
+    explicit native_network_stack(boost::program_options::variables_map opts, std::shared_ptr<device> dev);
+    virtual server_socket listen(socket_address sa, listen_options opt) override;
+    virtual ::seastar::socket socket() override;
+    virtual udp_channel make_udp_channel(ipv4_addr addr) override;
+    virtual future<> initialize() override;
+    static future<std::unique_ptr<network_stack>> create(boost::program_options::variables_map opts) {
+        if (engine().cpu_id() == 0) {
+            create_native_net_device(opts);
+        }
+        return ready_promise.get_future();
+    }
+    virtual bool has_per_core_namespace() override { return true; };
+    void arp_learn(ethernet_address l2, ipv4_address l3) {
+        _inet.learn(l2, l3);
+    }
+    friend class native_server_socket_impl<tcp4>;
+    // patch by djp
+    // Add another constructor.
+    native_network_stack(std::shared_ptr<device> dev,
+                         std::string ipv4_addr,
+                         std::string gw_addr="192.168.122.1",
+                         std::string netmask="255.255.255.0");
+};
 
 void create_native_stack(boost::program_options::variables_map opts, std::shared_ptr<device> dev);
 
