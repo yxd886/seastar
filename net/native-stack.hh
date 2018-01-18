@@ -67,7 +67,7 @@ public:
         }
         return ready_promise.get_future();
     }*/
-    static future<std::unique_ptr<network_stack>> create(boost::program_options::variables_map opts)
+    static future<std::unique_ptr<network_stack>> create(boost::program_options::variables_map opts);
     virtual bool has_per_core_namespace() override { return true; };
     void arp_learn(ethernet_address l2, ipv4_address l3) {
         _inet.learn(l2, l3);
