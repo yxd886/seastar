@@ -59,12 +59,15 @@ public:
     virtual ::seastar::socket socket() override;
     virtual udp_channel make_udp_channel(ipv4_addr addr) override;
     virtual future<> initialize() override;
-    static future<std::unique_ptr<network_stack>> create(boost::program_options::variables_map opts) {
+    // by djp
+    // Move the implementation to .cc file.
+    /*static future<std::unique_ptr<network_stack>> create(boost::program_options::variables_map opts) {
         if (engine().cpu_id() == 0) {
             create_native_net_device(opts);
         }
         return ready_promise.get_future();
-    }
+    }*/
+    static future<std::unique_ptr<network_stack>> create(boost::program_options::variables_map opts)
     virtual bool has_per_core_namespace() override { return true; };
     void arp_learn(ethernet_address l2, ipv4_address l3) {
         _inet.learn(l2, l3);

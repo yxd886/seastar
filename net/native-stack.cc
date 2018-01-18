@@ -140,6 +140,15 @@ public:
                          std::string netmask="255.255.255.0");
 };*/
 
+// patch by djp
+// Move the static function here.
+future<std::unique_ptr<network_stack>> native_network_stack::create(boost::program_options::variables_map opts) {
+    if (engine().cpu_id() == 0) {
+        create_native_net_device(opts);
+    }
+    return ready_promise.get_future();
+}
+
 thread_local promise<std::unique_ptr<network_stack>> native_network_stack::ready_promise;
 
 udp_channel
