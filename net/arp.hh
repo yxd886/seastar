@@ -205,7 +205,7 @@ public:
         }
     }
     friend class arp;
-    // patch by
+    // patch by djp
     // Add a way to hijack ARP
 private:
     std::vector<arp_for<L3>*> _other_arp_fors;

@@ -73,12 +73,17 @@ public:
         _inet.learn(l2, l3);
     }
     friend class native_server_socket_impl<tcp4>;
-    // patch by djp
+    // by djp
     // Add another constructor.
     native_network_stack(std::shared_ptr<device> dev,
                          std::string ipv4_addr,
                          std::string gw_addr="192.168.122.1",
                          std::string netmask="255.255.255.0");
+    // by djp
+    // expose ipv4
+    ipv4& get_inet() {
+        return std::ref(_inet);
+    }
 };
 
 void create_native_stack(boost::program_options::variables_map opts, std::shared_ptr<device> dev);
