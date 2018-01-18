@@ -23,7 +23,7 @@
 #include "core/app-template.hh"
 #include "netstar/port_manager.hh"
 
-// #include "netstar/stack/stack_manager.hh"
+#include "netstar/stack/stack_manager.hh"
 
 using namespace seastar;
 using namespace netstar;
