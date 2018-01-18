@@ -62,7 +62,7 @@ public:
     virtual std::unique_ptr<seastar::net::qp>
     init_local_queue(boost::program_options::variables_map opts, uint16_t qid) override {
         abort();
-        return std::make_unique<dummy_qp>(nullptr);
+        return std::make_unique<dummy_qp>(nullptr, 0);
     }
 
     virtual unsigned hash2qid(uint32_t hash) override {
