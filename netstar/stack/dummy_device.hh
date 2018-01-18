@@ -2,6 +2,7 @@
 #define _DUMMY_DEVICE_HH
 
 #include "net/net.hh"
+#include "net/native-stack.hh"
 
 #include "core/future.hh"
 
@@ -72,6 +73,19 @@ public:
     }
 };
 
+class multi_stack {
+    dummy_qp _qp;
+    std::unique_ptr<seastar::net::native_network_stack> _stack_ptr;
+
+public:
+    explicit multi_stack(std::shared_ptr<seastar::net::device> dummy_dev, port* p,
+                         std::string ipv4_addr, std::string gw_addr, std::string netmask)
+        : _qp(p) {
+        dummy_dev->update_local_queue(&_qp);
+        _stack_ptr = std::make_unique<seastar::net::native_network_stack>(
+                std::move(dummy_dev), ipv4_addr, gw_addr, netmask);
+    }
+};
 
 } // namespace internal
 
