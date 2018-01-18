@@ -32,7 +32,6 @@ class stack_manager {
 
 private:
     bool stack_check(unsigned port_id, std::string ipv4_addr) {
-        bool ret_val = true;
         for(auto id : _port_ids) {
             if (id == port_id) {
                 seastar::fprint(std::cout, "stack_manager ERROR: Duplicated port ID %d.\n", port_id);
