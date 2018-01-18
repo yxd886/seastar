@@ -42,6 +42,8 @@ enum class port_type {
     fdir
 };
 
+class stack_manager;
+
 class port_manager {
     std::vector<seastar::distributed<internal::shard_container<port>>> _port_shard;
     std::vector<port_type> _port_types;
@@ -122,6 +124,10 @@ private:
             }
         }
         return true;
+    }
+    friend class stack_manager;
+    seastar::net::device* dev(unsigned id) {
+        return _devs.at(id).get();
     }
 };
 
