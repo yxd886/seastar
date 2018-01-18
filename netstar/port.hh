@@ -37,7 +37,7 @@ struct qp_wrapper{
 } // namespace internal
 
 class port {
-    uint16_t _port_id;
+    uint16_t _port_id; // This is actually dpdk device id.
     internal::qp_wrapper _qp_wrapper;
     bool _receive_configured;
     seastar::circular_buffer<rte_packet> _rte_packet_sendq;
@@ -129,6 +129,10 @@ public:
 
     uint64_t tx_pkts() {
         return _qp_wrapper.qp->tx_pkts();
+    }
+
+    uint16_t get_dev_id() {
+        return _port_id;
     }
 };
 

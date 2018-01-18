@@ -17,8 +17,9 @@ private:
     port& _port;
 
 public:
-    explicit dummy_qp(port* pt)
-        : _port(*pt){}
+    explicit dummy_qp(port* pt, unsigned qid)
+        : seastar::net::qp(false, std::string("dummynet_dev_")+std::to_string(pt->get_dev_id()), qid)
+        , _port(*pt){}
 
     virtual seastar::future<> send(seastar::net::packet p) override {
         abort();
@@ -80,7 +81,7 @@ class multi_stack {
 public:
     explicit multi_stack(std::shared_ptr<seastar::net::device> dummy_dev, port* p,
                          std::string ipv4_addr, std::string gw_addr, std::string netmask)
-        : _qp(p) {
+        : _qp(p, seastar::engine().cpu_id()) {
         dummy_dev->update_local_queue(&_qp);
         _stack_ptr = std::make_unique<seastar::net::native_network_stack>(
                 std::move(dummy_dev), ipv4_addr, gw_addr, netmask);
