@@ -130,6 +130,12 @@ public:
         _inet.learn(l2, l3);
     }
     friend class native_server_socket_impl<tcp4>;
+    // patch by djp
+    // Add another constructor.
+    native_network_stack(std::shared_ptr<device> dev,
+                         std::string ipv4_addr,
+                         std::string gw_addr="192.168.122.1",
+                         std::string netmask="255.255.255.0");
 };
 
 thread_local promise<std::unique_ptr<network_stack>> native_network_stack::ready_promise;
@@ -159,6 +165,21 @@ native_network_stack::native_network_stack(boost::program_options::variables_map
         _inet.set_gw_address(ipv4_address(opts["gw-ipv4-addr"].as<std::string>()));
         _inet.set_netmask_address(ipv4_address(opts["netmask-ipv4-addr"].as<std::string>()));
     }
+}
+
+// patch by djp
+// Definition of the new constructor
+native_network_stack::native_network_stack(std::shared_ptr<device> dev,
+                                           std::string ipv4_addr,
+                                           std::string gw_addr,
+                                           std::string netmask)
+    : _netif(std::move(dev))
+    , _inet(&_netif) {
+    _inet.get_udp().set_queue_size(ipv4_udp::default_queue_size);
+    _dhcp = false;
+    _inet.set_host_address(ipv4_address(ipv4_addr));
+    _inet.set_gw_address(ipv4_address(gw_addr));
+    _inet.set_netmask_address(ipv4_address(netmask));
 }
 
 server_socket

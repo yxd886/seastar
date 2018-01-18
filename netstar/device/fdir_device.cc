@@ -160,7 +160,7 @@ uint32_t qp_mempool_obj_size(bool hugetlbfs_membackend)
     return mp_size;
 }
 
-static constexpr const char* pktmbuf_pool_name   = "fdpdk_pktmbuf_pool"; // standard_device_pktmbuf_pool
+static constexpr const char* pktmbuf_pool_name   = "fdir_pktmbuf_pool";
 
 /*
  * When doing reads from the NIC queues, use this batch size

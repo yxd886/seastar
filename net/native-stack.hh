@@ -29,6 +29,10 @@ namespace seastar {
 
 namespace net {
 
+// patch by djp
+// Expose native_network_stack
+class native_network_stack;
+
 void create_native_stack(boost::program_options::variables_map opts, std::shared_ptr<device> dev);
 
 }
