@@ -37,7 +37,9 @@ int main(int ac, char** av) {
         return port_manager::get().add_port(opts, 0, port_type::standard).then([&opts]{
             return port_manager::get().add_port(opts, 1, port_type::fdir);
         }).then([]{
-            printf("All the devices are successfully created\n");
+            return stack_manager::get().add_stack(0, "10.28.1.2", "10.28.1.1", "255.255.255.0");
+        }).then([]{
+            return stack_manager::get().add_stack(1, "10.28.1.3", "10.28,1.1", "255.255.255.0");
         });
     });
 }
