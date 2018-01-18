@@ -95,6 +95,10 @@ public:
     seastar::net::network_stack* get_stack() {
         return _stack_ptr.get();
     }
+
+    void put_arp_for(std::shared_ptr<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>> vec) {
+        vec->at(seastar::engine().cpu_id()) = &(_stack_ptr->get_inet().get_arp_for());
+    }
 };
 
 } // namespace internal

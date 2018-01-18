@@ -31,8 +31,12 @@ public:
         });
 
         auto sptr = _dummy_devices.at(which_one);
+        auto vec = std::make_shared<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>>(seastar::smp::count);
+
         return _stacks.at(which_one).start(sptr, &(port_manager::get().pOrt(port_id)),
-                                           ipv4_addr, gw_addr, netmask);
+                                           ipv4_addr, gw_addr, netmask).then([vec, this, which_one]{
+            // _stacks.at(which_one).
+        });
     }
 
     static stack_manager& get() {
