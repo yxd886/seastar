@@ -86,7 +86,7 @@ public:
     seastar::future<> invoke_on_all(unsigned hook_point_id, void (hook::*func)(Args...), Args... args) {
         return seastar::parallel_for_each(boost::irange<unsigned>(0, _hooks.at(hook_point_id).size()),
                 [hook_point_id, this, func, args...] (unsigned c) {
-            return seastar::smp::submit_to(c, [hook_point_id, this, func, args...] {
+            return seastar::smp::submit_to(c, [c, hook_point_id, this, func, args...] {
                 auto inst = _hooks.at(hook_point_id).at(c);
                 ((*inst).*func)(args...);
             });
