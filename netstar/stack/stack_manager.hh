@@ -33,6 +33,9 @@ public:
         return stack_shard_sptr->start(sptr, &(port_manager::get().pOrt(port_id)),
                                        ipv4_addr, gw_addr, netmask).then([stack_shard_sptr]{
             seastar::fprint(std::cout, "stack creation succeed.\n");
+            return stack_shard_sptr->stop();
+        }).then([stack_shard_sptr]{
+            seastar::fprint(std::cout, "stack stop succeed.\n");
         });
     }
 
