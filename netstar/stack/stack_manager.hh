@@ -53,7 +53,7 @@ public:
     }
 
     seastar::net::network_stack& stack(unsigned stack_id) {
-        return *(_stacks.at(stack_id).at(seastar::engine().cpu_id()));
+        return *((_stacks.at(stack_id).at(seastar::engine().cpu_id()))->get_stack());
     }
 
 private:
