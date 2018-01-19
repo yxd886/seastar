@@ -22,7 +22,6 @@ enum class port_type {
 class stack_manager;
 
 class port_manager {
-    std::vector<seastar::distributed<internal::shard_container<port>>> _port_shard;
     std::vector<port_type> _port_types;
     std::vector<std::unique_ptr<seastar::net::device>> _devs;
     std::vector<uint16_t> _port_ids;
@@ -41,9 +40,8 @@ public:
                                uint16_t port_id,
                                port_type pt){
         assert(port_check(opts, port_id));
-        unsigned which_one = _port_shard.size();
+        unsigned which_one = _ports.size();
 
-        _port_shard.emplace_back();
         _port_types.push_back(pt);
         _port_ids.push_back(port_id);
         _ports.push_back(std::vector<port*>(seastar::smp::count, nullptr));
@@ -64,21 +62,21 @@ public:
         }
         }
 
-        seastar::engine().at_exit([this, which_one] {
-           return _port_shard.at(which_one).stop();
-        });
-
         auto dev  = _devs.back().get();
-        return _port_shard.at(which_one).start(opts, dev, port_id).then([dev]{
+        auto shard_sptr = std::make_shared<seastar::distributed<internal::shard_container<port>>>();
+        return shard_sptr->start(opts, dev, port_id).then([dev]{
             return dev->link_ready();
-        }).then([this, which_one]{
-             return _port_shard.at(which_one).invoke_on_all(&internal::shard_container<port>::save_container_ptr,
-                                                            &(_ports.at(which_one)));
+        }).then([this, which_one, shard_sptr]{
+             return shard_sptr->invoke_on_all(&internal::shard_container<port>::save_container_ptr,
+                                              &(_ports.at(which_one)));
+        }).then([this, shard_sptr]{
+            return shard_sptr->stop();
+        }).then([shard_sptr]{
         });
     }
 
     port& pOrt(unsigned i) {
-        return _port_shard.at(i).local().get_contained();
+        return _ports.at(i).at(seastar::engine().cpu_id());
     }
 
     port_type type(unsigned i) {
@@ -90,7 +88,7 @@ public:
     }
 
     unsigned num_ports() {
-        return _port_shard.size();
+        return _ports.size();
     }
 
 private:
