@@ -12,7 +12,7 @@ class dummy_hook : public hook {
 
 public:
     dummy_hook(unsigned port_id)
-        : hook(&(port_manager::get().pOrt(port_id)))
+        : hook(std::ref(port_manager::get().pOrt(port_id)))
         , _target_port(nullptr){
 
         // override the recv_func

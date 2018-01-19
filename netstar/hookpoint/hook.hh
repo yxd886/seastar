@@ -12,17 +12,17 @@ enum class hook_type {
 
 class hook {
 protected:
-    port* _p;
+    port& _p;
     std::function<seastar::future<> (rte_packet)> _recv_func;
     std::experimental::optional<seastar::subscription<rte_packet>> _sub;
 
     void start_receving() {
         // Move or copy?
-        _sub.emplace(_p->receive(_recv_func));
+        _sub.emplace(_p.receive(_recv_func));
     }
 
 public:
-    explicit hook(port* p)
+    explicit hook(port& p)
         : _p(p)
         , _recv_func([](rte_packet p){return seastar::make_ready_future<>();}) {
         seastar::fprint(std::cout, "hook point is created on core %d.\n", seastar::engine().cpu_id());
