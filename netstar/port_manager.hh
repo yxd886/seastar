@@ -97,11 +97,13 @@ private:
     bool port_check(boost::program_options::variables_map& opts, uint16_t port_id){
         if(opts.count("network-stack") &&
            opts["network-stack"].as<std::string>() == "native"){
+            seastar::fprint(std::cout, "port_manager ERROR: Can not use the device that the native stack is using.\n");
             return false;
         }
 
         for(auto id : _port_ids){
             if(id == port_id){
+                seastar::fprint(std::cout, "port_manager ERROR: DPDK device with index %d has already been used.\n", port_id);
                 return false;
             }
         }
