@@ -41,7 +41,6 @@ template<typename T>
 struct shard_container_trait {
     using shard_t = seastar::distributed<internal::shard_container<T>>;
     using instance_t = internal::shard_container<T>;
-    using obj_ptr_t = T*;
 };
 
 } // namespace netstar
