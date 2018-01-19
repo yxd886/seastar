@@ -31,7 +31,10 @@ public:
 
         auto stack_shard_sptr = std::make_shared<stack_shard::shard_t>();
         return stack_shard_sptr->start(sptr, &(port_manager::get().pOrt(port_id)),
-                                       ipv4_addr, gw_addr, netmask).then([stack_shard_sptr]{
+                                       ipv4_addr, gw_addr, netmask).then([stack_shard_sptr, which_one, this]{
+            stack_shard_sptr->invoke_on_all(&stack_shard::instance_t::save_container_ptr,
+                                            &_stacks.at(which_one));
+        }).then([stack_shard_sptr]{
             seastar::fprint(std::cout, "stack creation succeed.\n");
             return stack_shard_sptr->stop();
         }).then([stack_shard_sptr]{
