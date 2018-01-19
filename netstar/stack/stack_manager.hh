@@ -24,11 +24,11 @@ public:
         unsigned which_one = _stacks.size();
 
         _port_ids.push_back(port_id);
-        _ipv4_addrs.push_back(ipv4_addr);
         _dummy_devices.push_back(std::make_shared<internal::dummy_device>(port_manager::get().dev(port_id)));
-        _stacks.emplace_back();
-        auto sptr = _dummy_devices.at(which_one);
+        _stacks.push_back(std::vector<internal::multi_stack*>(seastar::smp::count, nullptr));
+        _ipv4_addrs.push_back(ipv4_addr);
 
+        auto sptr = _dummy_devices.at(which_one);
         auto stack_shard_sptr = std::make_shared<stack_shard::shard_t>();
         return stack_shard_sptr->start(sptr, &(port_manager::get().pOrt(port_id)),
                                        ipv4_addr, gw_addr, netmask).then([stack_shard_sptr, which_one, this]{
