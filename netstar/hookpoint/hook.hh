@@ -34,6 +34,10 @@ public:
     virtual bool check_and_start() = 0;
 };
 
+class hook_manager {
+
+};
+
 }
 
 #endif
