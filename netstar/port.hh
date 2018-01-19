@@ -42,7 +42,6 @@ class port {
     bool _receive_configured;
     seastar::circular_buffer<rte_packet> _rte_packet_sendq;
     seastar::circular_buffer<seastar::net::packet> _seastar_packet_sendq;
-    std::experimental::optional<seastar::subscription<rte_packet>> _sub;
 
 public:
     explicit port(boost::program_options::variables_map opts,
