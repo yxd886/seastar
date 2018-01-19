@@ -16,7 +16,7 @@ public:
         , _target_port(nullptr){
 
         // override the recv_func
-        _recv_func = [](rte_packet p){
+        _recv_func = [this](rte_packet p){
           // Direct resend
           _target_port->send_rte_packet(std::move(p));
           return seastar::make_ready_future<>();
