@@ -76,7 +76,7 @@ public:
     }
 
     port& pOrt(unsigned i) {
-        return _ports.at(i).at(seastar::engine().cpu_id());
+        return *(_ports.at(i).at(seastar::engine().cpu_id()));
     }
 
     port_type type(unsigned i) {
