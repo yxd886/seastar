@@ -42,6 +42,12 @@ class hook_manager {
     std::vector<seastar::promise<>> _prs;
     std::vector<unsigned> _port_ids;
 
+    struct hook_config {
+        hook* h;
+        hook_config(hook* ho)
+            :h(ho){}
+    };
+
 public:
     seastar::future<> add_hook_point(hook_type type, unsigned port_id) {
         assert(hook_point_check(port_id));
