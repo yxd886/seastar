@@ -72,6 +72,7 @@ public:
         }).then([this, shard_sptr]{
             return shard_sptr->stop();
         }).then([shard_sptr]{
+            seastar::fprint(std::cout, "wtf?\n");
         });
     }
 
