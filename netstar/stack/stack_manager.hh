@@ -28,15 +28,16 @@ public:
 
         auto sptr = _dummy_devices.at(which_one);
         // auto vec = std::make_shared<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>>(seastar::smp::count);
+
         auto shard_sptr = std::make_shared<seastar::distributed<internal::shard_container<internal::multi_stack>>>();
-        return shard_sptr->start(sptr, &(port_manager::get().pOrt(port_id)),
-                                 ipv4_addr, gw_addr, netmask).then([this, which_one, shard_sptr]{
+
+        return shard_sptr->start(sptr, &(port_manager::get().pOrt(port_id)), ipv4_addr, gw_addr, netmask).then([this, which_one, shard_sptr]{
             return shard_sptr->invoke_on_all(&internal::shard_container<internal::multi_stack>::save_container_ptr,
                                              &_stacks.at(which_one));
         }).then([shard_sptr]{
             return shard_sptr->stop();
         }).then([shard_sptr]{
-
+            seastar::fprint(std::cout,"here!.\n");
         });
     }
 
