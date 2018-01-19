@@ -48,8 +48,10 @@ int main(int ac, char** av) {
             return hook_manager::get().add_hook_point(hook_type::dummy, 1);
         }).then([]{
             fprint(std::cout, "hook point 1 ok.\n");
-            unsigned target_id = 1;
-            return hook_manager::get().invoke_on_all(0, &hook::update_target_port, target_id);
+            return hook_manager::get().invoke_on_all(0, &hook::update_target_port, unsigned(1));
+        }).then([]{
+            fprint(std::cout, "hook point 0's target set to 1 ok.\n");
+            return hook_manager::get().invoke_on_all(1, &hook::update_target_port, unsigned(0));
         });
     });
 }
