@@ -27,8 +27,7 @@ class port_manager {
     std::vector<uint16_t> _port_ids;
     std::vector<std::vector<port*>> _ports;
 
-    port_manager() {
-    }
+    port_manager() {}
 
     using port_shard = shard_container_trait<port>;
 
