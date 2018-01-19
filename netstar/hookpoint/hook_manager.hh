@@ -11,14 +11,16 @@ template<typename T>
 struct hook_point_launcher {
     static_assert(std::is_base_of<hook, T>::value, "The type parameter is not derived from hook.\n");
     using hook_shard = shard_container_trait<T>;
+    using shard_t = typename hook_shard::shard_t;
+    using instance_t = typename hook_shard::instance_t;
 
     template <typename... Args>
     static seastar::future<std::vector<hook*>> launch(Args&&... args) {
         auto vec = std::make_shared<std::vector<T*>>(seastar::smp::count, nullptr);
-        auto shard_sptr = std::make_shared<hook_shard::shard_t>();
+        auto shard_sptr = std::make_shared<shard_t>();
 
         return shard_sptr->start(std::forward<Args>(args)...).then([shard_sptr, vec]{
-            return shard_sptr->invoke_on_all(&hook_shard::instance_t::save_container_ptr,
+            return shard_sptr->invoke_on_all(&instance_t::save_container_ptr,
                                              vec.get());
         }).then([shard_sptr]{
             return shard_sptr->stop();
