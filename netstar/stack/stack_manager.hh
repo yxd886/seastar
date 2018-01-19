@@ -36,6 +36,7 @@ public:
         }).then([shard_sptr]{
             return shard_sptr->stop();
         }).then([shard_sptr]{
+
         });
     }
 
