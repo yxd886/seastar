@@ -73,7 +73,6 @@ public:
         }).then([this, port_shard_sptr]{
             return port_shard_sptr->stop();
         }).then([port_shard_sptr]{
-            seastar::fprint(std::cout, "wtf?\n");
         });
     }
 
