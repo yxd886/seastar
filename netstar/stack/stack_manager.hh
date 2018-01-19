@@ -21,14 +21,19 @@ public:
     seastar::future<> add_stack(unsigned port_id, std::string ipv4_addr,
                    std::string gw_addr, std::string netmask) {
         assert(stack_check(port_id, ipv4_addr));
-        // unsigned which_one = _stacks.size();
+        unsigned which_one = _stacks.size();
 
         _port_ids.push_back(port_id);
         _ipv4_addrs.push_back(ipv4_addr);
         _dummy_devices.push_back(std::make_shared<internal::dummy_device>(port_manager::get().dev(port_id)));
         _stacks.emplace_back();
+        auto sptr = _dummy_devices.at(which_one);
 
-       return seastar::make_ready_future<>();
+        auto stack_shard_sptr = std::make_shared<stack_shard::shard_t>();
+        return stack_shard_sptr->start(sptr, &(port_manager::get().pOrt(port_id)),
+                                       ipv4_addr, gw_addr, netmask).then([stack_shard_sptr]{
+            seastar::fprint(std::cout, "stack creation succeed.\n");
+        });
     }
 
     static stack_manager& get() {
