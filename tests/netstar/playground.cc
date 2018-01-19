@@ -55,6 +55,8 @@ int main(int ac, char** av) {
         }).then([]{
             fprint(std::cout, "hook point 1's target set to 0 ok.\n");
             return hook_manager::get().invoke_on_all(0, &hook::check_and_start);
+        }).then([]{
+            return hook_manager::get().invoke_on_all(1, &hook::check_and_start);
         });
     });
 }
