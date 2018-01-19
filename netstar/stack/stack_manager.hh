@@ -35,6 +35,7 @@ public:
             return shard_sptr->invoke_on_all(&internal::shard_container<internal::multi_stack>::save_container_ptr,
                                              &_stacks.at(which_one));
         }).then([shard_sptr]{
+            seastar::fprint(std::cout,"here!!.\n");
             return shard_sptr->stop();
         }).then([shard_sptr]{
             seastar::fprint(std::cout,"here!.\n");
