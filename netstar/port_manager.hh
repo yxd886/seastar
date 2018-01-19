@@ -26,6 +26,7 @@ class port_manager {
     std::vector<port_type> _port_types;
     std::vector<std::unique_ptr<seastar::net::device>> _devs;
     std::vector<uint16_t> _port_ids;
+    std::vector<std::vector<port*>> _ports;
 
     port_manager() {
     }
@@ -45,6 +46,7 @@ public:
         _port_shard.emplace_back();
         _port_types.push_back(pt);
         _port_ids.push_back(port_id);
+        _ports.push_back(std::vector<port*>(seastar::smp::count, nullptr));
 
         switch(pt) {
         case(port_type::standard) : {
@@ -69,6 +71,9 @@ public:
         auto dev  = _devs.back().get();
         return _port_shard.at(which_one).start(opts, dev, port_id).then([dev]{
             return dev->link_ready();
+        }).then([this, which_one]{
+             return _port_shard.at(which_one).invoke_on_all(&internal::shard_container::save_container_ptr,
+                                                            &(_ports.at(which_one)));
         });
     }
 

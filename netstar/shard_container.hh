@@ -2,6 +2,7 @@
 #define _SHARD_CONTAINER_HH
 
 #include <memory>
+#include <vector>
 
 #include "core/future.hh"
 #include "core/reactor.hh"
@@ -27,6 +28,10 @@ struct shard_container {
 
     T& get_contained() {
         return *t;
+    }
+
+    void save_container_ptr(std::vector<T*>* vec) {
+        vec->at(seastar::engine().cpu_id()) = t;
     }
 };
 
