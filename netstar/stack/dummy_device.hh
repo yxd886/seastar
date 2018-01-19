@@ -87,10 +87,6 @@ public:
                 std::move(dummy_dev), ipv4_addr, gw_addr, netmask);
     }
 
-    seastar::future<> stop() {
-        return seastar::make_ready_future();
-    }
-
     seastar::net::network_stack* get_stack() {
         return _stack_ptr.get();
     }
