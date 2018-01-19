@@ -2,7 +2,7 @@
 #define _HOOK_HH
 
 #include "netstar/port_manager.hh"
-#include "netstar/stack_manager.hh"
+#include "netstar/stack/stack_manager.hh"
 
 namespace netstar{
 
