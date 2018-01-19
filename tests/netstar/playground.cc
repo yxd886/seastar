@@ -53,7 +53,8 @@ int main(int ac, char** av) {
             fprint(std::cout, "hook point 0's target set to 1 ok.\n");
             return hook_manager::get().invoke_on_all(1, &hook::update_target_port, unsigned(0));
         }).then([]{
-                fprint(std::cout, "hook point 1's target set to 0 ok.\n");
+            fprint(std::cout, "hook point 1's target set to 0 ok.\n");
+            return hook_manager::get().invoke_on_all(0, &hook::check_and_start);
         });
     });
 }
