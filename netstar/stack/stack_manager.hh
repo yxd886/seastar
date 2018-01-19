@@ -12,8 +12,8 @@ namespace netstar {
 class stack_manager {
     std::vector<unsigned> _port_ids;
     std::vector<std::shared_ptr<seastar::net::device>> _dummy_devices;
+    std::vector<seastar::distributed<internal::multi_stack>> _stacks;
     std::vector<std::string> _ipv4_addrs;
-    std::vector<std::vector<internal::multi_stack*>> _stacks;
 
 public:
     seastar::future<> add_stack(unsigned port_id, std::string ipv4_addr,
@@ -26,19 +26,18 @@ public:
         _dummy_devices.push_back(std::make_shared<internal::dummy_device>(port_manager::get().dev(port_id)));
         _stacks.emplace_back();
 
+        seastar::engine().at_exit([this, which_one] {
+           return _stacks.at(which_one).stop();
+        });
+
         auto sptr = _dummy_devices.at(which_one);
-        // auto vec = std::make_shared<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>>(seastar::smp::count);
+        auto vec = std::make_shared<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>>(seastar::smp::count);
 
-        auto shard_sptr = std::make_shared<seastar::distributed<internal::shard_container<internal::multi_stack>>>();
-
-        return shard_sptr->start(sptr, &(port_manager::get().pOrt(port_id)), ipv4_addr, gw_addr, netmask).then([this, which_one, shard_sptr]{
-            return shard_sptr->invoke_on_all(&internal::shard_container<internal::multi_stack>::save_container_ptr,
-                                             &_stacks.at(which_one));
-        }).then([shard_sptr]{
-            seastar::fprint(std::cout,"here!!.\n");
-            return shard_sptr->stop();
-        }).then([shard_sptr]{
-            seastar::fprint(std::cout,"here!.\n");
+        return _stacks.at(which_one).start(sptr, &(port_manager::get().pOrt(port_id)),
+                                           ipv4_addr, gw_addr, netmask).then([vec, this, which_one]{
+            return _stacks.at(which_one).invoke_on_all(&internal::multi_stack::retrieve_arp_for, vec);
+        }).then([vec, this, which_one]{
+            return _stacks.at(which_one).invoke_on_all(&internal::multi_stack::set_arp_for, vec);
         });
     }
 
@@ -56,7 +55,7 @@ public:
     }
 
     seastar::net::network_stack& stack(unsigned stack_id) {
-        return *((_stacks.at(stack_id).at(seastar::engine().cpu_id()))->get_stack());
+        return *(_stacks.at(stack_id).local().get_stack());
     }
 
 private:
