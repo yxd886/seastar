@@ -33,19 +33,21 @@ public:
         auto vec = std::make_shared<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>>(seastar::smp::count);
 
         return stack_shard_sptr->start(sptr, &(port_manager::get().pOrt(port_id)),
-                                       ipv4_addr, gw_addr, netmask).then([stack_shard_sptr, which_one, this]{
-            stack_shard_sptr->invoke_on_all(&stack_shard::instance_t::save_container_ptr,
+                                       ipv4_addr, gw_addr, netmask).then([vec, stack_shard_sptr]{
+            return stack_shard_sptr->invoke_on_all([vec](stack_shard::instance_t& service){
+                service.get_contained().retrieve_arp_for(vec);
+            });
+        }).then([vec, stack_shard_sptr]{
+            return stack_shard_sptr->invoke_on_all([vec](stack_shard::instance_t& service){
+                service.get_contained().set_arp_for(vec);
+            });
+        }).then([stack_shard_sptr, which_one, this]{
+            return stack_shard_sptr->invoke_on_all(&stack_shard::instance_t::save_container_ptr,
                                             &_stacks.at(which_one));
         }).then([stack_shard_sptr]{
             return stack_shard_sptr->stop();
-        }).then([stack_shard_sptr, vec, which_one, this]{
-            return seastar::do_for_each(_stacks.at(which_one), [vec](internal::multi_stack* s){
-                s->retrieve_arp_for(vec);
-            });
-        }).then([vec, which_one, this]{
-            return seastar::do_for_each(_stacks.at(which_one), [vec](internal::multi_stack* s){
-                s->set_arp_for(vec);
-            });
+        }).then([stack_shard_sptr]{
+
         });
     }
 
