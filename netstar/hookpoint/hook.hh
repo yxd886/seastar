@@ -51,9 +51,9 @@ struct hook_point_launcher {
         auto vec = std::make_shared<std::vector<T*>>(seastar::smp::count, nullptr);
         auto shard_sptr = std::make_shared<hook_shard::shard_t>();
 
-        shard_sptr->start(std::forward<Args>(args)...).then([shard_sptr, vec]{
-            shard_sptr->invoke_on_all(&hook_shard::instance_t::save_container_ptr,
-                                      vec.get());
+        return shard_sptr->start(std::forward<Args>(args)...).then([shard_sptr, vec]{
+            return shard_sptr->invoke_on_all(&hook_shard::instance_t::save_container_ptr,
+                                             vec.get());
         }).then([shard_sptr]{
             return shard_sptr->stop();
         }).then([shard_sptr, vec]{
