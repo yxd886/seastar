@@ -72,7 +72,7 @@ public:
         return _port_shard.at(which_one).start(opts, dev, port_id).then([dev]{
             return dev->link_ready();
         }).then([this, which_one]{
-             return _port_shard.at(which_one).invoke_on_all(&internal::shard_container::save_container_ptr,
+             return _port_shard.at(which_one).invoke_on_all(&internal::shard_container<port>::save_container_ptr,
                                                             &(_ports.at(which_one)));
         });
     }
