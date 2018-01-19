@@ -40,10 +40,11 @@ int main(int ac, char** av) {
         }).then([]{
             return stack_manager::get().add_stack(0, "10.28.1.2", "10.28.1.1", "255.255.255.0");
         }).then([]{
-            fprint(std::cout, "stack 0 ok.\n");
             return stack_manager::get().add_stack(1, "10.28.1.3", "10.28.1.1", "255.255.255.0");
         }).then([]{
-            fprint(std::cout, "stack 1 ok.\n");
+            return hook_manager::get().add_hook_point(hook_type::dummy, 0);
+        }).then([]{
+            return hook_manager::get().add_hook_point(hook_type::dummy, 1);
         });
     });
 }

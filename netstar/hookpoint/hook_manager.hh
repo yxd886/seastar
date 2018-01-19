@@ -44,6 +44,8 @@ class hook_manager {
 
 public:
     seastar::future<> add_hook_point(hook_type type, unsigned port_id) {
+        assert(hook_point_check(port_id));
+
         unsigned which_one = _prs.size();
         _prs.emplace_back();
         _port_ids.push_back(port_id);
@@ -62,6 +64,31 @@ public:
         }
 
         return _prs.at(which_one).get_future();
+    }
+
+public:
+    static hook_manager& get() {
+        static hook_manager hm;
+        return hm;
+    }
+
+    hook& hOok(unsigned hook_point_id) {
+        return *(_hooks.at(hook_point_id).at(seastar::engine().cpu_id()));
+    }
+
+    unsigned hook_port_id(unsigned hook_point_id) {
+        return _port_ids.at(hook_point_id);
+    }
+
+private:
+    bool hook_point_check(unsigned port_id) {
+        for(auto id : _port_ids) {
+            if(id == port_id) {
+                seastar::fprint(std::cout, "hook_manager ERROR: port %d has been registered.\n", port_id);
+                return false;
+            }
+        }
+        return true;
     }
 };
 
