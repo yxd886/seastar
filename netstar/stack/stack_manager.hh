@@ -21,7 +21,7 @@ public:
     seastar::future<> add_stack(unsigned port_id, std::string ipv4_addr,
                    std::string gw_addr, std::string netmask) {
         assert(stack_check(port_id, ipv4_addr));
-        unsigned which_one = _stacks.size();
+        // unsigned which_one = _stacks.size();
 
         _port_ids.push_back(port_id);
         _ipv4_addrs.push_back(ipv4_addr);
