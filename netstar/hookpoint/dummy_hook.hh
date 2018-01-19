@@ -11,8 +11,8 @@ class dummy_hook : public hook {
     bool _recv_func_configured;
 
 public:
-    dummy_hook(port* p)
-        : hook(p)
+    dummy_hook(unsigned port_id)
+        : hook(&(port_manager::get().pOrt(port_id)))
         , _recv_func_configured(false) {}
 
     virtual void update_port_recv_func(std::function<seastar::future<> (rte_packet)> new_func) override {
