@@ -30,6 +30,8 @@ class port_manager {
     port_manager() {
     }
 
+    using port_shard = shard_container_trait<port>;
+
 public:
     static port_manager& get() {
         static port_manager pm;
@@ -63,15 +65,15 @@ public:
         }
 
         auto dev  = _devs.back().get();
-        auto shard_sptr = std::make_shared<seastar::distributed<internal::shard_container<port>>>();
-        return shard_sptr->start(opts, dev, port_id).then([dev]{
+        auto port_shard_sptr = std::make_shared<port_shard::shard_t>();
+        return port_shard_sptr->start(opts, dev, port_id).then([dev]{
             return dev->link_ready();
-        }).then([this, which_one, shard_sptr]{
-             return shard_sptr->invoke_on_all(&internal::shard_container<port>::save_container_ptr,
-                                              &(_ports.at(which_one)));
-        }).then([this, shard_sptr]{
-            return shard_sptr->stop();
-        }).then([shard_sptr]{
+        }).then([this, which_one, port_shard_sptr]{
+             return port_shard_sptr->invoke_on_all(&port_shard::instance_t::save_container_ptr,
+                                                   &(_ports.at(which_one)));
+        }).then([this, port_shard_sptr]{
+            return port_shard_sptr->stop();
+        }).then([port_shard_sptr]{
             seastar::fprint(std::cout, "wtf?\n");
         });
     }
