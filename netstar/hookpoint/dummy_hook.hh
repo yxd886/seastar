@@ -14,7 +14,6 @@ public:
     dummy_hook(unsigned port_id)
         : hook(&(port_manager::get().pOrt(port_id)))
         , _recv_func_configured(false) {
-        seastar::fprint(std::cout, "dummy_hook is created on core %d.\n", seastar::engine().cpu_id());
     }
 
     virtual void update_port_recv_func(std::function<seastar::future<> (rte_packet)> new_func) override {

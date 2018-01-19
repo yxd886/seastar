@@ -69,6 +69,8 @@ public:
             }
             return p;
         });
+
+        seastar::fprint(std::cout, "port is created on core %d.\n", seastar::engine().cpu_id());
     }
 
     port(port&& other) = delete;

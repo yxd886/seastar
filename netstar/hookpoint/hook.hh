@@ -24,7 +24,9 @@ protected:
 public:
     explicit hook(port* p)
         : _p(p)
-        , _recv_func(nullptr) {}
+        , _recv_func(nullptr) {
+        seastar::fprint(std::cout, "hook point is created on core %d.\n", seastar::engine().cpu_id());
+    }
 
     virtual ~hook() {}
 

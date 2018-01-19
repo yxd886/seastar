@@ -85,6 +85,7 @@ public:
         dummy_dev->update_local_queue(&_qp);
         _stack_ptr = std::make_unique<seastar::net::native_network_stack>(
                 std::move(dummy_dev), ipv4_addr, gw_addr, netmask);
+        seastar::fprint(std::cout, "multi_stack is created on core %d.\n", seastar::engine().cpu_id());
     }
 
     seastar::future<> stop() {
