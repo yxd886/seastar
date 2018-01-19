@@ -18,16 +18,13 @@ public:
 
     virtual void update_port_recv_func(std::function<seastar::future<> (rte_packet)> new_func) override {
         _recv_func_configured = true;
-        _recv_func = std::move(new_func);
+        _recv_func = new_func;
     }
 
-    virtual bool check_and_start() override {
-        if(!_recv_func_configured) {
-            return false;
-        }
+    virtual void check_and_start() override {
+        assert(_recv_func_configured);
 
         start_receving();
-        return true;
     }
 };
 

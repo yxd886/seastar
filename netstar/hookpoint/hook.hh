@@ -38,7 +38,7 @@ public:
     // Check whether the hook point has been correctly configured.
     // If so, the hook point is started by calling start_receving() and return true.
     // If not, the hook point is not started and return false.
-    virtual bool check_and_start() = 0;
+    virtual void check_and_start() = 0;
 };
 
 } // namespace netstar
