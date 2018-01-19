@@ -44,7 +44,10 @@ int main(int ac, char** av) {
         }).then([]{
             return hook_manager::get().add_hook_point(hook_type::dummy, 0);
         }).then([]{
+            fprint(std::cout, "hook point 0 ok.\n");
             return hook_manager::get().add_hook_point(hook_type::dummy, 1);
+        }).then([]{
+            fprint(std::cout, "hook point 1 ok.\n");
         });
     });
 }
