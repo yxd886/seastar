@@ -38,11 +38,11 @@
 #include <queue>
 #include <experimental/optional>
 #include <boost/preprocessor.hpp>
-#include "ip.hh"
-#include "const.hh"
+#include "net/ip.hh"
+#include "net/const.hh"
 #include "core/dpdk_rte.hh"
-#include "dpdk.hh"
-#include "toeplitz.hh"
+#include "net/dpdk.hh"
+#include "net/toeplitz.hh"
 
 #include <getopt.h>
 #include <malloc.h>
