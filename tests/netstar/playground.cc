@@ -230,8 +230,9 @@ int main(int ac, char** av) {
                 });
                 return server1->invoke_on_all(&tcp_server::listen, ipv4_addr{port});
             });
-        }).then([port]{
+        }).then([port](){
            std::cout << "Seastar TCP server1 listening on port " << port << " ...\n";
+           return;
         });
     });
 }
