@@ -56,6 +56,8 @@
 #include <rte_cycles.h>
 #include <rte_memzone.h>
 
+#include "netstar/rte_packet.hh"
+
 #if RTE_VERSION <= RTE_VERSION_NUM(2,0,0,16)
 
 static
@@ -1305,6 +1307,42 @@ public:
             });
         }
     }
+
+    void process_packets_with_rte_packets(struct rte_mbuf **bufs, uint16_t count) {
+            uint64_t nr_frags = 0, bytes = 0;
+
+            for (uint16_t i = 0; i < count; i++) {
+                struct rte_mbuf *m = bufs[i];
+                netstar::rte_packet p(m);
+
+                if (_dev->hw_features().rx_csum_offload) {
+                    if (m->ol_flags & (PKT_RX_IP_CKSUM_BAD | PKT_RX_L4_CKSUM_BAD)) {
+                        // Packet with bad checksum, just drop it.
+                        _stats.rx.bad.inc_csum_err();
+                        continue;
+                    }
+                    // Note that when _hw_features.rx_csum_offload is on, the receive
+                    // code for ip, tcp and udp will assume they don't need to check
+                    // the checksum again, because we did this here.
+                }
+
+                nr_frags += m->nb_segs;
+                bytes    += m->pkt_len;
+
+                auto pkt = p.get_packet();
+                if(pkt){
+                    _dev->l2receive(std::move(*pkt));
+                }
+            }
+
+            _stats.rx.good.update_pkts_bunch(count);
+            _stats.rx.good.update_frags_stats(nr_frags, bytes);
+
+            if (!HugetlbfsMemBackend) {
+                _stats.rx.good.copy_frags = _stats.rx.good.nr_frags;
+                _stats.rx.good.copy_bytes = _stats.rx.good.bytes;
+            }
+        }
 
     dpdk_device& port() const { return *_dev; }
     tx_buf* get_tx_buf() { return _tx_buf_factory.get(); }
