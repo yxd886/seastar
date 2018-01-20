@@ -9,6 +9,10 @@
 
 namespace netstar {
 
+namespace internal {
+class pure_stack_hook;
+}
+
 class stack_manager {
     std::vector<unsigned> _port_ids;
     std::vector<std::shared_ptr<seastar::net::device>> _dummy_devices;
@@ -66,6 +70,12 @@ public:
 
     seastar::net::network_stack& stack(unsigned stack_id) {
         return *(_stacks.at(stack_id).at(seastar::engine().cpu_id())->get_stack());
+    }
+
+private:
+    friend class internal::pure_stack_hook;
+    seastar::net::device* dummy_dev(unsigned stack_id) {
+        return _dummy_devices.at(stack_id).get();
     }
 
 private:

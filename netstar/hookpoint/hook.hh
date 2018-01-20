@@ -31,6 +31,12 @@ public:
     virtual ~hook() {}
 
     virtual void update_target_port(unsigned port_id) {
+        seastar::fprint(std::cout,"update_target_port is not defined for a hook.\n");
+        abort();
+    }
+
+    virtual void attach_stack(unsigned stack_id) {
+        seastar::fprint(std::cout,"attach_stack is not defined for a hook.\n");
         abort();
     }
 
