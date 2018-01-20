@@ -211,12 +211,12 @@ int main(int ac, char** av) {
         });*/
 
         port_manager::get().add_port(config, 0, port_type::seastar_style).then([&config]{
-            return port_manager::get().add_port(config, 1, port_type::seastar_style);
+            // return port_manager::get().add_port(config, 1, port_type::seastar_style);
         }).then([&config]{
-            return stack_manager::get().add_old_stack(0, "10.28.1.12", "10.28.1.1", "255.255.255.0", config);
-        }).then([&config]{
+            return stack_manager::get().add_old_stack(0, "10.28.1.12", "10.28.1.1", "255.255.255.0");
+        })/*.then([&config]{
             return stack_manager::get().add_old_stack(1, "10.29.1.12", "10.29.1.1", "255.255.255.0", config);
-        })/*.then([]{
+        }).then([]{
             return hook_manager::get().add_hook_point(hook_type::pure_stack, 0);
         }).then([]{
             return hook_manager::get().add_hook_point(hook_type::pure_stack, 1);
@@ -238,7 +238,7 @@ int main(int ac, char** av) {
         }).then([port](){
            std::cout << "Seastar TCP server0 listening on port " << port << " ...\n";
            return;
-        }).then([server1, port]{
+        })/*.then([server1, port]{
             return server1->start(1).then([server1, port] () mutable{
                 engine().at_exit([server1]{
                     return server1->stop();
@@ -248,6 +248,6 @@ int main(int ac, char** av) {
         }).then([port](){
            std::cout << "Seastar TCP server1 listening on port " << port << " ...\n";
            return;
-        });
+        })*/;
     });
 }
