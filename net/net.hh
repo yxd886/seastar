@@ -345,11 +345,6 @@ public:
         assert(!_queues[engine().cpu_id()]);
         _queues[engine().cpu_id()] = qp;
     }
-    // patch by djp
-    // expose _rss_table_bits
-    size_t get_rss_table_bits() {
-        return _rss_table_bits;
-    }
 };
 
 }

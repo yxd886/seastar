@@ -22,23 +22,14 @@ struct qp_wrapper{
     std::unique_ptr<seastar::net::qp> qp;
 
     explicit qp_wrapper(boost::program_options::variables_map opts,
-                        seastar::net::device* dev,
-                        uint16_t qid)
-        : qid(qid)
-        , dev(dev) {
+                         seastar::net::device* dev,
+                         uint16_t qid) :
+                         qid(qid), dev(dev){
         // Each core must has a hardware queue. We enforce this!
         assert(qid < dev->hw_queues_count());
 
         // The default qp initialization taking from native stack
         qp = dev->init_local_queue(opts, qid);
-
-        std::map<unsigned, float> cpu_weights;
-        for (unsigned i = dev->hw_queues_count() + qid % dev->hw_queues_count(); i < seastar::smp::count; i+= dev->hw_queues_count()) {
-            cpu_weights[i] = 1;
-        }
-        cpu_weights[qid] = opts["hw-queue-weight"].as<float>();
-        qp->configure_proxies(cpu_weights);
-
         dev->update_local_queue(qp.get());
     }
 };

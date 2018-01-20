@@ -1,23 +1,7 @@
 /*
- * This file is open source software, licensed to you under the terms
- * of the Apache License, Version 2.0 (the "License").  See the NOTICE file
- * distributed with this work for additional information regarding copyright
- * ownership.  You may not use this file except in compliance with the License.
- *
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * netstar
  */
-/*
- * Copyright (C) 2014 Cloudius Systems, Ltd.
- */
+
 #ifdef HAVE_DPDK
 
 #include <cinttypes>
@@ -41,7 +25,7 @@
 #include "net/ip.hh"
 #include "net/const.hh"
 #include "core/dpdk_rte.hh"
-#include "net/dpdk.hh"
+#include "standard_device.hh"
 #include "net/toeplitz.hh"
 
 #include <getopt.h>
@@ -56,14 +40,12 @@
 #include <rte_cycles.h>
 #include <rte_memzone.h>
 
-#include "netstar/rte_packet.hh"
+using namespace seastar;
+using namespace seastar::net;
 
-namespace netstar {
+namespace netstar{
 
 namespace standard_device {
-
-using namespace seastar::net;
-using namespace seastar;
 
 #if RTE_VERSION <= RTE_VERSION_NUM(2,0,0,16)
 
@@ -178,7 +160,7 @@ uint32_t qp_mempool_obj_size(bool hugetlbfs_membackend)
     return mp_size;
 }
 
-static constexpr const char* pktmbuf_pool_name   = "sd_pktmbuf_pool";
+static constexpr const char* pktmbuf_pool_name   = "sd_pktmbuf_pool"; // standard_device_pktmbuf_pool
 
 /*
  * When doing reads from the NIC queues, use this batch size
@@ -375,7 +357,7 @@ public:
         , _home_cpu(engine().cpu_id())
         , _use_lro(use_lro)
         , _enable_fc(enable_fc)
-        , _stats_plugin_name("network")
+        , _stats_plugin_name("netstar_network")
         , _stats_plugin_inst(std::string("port") + std::to_string(_port_idx))
         , _xstats(port_idx)
     {
@@ -1140,14 +1122,11 @@ build_mbuf_cluster:
         //
         static constexpr int gc_count = 1;
     public:
-        // patch by djp
-        // Add uint8_t port_idx to tx_buf_factory
         tx_buf_factory(uint8_t qid, uint8_t port_idx) {
             using namespace memory;
 
-            // patch by djp
-            // modify the name of the pktmbuf_pool.
             sstring name = sstring(pktmbuf_pool_name) + to_sstring(qid) + to_sstring(port_idx) + "_tx";
+
             printf("Creating Tx mbuf pool '%s' [%u mbufs] ...\n",
                    name.c_str(), mbufs_per_queue_tx);
 
@@ -1309,41 +1288,76 @@ public:
         }
     }
 
-    void process_packets_with_rte_packets(struct rte_mbuf **bufs, uint16_t count) {
-            uint64_t nr_frags = 0, bytes = 0;
-
-            for (uint16_t i = 0; i < count; i++) {
-                struct rte_mbuf *m = bufs[i];
-                netstar::rte_packet p(m);
-
-                if (_dev->hw_features().rx_csum_offload) {
-                    if (m->ol_flags & (PKT_RX_IP_CKSUM_BAD | PKT_RX_L4_CKSUM_BAD)) {
-                        // Packet with bad checksum, just drop it.
-                        _stats.rx.bad.inc_csum_err();
-                        continue;
-                    }
-                    // Note that when _hw_features.rx_csum_offload is on, the receive
-                    // code for ip, tcp and udp will assume they don't need to check
-                    // the checksum again, because we did this here.
-                }
-
-                nr_frags += m->nb_segs;
-                bytes    += m->pkt_len;
-
-                auto pkt = p.get_packet();
-                if(pkt){
-                    _dev->l2receive(std::move(*pkt));
-                }
-            }
-
-            _stats.rx.good.update_pkts_bunch(count);
-            _stats.rx.good.update_frags_stats(nr_frags, bytes);
-
-            if (!HugetlbfsMemBackend) {
-                _stats.rx.good.copy_frags = _stats.rx.good.nr_frags;
-                _stats.rx.good.copy_bytes = _stats.rx.good.bytes;
+    // by djp
+    // override send_rte_pkts
+    virtual uint32_t send_rte_pkts(circular_buffer<rte_packet>& pb) override {
+        if (_rte_packet_tx_burst.size() == 0) {
+            for (auto&& p : pb) {
+                // TODO: assert() in a fast path! Remove me ASAP!
+                assert(p.len());
+                _rte_packet_tx_burst.push_back(p.release_mbuf());
             }
         }
+
+        uint16_t sent = rte_eth_tx_burst(_dev->port_idx(), _qid,
+                                         _rte_packet_tx_burst.data() + _rte_packet_tx_burst_idx,
+                                         _rte_packet_tx_burst.size() - _rte_packet_tx_burst_idx);
+
+        uint64_t nr_frags = 0, bytes = 0;
+
+        for (int i = 0; i < sent; i++) {
+            rte_mbuf* m = _rte_packet_tx_burst[_rte_packet_tx_burst_idx + i];
+            bytes    += m->pkt_len;
+            nr_frags += m->nb_segs;
+            pb.pop_front();
+        }
+
+        _stats.tx.good.update_frags_stats(nr_frags, bytes);
+
+        _rte_packet_tx_burst_idx += sent;
+
+        if (_rte_packet_tx_burst_idx == _rte_packet_tx_burst.size()) {
+            _rte_packet_tx_burst_idx = 0;
+            _rte_packet_tx_burst.clear();
+        }
+
+        return sent;
+    }
+
+    // by djp
+    // process received rte_mbuf and deliver rte_packet
+    void process_packets_with_rte_packets(struct rte_mbuf **bufs, uint16_t count) {
+        uint64_t nr_frags = 0, bytes = 0;
+
+        for (uint16_t i = 0; i < count; i++) {
+            struct rte_mbuf *m = bufs[i];
+            rte_packet p(m);
+
+            if (_dev->hw_features().rx_csum_offload) {
+                if (m->ol_flags & (PKT_RX_IP_CKSUM_BAD | PKT_RX_L4_CKSUM_BAD)) {
+                    // Packet with bad checksum, just drop it.
+                    _stats.rx.bad.inc_csum_err();
+                    continue;
+                }
+                // Note that when _hw_features.rx_csum_offload is on, the receive
+                // code for ip, tcp and udp will assume they don't need to check
+                // the checksum again, because we did this here.
+            }
+
+            nr_frags += m->nb_segs;
+            bytes    += m->pkt_len;
+
+            _dev->l2receive_rte_packet(std::move(p));
+        }
+
+        _stats.rx.good.update_pkts_bunch(count);
+        _stats.rx.good.update_frags_stats(nr_frags, bytes);
+
+        if (!HugetlbfsMemBackend) {
+            _stats.rx.good.copy_frags = _stats.rx.good.nr_frags;
+            _stats.rx.good.copy_bytes = _stats.rx.good.bytes;
+        }
+    }
 
     dpdk_device& port() const { return *_dev; }
     tx_buf* get_tx_buf() { return _tx_buf_factory.get(); }
@@ -1510,6 +1524,9 @@ private:
     reactor::poller _tx_gc_poller;
     std::vector<rte_mbuf*> _tx_burst;
     uint16_t _tx_burst_idx = 0;
+    // by djp
+    std::vector<rte_mbuf*> _rte_packet_tx_burst;
+    uint16_t _rte_packet_tx_burst_idx = 0;
     static constexpr phys_addr_t page_mask = ~(memory::page_size - 1);
 };
 
@@ -1841,9 +1858,6 @@ template <bool HugetlbfsMemBackend>
 bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
 {
     using namespace memory;
-
-    // patch by djp
-    // Modify the name of the pktmbuf_pool.
     sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + to_sstring(_dev->port_idx()) + "_rx";
 
     printf("Creating Rx mbuf pool '%s' [%u mbufs] ...\n",
@@ -1968,8 +1982,6 @@ dpdk_qp<HugetlbfsMemBackend>::dpdk_qp(dpdk_device* dev, uint8_t qid,
                                       const std::string stats_plugin_name)
      : qp(true, stats_plugin_name, qid), _dev(dev), _qid(qid),
        _rx_gc_poller(reactor::poller::simple([&] { return rx_gc(); })),
-       // patch by djp
-       // Pass the dev->port_idx() to construct _tx_buf_factory.
        _tx_buf_factory(qid, dev->port_idx()),
        _tx_gc_poller(reactor::poller::simple([&] { return _tx_buf_factory.gc(); }))
 {
@@ -2246,6 +2258,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::poll_rx_once()
 
     /* Now process the NIC packets read */
     if (likely(rx_count > 0)) {
+        // by djp
         // process_packets(buf, rx_count);
         process_packets_with_rte_packets(buf, rx_count);
     }
@@ -2301,24 +2314,15 @@ std::unique_ptr<qp> dpdk_device::init_local_queue(boost::program_options::variab
     return qp;
 }
 
-} // namespace dpdk
+} // namespace standard_device
 
-/******************************** Interface functions *************************/
-
-std::unique_ptr<seastar::net::device> create_standard_device(
+std::unique_ptr<net::device> create_standard_device(
                                     uint8_t port_idx,
                                     uint8_t num_queues,
                                     bool use_lro,
-                                    bool enable_fc)
-{
-    // patch by djp
-    // Remove the called assertion check, so that we can create multiple dpdk_net_device.
-    // static bool called = false;
+                                    bool enable_fc) {
 
-    // assert(!called);
-    assert(seastar::dpdk::eal::initialized);
-
-    // called = true;
+    assert(dpdk::eal::initialized);
 
     // Check that we have at least one DPDK-able port
     if (rte_eth_dev_count() == 0) {
@@ -2327,10 +2331,12 @@ std::unique_ptr<seastar::net::device> create_standard_device(
         printf("ports number: %d\n", rte_eth_dev_count());
     }
 
-    return std::make_unique<standard_device::dpdk_device>(port_idx, num_queues, use_lro,
-                                               enable_fc);
+    return std::make_unique<standard_device::dpdk_device>(port_idx,
+                                                          num_queues,
+                                                          use_lro,
+                                                          enable_fc);
 }
 
-}
+} // namespace netstar
 
 #endif // HAVE_DPDK

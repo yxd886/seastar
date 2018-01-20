@@ -14,17 +14,14 @@ namespace internal {
 
 class dummy_qp : public seastar::net::qp {
 private:
-    port* _port;
+    port& _port;
 
 public:
-    dummy_qp(port* pt, unsigned qid)
+    explicit dummy_qp(port* pt, unsigned qid)
         : seastar::net::qp(false, std::string("dummynet_dev_")+std::to_string(pt->get_dev_id()), qid)
-        , _port(pt){
+        , _port(*pt){
         assert(pt->get_qid() == seastar::engine().cpu_id());
     }
-
-    dummy_qp()
-        : _port(nullptr) {}
 
     virtual seastar::future<> send(seastar::net::packet p) override {
         abort();
@@ -34,7 +31,7 @@ public:
         // seastar::fprint(std::cout," sending %d packets out.\n", p.size());
         auto size = p.size();
         while(!p.empty()) {
-            _port->send_seastar_packet(std::move(p.front()));
+            _port.send_seastar_packet(std::move(p.front()));
             p.pop_front();
         }
         return size;
@@ -47,9 +44,7 @@ private:
 
 public:
     dummy_device(seastar::net::device* concrete_dev)
-        : _concrete_dev(concrete_dev) {
-        _rss_table_bits = concrete_dev->get_rss_table_bits();
-    }
+        : _concrete_dev(concrete_dev) {}
 
     virtual seastar::net::ethernet_address hw_address() override {
         return _concrete_dev->hw_address();
@@ -87,28 +82,12 @@ class multi_stack {
     std::unique_ptr<seastar::net::native_network_stack> _stack_ptr;
 
 public:
-    multi_stack(boost::program_options::variables_map opts,
-                std::shared_ptr<seastar::net::device> dummy_dev, unsigned port_id,
-                std::string ipv4_addr, std::string gw_addr, std::string netmask)
+    explicit multi_stack(std::shared_ptr<seastar::net::device> dummy_dev, unsigned port_id,
+                         std::string ipv4_addr, std::string gw_addr, std::string netmask)
         : _qp(&(port_manager::get().pOrt(port_id)), seastar::engine().cpu_id()) {
-
-        auto qid = port_manager::get().pOrt(port_id).get_qid();
-        std::map<unsigned, float> cpu_weights;
-        for (unsigned i = dummy_dev->hw_queues_count() + qid % dummy_dev->hw_queues_count(); i < seastar::smp::count; i+= dummy_dev->hw_queues_count()) {
-            cpu_weights[i] = 1;
-        }
-        cpu_weights[qid] = opts["hw-queue-weight"].as<float>();
-        _qp.configure_proxies(cpu_weights);
-
         dummy_dev->update_local_queue(&_qp);
-
-        _stack_ptr = std::make_unique<seastar::net::native_network_stack>(dummy_dev, ipv4_addr, gw_addr, netmask);
-        seastar::fprint(std::cout, "multi_stack is created on core %d.\n", seastar::engine().cpu_id());
-    }
-
-    multi_stack(std::shared_ptr<seastar::net::device> dev, unsigned port_id,
-                std::string ipv4_addr, std::string gw_addr, std::string netmask) {
-        _stack_ptr = std::make_unique<seastar::net::native_network_stack>(dev, ipv4_addr, gw_addr, netmask);
+        _stack_ptr = std::make_unique<seastar::net::native_network_stack>(
+                std::move(dummy_dev), ipv4_addr, gw_addr, netmask);
         seastar::fprint(std::cout, "multi_stack is created on core %d.\n", seastar::engine().cpu_id());
     }
 

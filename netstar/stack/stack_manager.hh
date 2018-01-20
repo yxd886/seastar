@@ -23,9 +23,8 @@ class stack_manager {
 
 public:
     seastar::future<> add_stack(unsigned port_id, std::string ipv4_addr,
-                   std::string gw_addr, std::string netmask, boost::program_options::variables_map opts) {
+                   std::string gw_addr, std::string netmask) {
         assert(stack_check(port_id, ipv4_addr));
-        assert(port_manager::get().type(port_id) != port_type::seastar_style);
         unsigned which_one = _stacks.size();
 
         _port_ids.push_back(port_id);
@@ -37,40 +36,7 @@ public:
         auto stack_shard_sptr = std::make_shared<stack_shard::shard_t>();
         auto vec = std::make_shared<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>>(seastar::smp::count);
 
-        return stack_shard_sptr->start(opts, sptr, port_id, ipv4_addr, gw_addr, netmask).then([vec, stack_shard_sptr]{
-            return stack_shard_sptr->invoke_on_all([vec](stack_shard::instance_t& service){
-                service.get_contained().retrieve_arp_for(vec);
-            });
-        }).then([vec, stack_shard_sptr]{
-            return stack_shard_sptr->invoke_on_all([vec](stack_shard::instance_t& service){
-                service.get_contained().set_arp_for(vec);
-            });
-        }).then([stack_shard_sptr, which_one, this]{
-            return stack_shard_sptr->invoke_on_all(&stack_shard::instance_t::save_container_ptr,
-                                            &_stacks.at(which_one));
-        }).then([stack_shard_sptr]{
-            return stack_shard_sptr->stop();
-        }).then([stack_shard_sptr]{
-
-        });
-    }
-
-    seastar::future<> add_old_stack(unsigned port_id, std::string ipv4_addr,
-                   std::string gw_addr, std::string netmask) {
-        assert(stack_check(port_id, ipv4_addr));
-        // assert(port_manager::get().type(port_id) == port_type::seastar_style);
-        unsigned which_one = _stacks.size();
-
-        _port_ids.push_back(port_id);
-        _dummy_devices.push_back(std::make_shared<internal::dummy_device>(port_manager::get().dev(port_id)));
-        _stacks.push_back(std::vector<internal::multi_stack*>(seastar::smp::count, nullptr));
-        _ipv4_addrs.push_back(ipv4_addr);
-
-        auto stack_shard_sptr = std::make_shared<stack_shard::shard_t>();
-        auto vec = std::make_shared<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>>(seastar::smp::count);
-
-        return stack_shard_sptr->start(port_manager::get().shared_dev_ptr(port_id),
-                                       port_id, ipv4_addr, gw_addr, netmask).then([vec, stack_shard_sptr]{
+        return stack_shard_sptr->start(sptr, port_id, ipv4_addr, gw_addr, netmask).then([vec, stack_shard_sptr]{
             return stack_shard_sptr->invoke_on_all([vec](stack_shard::instance_t& service){
                 service.get_contained().retrieve_arp_for(vec);
             });
