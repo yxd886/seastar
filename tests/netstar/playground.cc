@@ -49,13 +49,17 @@ static bool enable_sctp = false;
 class tcp_server {
     std::vector<server_socket> _tcp_listeners;
     std::vector<server_socket> _sctp_listeners;
+    unsigned _stack_id;
 public:
+    tcp_server(unsigned stack_id) : _stack_id(stack_id) {}
+
     future<> listen(ipv4_addr addr) {
         if (enable_tcp) {
             listen_options lo;
             lo.proto = transport::TCP;
             lo.reuse_address = true;
-            _tcp_listeners.push_back(engine().listen(make_ipv4_address(addr), lo));
+            // _tcp_listeners.push_back(engine().listen(make_ipv4_address(addr), lo));
+            _tcp_listeners.push_back(stack_manager::get().stack(_stack_id).listen(make_ipv4_address(addr), lo));
             do_accepts(_tcp_listeners);
         }
 
@@ -63,7 +67,8 @@ public:
             listen_options lo;
             lo.proto = transport::SCTP;
             lo.reuse_address = true;
-            _sctp_listeners.push_back(engine().listen(make_ipv4_address(addr), lo));
+            // _sctp_listeners.push_back(engine().listen(make_ipv4_address(addr), lo));
+            _sctp_listeners.push_back(stack_manager::get().stack(_stack_id).listen(make_ipv4_address(addr), lo));
             do_accepts(_sctp_listeners);
         }
         return make_ready_future<>();
@@ -224,7 +229,7 @@ int main(int ac, char** av) {
         }).then([]{
             return hook_manager::get().invoke_on_all(1, &hook::check_and_start);
         }).then([server1, port]{
-            return server1->start().then([server1, port] () mutable{
+            return server1->start(0).then([server1, port] () mutable{
                 engine().at_exit([server1]{
                     return server1->stop();
                 });
