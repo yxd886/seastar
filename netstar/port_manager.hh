@@ -15,6 +15,7 @@
 namespace netstar{
 
 enum class port_type {
+    seastar_style,
     standard,
     fdir
 };
@@ -23,7 +24,7 @@ class stack_manager;
 
 class port_manager {
     std::vector<port_type> _port_types;
-    std::vector<std::unique_ptr<seastar::net::device>> _devs;
+    std::vector<std::shared_ptr<seastar::net::device>> _devs;
     std::vector<uint16_t> _port_ids;
     std::vector<std::vector<port*>> _ports;
 
@@ -50,12 +51,26 @@ public:
         switch(pt) {
         case(port_type::standard) : {
             auto dev = create_standard_device(port_id, seastar::smp::count);
-            _devs.push_back(std::move(dev));
+            auto dev_ptr = dev.release();
+            std::shared_ptr<seastar::net::device> dev_shared_ptr;
+            dev_shared_ptr.reset(dev_ptr);
+            _devs.push_back(dev_shared_ptr);
             break;
         }
         case(port_type::fdir) : {
             auto dev = create_fdir_device(port_id, seastar::smp::count);
-            _devs.push_back(std::move(dev));
+            auto dev_ptr = dev.release();
+            std::shared_ptr<seastar::net::device> dev_shared_ptr;
+            dev_shared_ptr.reset(dev_ptr);
+            _devs.push_back(dev_shared_ptr);
+            break;
+        }
+        case(port_type::seastar_style): {
+            auto dev = seastar::create_dpdk_net_device(port_id, seastar::smp::count);
+            auto dev_ptr = dev.release();
+            std::shared_ptr<seastar::net::device> dev_shared_ptr;
+            dev_shared_ptr.reset(dev_ptr);
+            _devs.push_back(dev_shared_ptr);
             break;
         }
         default : {
@@ -112,6 +127,10 @@ private:
     seastar::net::device* dev(unsigned id) {
         return _devs.at(id).get();
     }
+    std::shared_ptr<seastar::net::device> shared_dev_ptr(unsigned id) {
+        return _devs.at(id);
+    }
+
 };
 
 } // namespace netstar
