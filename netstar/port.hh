@@ -30,6 +30,14 @@ struct qp_wrapper{
 
         // The default qp initialization taking from native stack
         qp = dev->init_local_queue(opts, qid);
+
+        std::map<unsigned, float> cpu_weights;
+        for (unsigned i = dev->hw_queues_count() + qid % dev->hw_queues_count(); i < seastar::smp::count; i+= dev->hw_queues_count()) {
+            cpu_weights[i] = 1;
+        }
+        cpu_weights[qid] = opts["hw-queue-weight"].as<float>();
+        qp->configure_proxies(cpu_weights);
+
         dev->update_local_queue(qp.get());
     }
 };

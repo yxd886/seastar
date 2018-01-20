@@ -21,8 +21,8 @@ public:
     explicit hook(port& p)
         : _p(p)
         , _recv_func([](rte_packet p){return seastar::make_ready_future<>();}) {
-        seastar::fprint(std::cout, "hook point is created on core %d.\n", seastar::engine().cpu_id());
         assert(p.get_qid() == seastar::engine().cpu_id());
+        seastar::fprint(std::cout, "hook point is created on core %d.\n", seastar::engine().cpu_id());
     }
 
     virtual ~hook() {}
