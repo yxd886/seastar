@@ -58,7 +58,7 @@ public:
     seastar::future<> add_old_stack(unsigned port_id, std::string ipv4_addr,
                    std::string gw_addr, std::string netmask) {
         assert(stack_check(port_id, ipv4_addr));
-        assert(port_manager::get().type(port_id) == port_type::seastar_style);
+        // assert(port_manager::get().type(port_id) == port_type::seastar_style);
         unsigned which_one = _stacks.size();
 
         _port_ids.push_back(port_id);

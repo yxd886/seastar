@@ -1347,7 +1347,10 @@ public:
             nr_frags += m->nb_segs;
             bytes    += m->pkt_len;
 
-            _dev->l2receive_rte_packet(std::move(p));
+            auto pkt = p.get_packet();
+            if(pkt){
+                _dev->l2receive(std::move(*pkt));
+            }
         }
 
         _stats.rx.good.update_pkts_bunch(count);

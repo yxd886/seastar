@@ -210,7 +210,7 @@ int main(int ac, char** av) {
             std::cout << "Seastar TCP server listening on port " << port << " ...\n";
         });*/
 
-        port_manager::get().add_port(config, 0, port_type::seastar_style).then([&config]{
+        port_manager::get().add_port(config, 0, port_type::standard).then([&config]{
             // return port_manager::get().add_port(config, 1, port_type::seastar_style);
         }).then([&config]{
             return stack_manager::get().add_old_stack(0, "10.28.1.12", "10.28.1.1", "255.255.255.0");
