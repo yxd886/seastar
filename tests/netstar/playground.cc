@@ -198,8 +198,8 @@ int main(int ac, char** av) {
             fprint(std::cerr, "Error: no protocols enabled. Use \"--tcp yes\" and/or \"--sctp yes\" to enable\n");
             return engine().exit(1);
         }
+        auto server0 = new distributed<tcp_server>;
         auto server1 = new distributed<tcp_server>;
-        // auto server2 = new distributed<tcp_server>;
 
         /*server->start().then([server = std::move(server), port] () mutable {
             engine().at_exit([server] {
@@ -228,8 +228,18 @@ int main(int ac, char** av) {
             return hook_manager::get().invoke_on_all(0, &hook::check_and_start);
         }).then([]{
             return hook_manager::get().invoke_on_all(1, &hook::check_and_start);
+        }).then([server0, port]{
+            return server0->start(0).then([server0, port] () mutable{
+                engine().at_exit([server0]{
+                    return server0->stop();
+                });
+                return server0->invoke_on_all(&tcp_server::listen, ipv4_addr{port});
+            });
+        }).then([port](){
+           std::cout << "Seastar TCP server0 listening on port " << port << " ...\n";
+           return;
         }).then([server1, port]{
-            return server1->start(0).then([server1, port] () mutable{
+            return server1->start(1).then([server1, port] () mutable{
                 engine().at_exit([server1]{
                     return server1->stop();
                 });
