@@ -36,24 +36,20 @@ int main(int ac, char** av) {
         auto& opts = app.configuration();
 
         return port_manager::get().add_port(opts, 0, port_type::standard).then([&opts]{
-            return port_manager::get().add_port(opts, 1, port_type::fdir);
+            return port_manager::get().add_port(opts, 1, port_type::standard);
         }).then([]{
-            return stack_manager::get().add_stack(0, "10.28.1.2", "10.28.1.1", "255.255.255.0");
+            return stack_manager::get().add_stack(0, "10.28.1.12", "10.28.1.1", "255.255.255.0");
         }).then([]{
-            return stack_manager::get().add_stack(1, "10.28.1.3", "10.28.1.1", "255.255.255.0");
+            return stack_manager::get().add_stack(1, "10.29.1.12", "10.29.1.1", "255.255.255.0");
         }).then([]{
-            return hook_manager::get().add_hook_point(hook_type::dummy, 0);
+            return hook_manager::get().add_hook_point(hook_type::pure_stack, 0);
         }).then([]{
-            fprint(std::cout, "hook point 0 ok.\n");
-            return hook_manager::get().add_hook_point(hook_type::dummy, 1);
+            return hook_manager::get().add_hook_point(hook_type::pure_stack, 1);
         }).then([]{
-            fprint(std::cout, "hook point 1 ok.\n");
-            return hook_manager::get().invoke_on_all(0, &hook::update_target_port, unsigned(1));
+            return hook_manager::get().invoke_on_all(0, &hook::attach_stack, unsigned(0));
         }).then([]{
-            fprint(std::cout, "hook point 0's target set to 1 ok.\n");
-            return hook_manager::get().invoke_on_all(1, &hook::update_target_port, unsigned(0));
+            return hook_manager::get().invoke_on_all(1, &hook::attach_stack, unsigned(1));
         }).then([]{
-            fprint(std::cout, "hook point 1's target set to 0 ok.\n");
             return hook_manager::get().invoke_on_all(0, &hook::check_and_start);
         }).then([]{
             return hook_manager::get().invoke_on_all(1, &hook::check_and_start);
