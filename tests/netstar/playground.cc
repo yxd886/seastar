@@ -199,7 +199,7 @@ int main(int ac, char** av) {
             return engine().exit(1);
         }
         auto server0 = new distributed<tcp_server>;
-        auto server1 = new distributed<tcp_server>;
+        // auto server1 = new distributed<tcp_server>;
 
         /*server->start().then([server = std::move(server), port] () mutable {
             engine().at_exit([server] {
