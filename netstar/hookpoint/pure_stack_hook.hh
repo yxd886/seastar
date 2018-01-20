@@ -24,7 +24,7 @@ public:
     virtual void attach_stack(unsigned stack_id) override {
         _stack_id = stack_id;
         _stack_dummy_device = stack_manager::get().dummy_dev(stack_id);
-        _recv_func = [](rte_packet pkt) {
+        _recv_func = [this](rte_packet pkt) {
             auto p = pkt.get_packet();
             if(p) {
                 _stack_dummy_device->l2receive(std::move(*p));
