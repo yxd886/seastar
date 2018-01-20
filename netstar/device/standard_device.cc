@@ -1346,7 +1346,7 @@ public:
 
             nr_frags += m->nb_segs;
             bytes    += m->pkt_len;
-
+            p.check();
             _dev->l2receive_rte_packet(std::move(p));
         }
 

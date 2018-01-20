@@ -29,7 +29,9 @@ public:
         // seastar::fprint(std::cout," sending %d packets out.\n", p.size());
         auto size = p.size();
         while(!p.empty()) {
-            _port.send_seastar_packet(std::move(p.front()));
+            if(p.front()) {
+                _port.send_seastar_packet(std::move(p.front()));
+            }
             p.pop_front();
         }
         return size;
