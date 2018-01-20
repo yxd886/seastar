@@ -19,7 +19,7 @@ private:
 public:
     dummy_qp(port* pt, unsigned qid)
         : seastar::net::qp(false, std::string("dummynet_dev_")+std::to_string(pt->get_dev_id()), qid)
-        , _port(*pt){
+        , _port(pt){
         assert(pt->get_qid() == seastar::engine().cpu_id());
     }
 
@@ -108,7 +108,7 @@ public:
 
     multi_stack(std::shared_ptr<seastar::net::device> dev, unsigned port_id,
                 std::string ipv4_addr, std::string gw_addr, std::string netmask) {
-        _stack_ptr = std::make_unique<seastar::net::native_network_stack>(dummy_dev, ipv4_addr, gw_addr, netmask);
+        _stack_ptr = std::make_unique<seastar::net::native_network_stack>(dev, ipv4_addr, gw_addr, netmask);
         seastar::fprint(std::cout, "multi_stack is created on core %d.\n", seastar::engine().cpu_id());
     }
 
