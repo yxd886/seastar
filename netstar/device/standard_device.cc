@@ -2262,8 +2262,8 @@ bool dpdk_qp<HugetlbfsMemBackend>::poll_rx_once()
     /* Now process the NIC packets read */
     if (likely(rx_count > 0)) {
         // by djp
-        // process_packets(buf, rx_count);
-        process_packets_with_rte_packets(buf, rx_count);
+        process_packets(buf, rx_count);
+        // process_packets_with_rte_packets(buf, rx_count);
     }
 
     return rx_count;
