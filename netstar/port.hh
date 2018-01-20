@@ -36,6 +36,8 @@ struct qp_wrapper{
 
 } // namespace internal
 
+class hook;
+
 class port {
     uint16_t _port_id; // This is actually dpdk device id.
     internal::qp_wrapper _qp_wrapper;
@@ -87,6 +89,8 @@ public:
         _rte_packet_sendq.push_back(std::move(p));
     }
 
+private:
+    friend class hook;
     // Provide a customized receive function for the underlying qp.
     seastar::subscription<rte_packet>
     receive(std::function<seastar::future<> (rte_packet)> next_packet) {
