@@ -25,6 +25,7 @@ public:
         _stack_id = stack_id;
         _stack_dummy_device = stack_manager::get().dummy_dev(stack_id);
         _recv_func = [this](rte_packet pkt) {
+            seastar::fprint(std::cout, "port %d receive rte_packet.\n", _port_id);
             auto p = pkt.get_packet();
             if(p) {
                 _stack_dummy_device->l2receive(std::move(*p));

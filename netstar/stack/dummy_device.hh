@@ -26,6 +26,7 @@ public:
     }
 
     virtual uint32_t send(seastar::circular_buffer<seastar::net::packet>& p) override {
+        seastar::fprint(std::cout," sending %d packets out.\n", p.size());
         auto size = p.size();
         while(!p.empty()) {
             _port.send_seastar_packet(std::move(p.front()));
