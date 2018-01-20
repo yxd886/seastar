@@ -223,7 +223,7 @@ int main(int ac, char** av) {
             return hook_manager::get().invoke_on_all(0, &hook::check_and_start);
         }).then([]{
             return hook_manager::get().invoke_on_all(1, &hook::check_and_start);
-        }).then([server1]{
+        }).then([server1, port]{
             return server1->start().then([server1, port] () mutable{
                 engine().at_exit([server1]{
                     return server1->stop();
