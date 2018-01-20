@@ -2305,7 +2305,7 @@ std::unique_ptr<qp> dpdk_device::init_local_queue(boost::program_options::variab
 
 /******************************** Interface functions *************************/
 
-std::unique_ptr<seastar::net::device> create_dpdk_net_device(
+std::unique_ptr<seastar::net::device> create_standard_device(
                                     uint8_t port_idx,
                                     uint8_t num_queues,
                                     bool use_lro,
