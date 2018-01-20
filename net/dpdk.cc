@@ -58,6 +58,12 @@
 
 #include "netstar/rte_packet.hh"
 
+using namespace seastar::net;
+
+namespace seastar {
+
+namespace dpdk {
+
 #if RTE_VERSION <= RTE_VERSION_NUM(2,0,0,16)
 
 static
@@ -82,12 +88,6 @@ void* as_cookie(struct rte_pktmbuf_pool_private& p) {
 #ifndef MARKER
 typedef void    *MARKER[0];   /**< generic marker for a point in a structure */
 #endif
-
-using namespace seastar::net;
-
-namespace seastar {
-
-namespace dpdk {
 
 /******************* Net device related constatns *****************************/
 static constexpr uint16_t default_ring_size      = 512;
