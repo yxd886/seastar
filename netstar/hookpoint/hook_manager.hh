@@ -2,6 +2,7 @@
 #define _HOOK_MANAGER_HH
 
 #include "netstar/hookpoint/dummy_hook.hh"
+#include "netstar/hookpoint/pure_stack_hook.hh"
 #include <boost/iterator/counting_iterator.hpp>
 
 namespace netstar{
@@ -37,6 +38,11 @@ struct hook_point_launcher {
 
 
 } // namespace internal
+
+enum class hook_type {
+    dummy,
+    pure_stack
+};
 
 class hook_manager {
     std::vector<std::vector<hook*>> _hooks;

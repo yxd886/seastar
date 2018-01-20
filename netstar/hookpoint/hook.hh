@@ -6,10 +6,6 @@
 
 namespace netstar{
 
-enum class hook_type {
-    dummy
-};
-
 class hook {
 protected:
     port& _p;
