@@ -80,9 +80,9 @@ class multi_stack {
     std::unique_ptr<seastar::net::native_network_stack> _stack_ptr;
 
 public:
-    explicit multi_stack(std::shared_ptr<seastar::net::device> dummy_dev, port* p,
+    explicit multi_stack(std::shared_ptr<seastar::net::device> dummy_dev, unsigned port_id,
                          std::string ipv4_addr, std::string gw_addr, std::string netmask)
-        : _qp(p, seastar::engine().cpu_id()) {
+        : _qp(&(port_manager::get().pOrt(port_id)), seastar::engine().cpu_id()) {
         dummy_dev->update_local_queue(&_qp);
         _stack_ptr = std::make_unique<seastar::net::native_network_stack>(
                 std::move(dummy_dev), ipv4_addr, gw_addr, netmask);
