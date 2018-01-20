@@ -49,7 +49,7 @@ public:
 
         switch(pt) {
         case(port_type::standard) : {
-            auto dev = create_standard_device(port_id, seastar::smp::count);
+            auto dev = seastar::create_dpdk_net_device(port_id, seastar::smp::count);
             _devs.push_back(std::move(dev));
             break;
         }
