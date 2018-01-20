@@ -123,6 +123,8 @@ public:
            if (_mbuf->ol_flags & PKT_RX_VLAN_PKT) {
                oi.vlan_tci = _mbuf->vlan_tci;
            }
+           pkt.set_offload_info(oi);
+
            if (_mbuf->ol_flags & PKT_RX_RSS_HASH) {
                pkt.set_rss_hash(_mbuf->hash.rss);
            }
