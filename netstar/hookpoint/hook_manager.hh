@@ -59,11 +59,11 @@ public:
 
         switch(type) {
         case hook_type::dummy: {
-            internal::hook_point_launcher<internal::dummy_hook>::launch(port_id).then(
-                    [this, which_one](auto&& vec){
-                _hooks.push_back(std::move(vec));
-                _prs.at(which_one).set_value();
-            });
+            launch<internal::dummy_hook>(port_id, which_one);
+            break;
+        }
+        case hook_type::pure_stack: {
+            launch<internal::pure_stack_hook>(port_id, which_one);
             break;
         }
         default:
@@ -110,6 +110,15 @@ private:
             }
         }
         return true;
+    }
+
+    template<typename T>
+    void launch(unsigned port_id, unsigned which_one) {
+        internal::hook_point_launcher<internal::pure_stack_hook>::launch(port_id).then(
+                [this, which_one](auto&& vec){
+            _hooks.push_back(std::move(vec));
+            _prs.at(which_one).set_value();
+        });
     }
 };
 
