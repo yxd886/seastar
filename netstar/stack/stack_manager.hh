@@ -23,7 +23,7 @@ class stack_manager {
 
 public:
     seastar::future<> add_stack(unsigned port_id, std::string ipv4_addr,
-                   std::string gw_addr, std::string netmask) {
+                   std::string gw_addr, std::string netmask, boost::program_options::variables_map opts) {
         assert(stack_check(port_id, ipv4_addr));
         unsigned which_one = _stacks.size();
 
@@ -36,7 +36,7 @@ public:
         auto stack_shard_sptr = std::make_shared<stack_shard::shard_t>();
         auto vec = std::make_shared<std::vector<seastar::net::arp_for<seastar::net::ipv4>*>>(seastar::smp::count);
 
-        return stack_shard_sptr->start(sptr, port_id, ipv4_addr, gw_addr, netmask).then([vec, stack_shard_sptr]{
+        return stack_shard_sptr->start(opts, sptr, port_id, ipv4_addr, gw_addr, netmask).then([vec, stack_shard_sptr]{
             return stack_shard_sptr->invoke_on_all([vec](stack_shard::instance_t& service){
                 service.get_contained().retrieve_arp_for(vec);
             });

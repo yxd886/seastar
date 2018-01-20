@@ -22,9 +22,10 @@ struct qp_wrapper{
     std::unique_ptr<seastar::net::qp> qp;
 
     explicit qp_wrapper(boost::program_options::variables_map opts,
-                         seastar::net::device* dev,
-                         uint16_t qid) :
-                         qid(qid), dev(dev){
+                        seastar::net::device* dev,
+                        uint16_t qid)
+        : qid(qid)
+        , dev(dev) {
         // Each core must has a hardware queue. We enforce this!
         assert(qid < dev->hw_queues_count());
 
