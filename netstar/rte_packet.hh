@@ -5,6 +5,13 @@
 
 #include <rte_mbuf.h>
 
+namespace seastar{
+namespace dpdk {
+template <bool HugetlbfsMemBackend>
+class dpdk_qp;
+}
+}
+
 namespace netstar{
 
 namespace fdir_device {
@@ -138,6 +145,8 @@ private:
    friend class fdir_device::dpdk_qp<false>;
    friend class standard_device::dpdk_qp<true>;
    friend class standard_device::dpdk_qp<false>;
+   friend class seastar::dpdk::dpdk_qp<true>;
+   friend class seastar::dpdk::dpdk_qp<false>;
 
    // Explicitly invalidate _mbuf and return the original
    // _mbuf.
