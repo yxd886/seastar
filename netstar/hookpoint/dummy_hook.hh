@@ -29,6 +29,7 @@ public:
 
     virtual void check_and_start() override {
         assert(_target_port);
+        assert(_target_port->get_qid() == seastar::engine().cpu_id());
         start_receving();
     }
 };

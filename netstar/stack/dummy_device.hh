@@ -19,7 +19,9 @@ private:
 public:
     explicit dummy_qp(port* pt, unsigned qid)
         : seastar::net::qp(false, std::string("dummynet_dev_")+std::to_string(pt->get_dev_id()), qid)
-        , _port(*pt){}
+        , _port(*pt){
+        assert(pt->get_qid() == seastar::engine().cpu_id());
+    }
 
     virtual seastar::future<> send(seastar::net::packet p) override {
         abort();
