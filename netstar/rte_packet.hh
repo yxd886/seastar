@@ -123,20 +123,12 @@ public:
            if (_mbuf->ol_flags & PKT_RX_VLAN_PKT) {
                oi.vlan_tci = _mbuf->vlan_tci;
            }
-           pkt.set_offload_info(oi);
-
            if (_mbuf->ol_flags & PKT_RX_RSS_HASH) {
                pkt.set_rss_hash(_mbuf->hash.rss);
            }
 
            return std::move(pkt);
        }
-   }
-
-   // Check whether a packet is valid
-   void check() {
-       assert(_mbuf);
-       assert(rte_pktmbuf_data_len(_mbuf)>0);
    }
 
 private:

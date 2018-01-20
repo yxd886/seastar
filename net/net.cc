@@ -66,7 +66,7 @@ bool qp::poll_tx() {
             work = 0;
             for (auto&& pr : _pkt_providers) {
                 auto p = pr();
-                if (p && (*p)) {
+                if (p) {
                     work++;
                     _tx_packetq.push_back(std::move(p.value()));
                     if (_tx_packetq.size() == 128) {
@@ -95,7 +95,7 @@ bool qp::poll_tx_rte_pkt() {
             work = 0;
             for (auto&& pr : _rte_pkt_providers) {
                 auto p = pr();
-                if (p && (*p)) {
+                if (p) {
                     work++;
                     _tx_rte_packetq.push_back(std::move(p.value()));
                     if (_tx_rte_packetq.size() == 128) {
