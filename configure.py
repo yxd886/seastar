@@ -332,6 +332,8 @@ libnet = [
     'net/dhcp.cc',
     'net/tls.cc',
     'net/dns.cc',
+    'net/patchfile/fdir_device.cc',
+    'net/patchfile/standard_device.cc',
     ]
     
 libnetstar = [
