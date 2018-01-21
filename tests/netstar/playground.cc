@@ -188,7 +188,7 @@ namespace bpo = boost::program_options;
 
 int main(int ac, char** av) {
     async_flow_io<udp_ppr> x;
-    internal::af_work_unit<udp_ppr> y;
+    netstar::internal::af_work_unit<udp_ppr> y;
     app_template app;
     app.add_options()
         ("port", bpo::value<uint16_t>()->default_value(10000), "TCP server port")
