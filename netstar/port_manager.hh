@@ -6,8 +6,7 @@
 
 #include "net/dpdk.hh"
 #include "net/patchfile/standard_device.hh"
-
-#include "netstar/device/fdir_device.hh"
+#include "net/patchfile/fdir_device.hh"
 
 #include "netstar/port.hh"
 #include "netstar/shard_container.hh"
@@ -54,7 +53,7 @@ public:
             break;
         }
         case(port_type::fdir) : {
-            auto dev = create_fdir_device(port_id, seastar::smp::count);
+            auto dev = seastar::create_fdir_device(port_id, seastar::smp::count);
             _devs.push_back(std::move(dev));
             break;
         }
