@@ -8,6 +8,8 @@
 
 namespace netstar {
 
+namespace internal {
+
 template<typename Ppr>
 class async_flow_io {
     using FlowKeyType = typename Ppr::FlowKeyType;
@@ -19,6 +21,8 @@ class async_flow_io {
     // This is used as a stream to send packet to hookpoint.
     std::experimental::optional<seastar::stream<rte_packet>> _send_stream;
     unsigned _send_stream_hook_id;
+
+    // Direction is just a nick name for hook id.
     uint8_t _direction;
 
 public:
@@ -65,7 +69,13 @@ public:
             _direction = _receive_sub_hook_id;
         }
     }
+
+    uint8_t get_direction() {
+        return _direction;
+    }
 };
+
+} // namespace internal
 
 } // namespace netstar
 
