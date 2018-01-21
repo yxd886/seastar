@@ -30,6 +30,8 @@
 #include "netstar/stack/stack_manager.hh"
 #include "netstar/hookpoint/hook_manager.hh"
 #include "netstar/asyncflow/async_flow_util.hh"
+#include "netstar/preprocessor/udp_ppr.hh"
+#include "netstar/asyncflow/async_flow_io.hh"
 
 using namespace seastar;
 using namespace netstar;
