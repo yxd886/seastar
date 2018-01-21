@@ -1308,6 +1308,40 @@ public:
         }
     }
 
+    virtual uint32_t send_rte_pkts(circular_buffer<netstar::rte_packet>& pb) override {
+        if (_rte_packet_tx_burst.size() == 0) {
+            for (auto&& p : pb) {
+                // TODO: assert() in a fast path! Remove me ASAP!
+                assert(p.len());
+                _rte_packet_tx_burst.push_back(p.release_mbuf());
+            }
+        }
+
+        uint16_t sent = rte_eth_tx_burst(_dev->port_idx(), _qid,
+                                         _rte_packet_tx_burst.data() + _rte_packet_tx_burst_idx,
+                                         _rte_packet_tx_burst.size() - _rte_packet_tx_burst_idx);
+
+        uint64_t nr_frags = 0, bytes = 0;
+
+        for (int i = 0; i < sent; i++) {
+            rte_mbuf* m = _rte_packet_tx_burst[_rte_packet_tx_burst_idx + i];
+            bytes    += m->pkt_len;
+            nr_frags += m->nb_segs;
+            pb.pop_front();
+        }
+
+        _stats.tx.good.update_frags_stats(nr_frags, bytes);
+
+        _rte_packet_tx_burst_idx += sent;
+
+        if (_rte_packet_tx_burst_idx == _rte_packet_tx_burst.size()) {
+            _rte_packet_tx_burst_idx = 0;
+            _rte_packet_tx_burst.clear();
+        }
+
+        return sent;
+    }
+
     // by djp
     // process received rte_mbuf and deliver rte_packet
     void process_packets_with_rte_packets(struct rte_mbuf **bufs, uint16_t count) {
@@ -1508,6 +1542,9 @@ private:
     reactor::poller _tx_gc_poller;
     std::vector<rte_mbuf*> _tx_burst;
     uint16_t _tx_burst_idx = 0;
+    // by djp
+    std::vector<rte_mbuf*> _rte_packet_tx_burst;
+    uint16_t _rte_packet_tx_burst_idx = 0;
     static constexpr phys_addr_t page_mask = ~(memory::page_size - 1);
 };
 
