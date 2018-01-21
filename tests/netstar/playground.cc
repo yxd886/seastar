@@ -213,9 +213,9 @@ int main(int ac, char** av) {
         port_manager::get().add_port(config, 0, port_type::standard).then([&config]{
             return port_manager::get().add_port(config, 1, port_type::standard);
         }).then([]{
-            return stack_manager::get().add_stack(0, "10.28.1.12", "10.28.1.1", "255.255.255.0");
+            return stack_manager::get().add_stack(0, "10.28.1.13", "10.28.1.1", "255.255.255.0");
         }).then([]{
-            return stack_manager::get().add_stack(1, "10.29.1.12", "10.29.1.1", "255.255.255.0");
+            return stack_manager::get().add_stack(1, "10.29.1.13", "10.29.1.1", "255.255.255.0");
         }).then([]{
             return hook_manager::get().add_hook_point(hook_type::pure_stack, 0);
         }).then([]{
