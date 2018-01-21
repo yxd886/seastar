@@ -1308,6 +1308,7 @@ public:
         }
     }
 
+    // by djp
     virtual uint32_t send_rte_pkts(circular_buffer<netstar::rte_packet>& pb) override {
         if (_rte_packet_tx_burst.size() == 0) {
             for (auto&& p : pb) {
@@ -2281,6 +2282,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::poll_rx_once()
 
     /* Now process the NIC packets read */
     if (likely(rx_count > 0)) {
+        // by djp
         // process_packets(buf, rx_count);
         process_packets_with_rte_packets(buf, rx_count);
     }
