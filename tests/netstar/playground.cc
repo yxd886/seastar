@@ -187,6 +187,7 @@ public:
 namespace bpo = boost::program_options;
 
 int main(int ac, char** av) {
+    async_flow_io<udp_ppr> x;
     app_template app;
     app.add_options()
         ("port", bpo::value<uint16_t>()->default_value(10000), "TCP server port")
