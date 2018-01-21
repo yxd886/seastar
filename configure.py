@@ -338,8 +338,6 @@ libnet = [
     
 libnetstar = [
     'netstar/mica/util/cityhash/city_mod.cc',
-    'netstar/device/fdir_device.cc',
-    'netstar/device/standard_device.cc',
     ]
 
 core = [

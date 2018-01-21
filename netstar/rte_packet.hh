@@ -22,16 +22,6 @@ class dpdk_qp;
 
 namespace netstar{
 
-namespace fdir_device {
-template <bool HugetlbfsMemBackend>
-class dpdk_qp;
-} // namespace fdir_device
-
-namespace standard_device {
-template <bool HugetlbfsMemBackend>
-class dpdk_qp;
-} // namespace standard_device
-
 class rte_packet {
 #ifdef HAVE_DPDK
 
@@ -149,10 +139,6 @@ public:
    }
 
 private:
-   friend class fdir_device::dpdk_qp<true>;
-   friend class fdir_device::dpdk_qp<false>;
-   friend class standard_device::dpdk_qp<true>;
-   friend class standard_device::dpdk_qp<false>;
    friend class seastar::dpdk::dpdk_qp<true>;
    friend class seastar::dpdk::dpdk_qp<false>;
    friend class seastar::standard_device::dpdk_qp<true>;
