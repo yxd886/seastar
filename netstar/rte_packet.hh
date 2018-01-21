@@ -10,6 +10,10 @@ namespace dpdk {
 template <bool HugetlbfsMemBackend>
 class dpdk_qp;
 }
+namespace standard_device {
+template <bool HugetlbfsMemBackend>
+class dpdk_qp;
+}
 }
 
 namespace netstar{
@@ -147,6 +151,8 @@ private:
    friend class standard_device::dpdk_qp<false>;
    friend class seastar::dpdk::dpdk_qp<true>;
    friend class seastar::dpdk::dpdk_qp<false>;
+   friend class seastar::standard_device::dpdk_qp<true>;
+   friend class seastar::standard_device::dpdk_qp<false>;
 
    // Explicitly invalidate _mbuf and return the original
    // _mbuf.
