@@ -501,7 +501,7 @@ int main(int ac, char ** av) {
             clients.invoke_on_all(&client::start_the_test, test);
             clients.invoke_on_all(&client::start_bandwidth_monitoring, 1);
         });*/
-        port_manager().get().add_port(config, config["dpdk-port-idx"].as<unsigned>(), port_type::standard).then([]{
+        port_manager().get().add_port(config, config["dpdk-port-idx"].as<unsigned>(), port_type::standard).then([&config]{
             return stack_manager::get().add_stack(0,
                                                   config["host-ipv4-addr"].as<std::string>(),
                                                   config["gw-ipv4-addr"].as<std::string>(),
