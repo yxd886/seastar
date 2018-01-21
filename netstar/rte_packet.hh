@@ -62,7 +62,7 @@ public:
    Header* get_header(size_t offset = 0) {
        assert(_mbuf);
        assert(offset+sizeof(Header) <= rte_pktmbuf_pkt_len(_mbuf));
-       return reinterpret_cast<Header*>(rte_pktmbuf_mtod_offset(_mbuf, void, offset));
+       return reinterpret_cast<Header*>(rte_pktmbuf_mtod_offset(_mbuf, void*, offset));
    }
 
    // Trim some payload from front of the packet
