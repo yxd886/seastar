@@ -52,7 +52,6 @@ class hook_manager {
 public:
     seastar::future<> add_hook_point(hook_type type, unsigned port_id) {
         assert(hook_point_check(port_id));
-        assert(port_manager::get().type(port_id) != port_type::fdir);
 
         unsigned which_one = _prs.size();
         _prs.emplace_back();

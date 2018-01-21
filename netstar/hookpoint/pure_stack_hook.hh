@@ -36,6 +36,7 @@ public:
 
     virtual void check_and_start() override {
         assert(_port_id == stack_manager::get().port_id(_stack_id));
+        assert(port_manager::get().type(_port_id) != port_type::fdir);
         start_receving();
     }
 };
