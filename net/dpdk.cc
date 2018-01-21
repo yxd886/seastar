@@ -56,8 +56,8 @@
 #include <rte_cycles.h>
 #include <rte_memzone.h>
 
-#include "netstar/rte_packet.hh"
-
+// patch by djp
+// Move namespace definition up.
 using namespace seastar::net;
 
 namespace seastar {
@@ -88,6 +88,7 @@ void* as_cookie(struct rte_pktmbuf_pool_private& p) {
 #ifndef MARKER
 typedef void    *MARKER[0];   /**< generic marker for a point in a structure */
 #endif
+
 
 /******************* Net device related constatns *****************************/
 static constexpr uint16_t default_ring_size      = 512;
@@ -1308,76 +1309,6 @@ public:
         }
     }
 
-    // by djp
-    virtual uint32_t send_rte_pkts(circular_buffer<netstar::rte_packet>& pb) override {
-        if (_rte_packet_tx_burst.size() == 0) {
-            for (auto&& p : pb) {
-                // TODO: assert() in a fast path! Remove me ASAP!
-                assert(p.len());
-                _rte_packet_tx_burst.push_back(p.release_mbuf());
-            }
-        }
-
-        uint16_t sent = rte_eth_tx_burst(_dev->port_idx(), _qid,
-                                         _rte_packet_tx_burst.data() + _rte_packet_tx_burst_idx,
-                                         _rte_packet_tx_burst.size() - _rte_packet_tx_burst_idx);
-
-        uint64_t nr_frags = 0, bytes = 0;
-
-        for (int i = 0; i < sent; i++) {
-            rte_mbuf* m = _rte_packet_tx_burst[_rte_packet_tx_burst_idx + i];
-            bytes    += m->pkt_len;
-            nr_frags += m->nb_segs;
-            pb.pop_front();
-        }
-
-        _stats.tx.good.update_frags_stats(nr_frags, bytes);
-
-        _rte_packet_tx_burst_idx += sent;
-
-        if (_rte_packet_tx_burst_idx == _rte_packet_tx_burst.size()) {
-            _rte_packet_tx_burst_idx = 0;
-            _rte_packet_tx_burst.clear();
-        }
-
-        return sent;
-    }
-
-    // by djp
-    // process received rte_mbuf and deliver rte_packet
-    void process_packets_with_rte_packets(struct rte_mbuf **bufs, uint16_t count) {
-        uint64_t nr_frags = 0, bytes = 0;
-
-        for (uint16_t i = 0; i < count; i++) {
-            struct rte_mbuf *m = bufs[i];
-            netstar::rte_packet p(m);
-
-            if (_dev->hw_features().rx_csum_offload) {
-                if (m->ol_flags & (PKT_RX_IP_CKSUM_BAD | PKT_RX_L4_CKSUM_BAD)) {
-                    // Packet with bad checksum, just drop it.
-                    _stats.rx.bad.inc_csum_err();
-                    continue;
-                }
-                // Note that when _hw_features.rx_csum_offload is on, the receive
-                // code for ip, tcp and udp will assume they don't need to check
-                // the checksum again, because we did this here.
-            }
-
-            nr_frags += m->nb_segs;
-            bytes    += m->pkt_len;
-
-            _dev->l2receive_rte_packet(std::move(p));
-        }
-
-        _stats.rx.good.update_pkts_bunch(count);
-        _stats.rx.good.update_frags_stats(nr_frags, bytes);
-
-        if (!HugetlbfsMemBackend) {
-            _stats.rx.good.copy_frags = _stats.rx.good.nr_frags;
-            _stats.rx.good.copy_bytes = _stats.rx.good.bytes;
-        }
-    }
-
     dpdk_device& port() const { return *_dev; }
     tx_buf* get_tx_buf() { return _tx_buf_factory.get(); }
 private:
@@ -1543,9 +1474,6 @@ private:
     reactor::poller _tx_gc_poller;
     std::vector<rte_mbuf*> _tx_burst;
     uint16_t _tx_burst_idx = 0;
-    // by djp
-    std::vector<rte_mbuf*> _rte_packet_tx_burst;
-    uint16_t _rte_packet_tx_burst_idx = 0;
     static constexpr phys_addr_t page_mask = ~(memory::page_size - 1);
 };
 
@@ -2282,9 +2210,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::poll_rx_once()
 
     /* Now process the NIC packets read */
     if (likely(rx_count > 0)) {
-        // by djp
-        // process_packets(buf, rx_count);
-        process_packets_with_rte_packets(buf, rx_count);
+        process_packets(buf, rx_count);
     }
 
     return rx_count;

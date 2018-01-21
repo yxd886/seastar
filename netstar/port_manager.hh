@@ -4,7 +4,6 @@
 #include "core/distributed.hh"
 #include "core/reactor.hh"
 
-#include "net/dpdk.hh"
 #include "net/patchfile/standard_device.hh"
 #include "net/patchfile/fdir_device.hh"
 
