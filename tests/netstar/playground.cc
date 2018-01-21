@@ -29,6 +29,7 @@
 #include "netstar/port_manager.hh"
 #include "netstar/stack/stack_manager.hh"
 #include "netstar/hookpoint/hook_manager.hh"
+#include "netstar/asyncflow/async_flow_util.hh"
 
 using namespace seastar;
 using namespace netstar;
