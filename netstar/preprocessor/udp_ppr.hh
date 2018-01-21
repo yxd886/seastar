@@ -18,7 +18,6 @@ enum class udp_events : uint8_t{
 
 class udp_ppr{
 private:
-    using namespace std::chrono_literals;
     bool _is_client;
     seastar::timer<seastar::lowres_clock> _t;
     std::function<void(bool)> _close_fn;
@@ -34,7 +33,7 @@ public:
             // fprint(std::cout, "timer called.\n");
             this->_close_fn(this->_is_client);
         });
-        _t.arm(3s);
+        _t.arm(std::chrono::seconds(async_flow_config::flow_expire_seconds));
     }
 
 public:
@@ -43,7 +42,7 @@ public:
         ge.event_happen(udp_events::pkt_in);
         if(_t.armed()) {
             _t.cancel();
-            _t.arm(3s);
+            _t.arm(std::chrono::seconds(async_flow_config::flow_expire_seconds));
         }
         return ge;
     }
@@ -63,12 +62,12 @@ public:
                            seastar::net::ntoh(udp_hd_ptr->dst_port)};
     }
 
-public:
     struct async_flow_config {
         static constexpr int max_event_context_queue_size = 5;
         static constexpr int new_flow_queue_size = 1000;
         static constexpr int max_flow_table_size = 100000;
         static constexpr int max_directions = 2;
+        static constexpr int flow_expire_seconds = 3;
 
         static FlowKeyType get_flow_key(rte_packet& pkt){
             auto ip_hd_ptr = pkt.get_header<seastar::net::ip_hdr>(sizeof(seastar::net::eth_hdr));
