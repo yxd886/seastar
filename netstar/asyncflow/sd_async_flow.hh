@@ -36,6 +36,7 @@ class sd_async_flow_impl : public seastar::enable_lw_shared_from_this<sd_async_f
 
     sd_async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
+    uint8_t _reverse_direction_for_client;
     bool _initial_context_destroyed;
     uint64_t _flow_key_hash;
     uint32_t _flow_rss;
@@ -71,7 +72,10 @@ private:
     }
 
     void internal_packet_forward(rte_packet pkt) {
-        send_packet_out(std::move(pkt), _manager.get_reverse_direction(_client.direction));
+        if(pkt) {
+            _manager.send(std::move(pkt), _reverse_direction_for_client);
+            async_flow_debug("sd_async_flow_impl: send packet out from direction %d.\n", direction);
+        }
     }
 
 private:
@@ -169,6 +173,7 @@ public:
                        FlowKeyType* client_flow_key)
         : _manager(manager)
         , _client(true, client_direction, [this](bool){this->ppr_passive_close();})
+        , _reverse_direction_for_client(manager.get_reverse_direction(client_direction))
         , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;
         _flow_key_hash = 0;// mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(FlowKeyType));
@@ -218,13 +223,6 @@ public:
         }
         else{
             preprocess_and_forward(std::move(pkt));
-        }
-    }
-
-    void send_packet_out(rte_packet pkt, uint8_t direction){
-        if(pkt) {
-            _manager.send(std::move(pkt), direction);
-            async_flow_debug("sd_async_flow_impl: send packet out from direction %d.\n", direction);
         }
     }
 
