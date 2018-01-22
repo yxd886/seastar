@@ -263,7 +263,7 @@ private:
         _client.send_events.unregister_event(ev);
     }
 
-    future<> run_async_loop(std::function<future<af_action>()> fn) {
+    seastar::future<> run_async_loop(std::function<seastar::future<af_action>()> fn) {
         async_flow_assert(_client.loop_fn==nullptr &&
                           !_client.cur_context &&
                           !_client.async_loop_quit_pr &&
