@@ -74,7 +74,7 @@ private:
     void internal_packet_forward(rte_packet pkt) {
         if(pkt) {
             _manager.send(std::move(pkt), _reverse_direction_for_client);
-            async_flow_debug("sd_async_flow_impl: send packet out from direction %d.\n", direction);
+            async_flow_debug("sd_async_flow_impl: send packet out to direction %d.\n", _reverse_direction_for_client);
         }
     }
 
