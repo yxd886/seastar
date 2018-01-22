@@ -34,7 +34,7 @@ public:
         , _direction(0){
     }
 
-    void set_directon(uint8_t direction) {
+    void set_direction(uint8_t direction) {
         assert(direction == 1 || direction == 0);
         _direction = direction;
     }

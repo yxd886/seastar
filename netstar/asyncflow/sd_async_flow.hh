@@ -398,8 +398,8 @@ class sd_async_flow_manager {
 
 public:
     sd_async_flow_manager() {
-        _directions[0].set_directon(0);
-        _directions[1].set_directon(1);
+        _directions[0].set_direction(0);
+        _directions[1].set_direction(1);
     }
 
     // Public interface for accepting new async_flow.
