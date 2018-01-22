@@ -30,7 +30,7 @@ class filtered_events;
 template <typename... Args>
 void async_flow_debug(const char* fmt, Args&&... args) {
 #ifdef ASYNC_FLOW_DEBUG
-    print(fmt, std::forward<Args>(args)...);
+    seastar::fprint(std::cout, fmt, std::forward<Args>(args)...);
 #endif
 }
 
