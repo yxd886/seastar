@@ -39,7 +39,6 @@ class sd_async_flow_impl : public seastar::enable_lw_shared_from_this<sd_async_f
     uint8_t _reverse_direction_for_client;
     bool _initial_context_destroyed;
     uint64_t _flow_key_hash;
-    uint32_t _flow_rss;
 
 private:
 
@@ -177,7 +176,6 @@ public:
         , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;
         _flow_key_hash = 0;// mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(FlowKeyType));
-        _flow_rss = 0;
     }
 
     ~sd_async_flow_impl() {
@@ -192,11 +190,6 @@ public:
     void handle_packet_send(rte_packet pkt, uint8_t direction) {
         async_flow_debug("sd_async_flow_impl: handle_packet_send is called\n");
         async_flow_assert(direction == _client.direction);
-
-        // a patch
-        /*if(_flow_rss == 0 && pkt.rss_hash()){
-            _flow_rss = pkt.rss_hash().value();
-        }*/
 
         if(  _client.ppr_close ||
              !_initial_context_destroyed) {
@@ -300,10 +293,6 @@ public:
 
     filtered_events<EventEnumType> cur_event() {
         return _impl->_client.cur_context.value().fe;
-    }
-
-    uint32_t get_flow_rss () {
-        return _impl->_flow_rss;
     }
 
     uint64_t get_flow_key_hash () {
