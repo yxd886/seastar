@@ -32,6 +32,7 @@
 #include "netstar/asyncflow/async_flow_util.hh"
 #include "netstar/preprocessor/udp_ppr.hh"
 #include "netstar/asyncflow/async_flow_io.hh"
+#include "netstar/asyncflow/sd_async_flow.hh"
 
 using namespace seastar;
 using namespace netstar;
@@ -187,8 +188,7 @@ public:
 namespace bpo = boost::program_options;
 
 int main(int ac, char** av) {
-    internal::async_flow_io<udp_ppr> x;
-    netstar::internal::af_work_unit<udp_ppr> y(true, 1, [](bool x){});
+    netstar::sd_async_flow_manager<udp_ppr> manager;
     app_template app;
     app.add_options()
         ("port", bpo::value<uint16_t>()->default_value(10000), "TCP server port")
