@@ -270,7 +270,7 @@ private:
                           !_client.ppr_close);
 
         _client.loop_fn = std::move(fn);
-        _client.async_loop_quit_pr = promise<>();
+        _client.async_loop_quit_pr = seastar::promise<>();
         return _client.async_loop_quit_pr->get_future();
     }
 };
