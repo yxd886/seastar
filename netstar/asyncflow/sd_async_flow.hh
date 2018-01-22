@@ -36,7 +36,6 @@ class sd_async_flow_impl : public seastar::enable_lw_shared_from_this<sd_async_f
 
     sd_async_flow_manager<Ppr>& _manager;
     af_work_unit<Ppr> _client;
-    unsigned _pkts_in_pipeline; // records number of the packets injected into the pipeline.
     bool _initial_context_destroyed;
     uint64_t _flow_key_hash;
     uint32_t _flow_rss;
@@ -73,7 +72,6 @@ private:
 
     void internal_packet_forward(rte_packet pkt) {
         send_packet_out(std::move(pkt), _manager.get_reverse_direction(_client.direction));
-        _pkts_in_pipeline -= 1;
     }
 
 private:
@@ -94,10 +92,6 @@ private:
 
         if(action == af_action::forward || action == af_action::close_forward) {
             internal_packet_forward(std::move(context.pkt));
-        }
-
-        if(action == af_action::drop || action == af_action::close_drop) {
-            _pkts_in_pipeline -= 1;
         }
 
         _client.cur_context = {};
@@ -125,7 +119,6 @@ private:
         }
 
         if(_client.ppr_close == true) {
-            _pkts_in_pipeline += 1;
             _client.cur_context.emplace(rte_packet(),
                                         filtered_events<EventEnumType>::make_close_event(),
                                         true);
@@ -135,7 +128,6 @@ private:
 
     void async_loop_exception_handler(std::exception_ptr ptr) {
         this->_initial_context_destroyed = false;
-        this->_pkts_in_pipeline = 0;
         _client.cur_context = {};
         _client.loop_fn = nullptr;
         while(!_client.buffer_q.empty()) {
@@ -177,7 +169,6 @@ public:
                        FlowKeyType* client_flow_key)
         : _manager(manager)
         , _client(true, client_direction, [this](bool){this->ppr_passive_close();})
-        , _pkts_in_pipeline(0)
         , _initial_context_destroyed(false) {
         _client.flow_key = *client_flow_key;
         _flow_key_hash = 0;// mica::util::hash(reinterpret_cast<char*>(client_flow_key), sizeof(FlowKeyType));
@@ -187,7 +178,6 @@ public:
     ~sd_async_flow_impl() {
         async_flow_debug("sd_async_flow_impl: deconstruction.\n");
         async_flow_assert(!_client.cur_context);
-        async_flow_assert(_pkts_in_pipeline == 0);
     }
 
     void destroy_initial_context() {
@@ -203,14 +193,12 @@ public:
             _flow_rss = pkt.rss_hash().value();
         }*/
 
-        if( _pkts_in_pipeline >= Ppr::async_flow_config::max_event_context_queue_size ||
-             _client.ppr_close ||
+        if(  _client.ppr_close ||
              !_initial_context_destroyed) {
-            // Unconditionally drop the packet.
+            // Unconditionally drop the packet if the preprocessor
+            // has been closed or the initial context has not been destroyed.
             return;
         }
-
-        _pkts_in_pipeline += 1;
 
         if(_client.loop_fn != nullptr) {
             if(!_client.cur_context) {
@@ -244,7 +232,6 @@ public:
         close_ppr_and_remove_flow_key();
 
         if(_client.loop_fn != nullptr && !_client.cur_context) {
-            _pkts_in_pipeline += 1;
             _client.cur_context.emplace(rte_packet(),
                                         filtered_events<EventEnumType>::make_close_event(),
                                         true);
