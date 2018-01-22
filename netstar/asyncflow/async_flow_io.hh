@@ -34,6 +34,11 @@ public:
         , _direction(0){
     }
 
+    void set_directon(uint8_t direction) {
+        assert(direction == 1 || direction == 0);
+        _direction = direction;
+    }
+
     void receive_from_hookpoint(unsigned hook_id,
                                 seastar::stream<rte_packet, FlowKeyType*>& hook_input_stream,
                                 std::function<seastar::future<>(rte_packet, FlowKeyType*)> recv_fn) {
@@ -76,15 +81,6 @@ public:
 
     uint8_t get_direction() {
         return _direction;
-    }
-
-    uint8_t get_reverse_direction() {
-        if(_direction == 0) {
-            return 1;
-        }
-        else {
-            return 0;
-        }
     }
 
     seastar::stream<rte_packet>& get_send_stream() {

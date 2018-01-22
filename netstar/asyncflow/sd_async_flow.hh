@@ -10,7 +10,7 @@
 #include "netstar/rte_packet.hh"
 
 #include <unordered_map>
-#include <vector>
+#include <array>
 
 namespace netstar {
 
@@ -393,13 +393,13 @@ class sd_async_flow_manager {
     };
 
     std::unordered_map<FlowKeyType, seastar::lw_shared_ptr<internal::sd_async_flow_impl<Ppr>>, HashFunc> _flow_table;
-    std::vector<internal::async_flow_io<Ppr>> _directions;
+    std::array<internal::async_flow_io<Ppr>, 2> _directions;
     seastar::queue<queue_item> _new_ic_q{Ppr::async_flow_config::new_flow_queue_size};
 
 public:
     sd_async_flow_manager() {
-        _directions.emplace_back();
-        _directions.emplace_back();
+        _directions[0].set_directon(0);
+        _directions[1].set_direction(1);
     }
 
     // Public interface for accepting new async_flow.
@@ -425,7 +425,7 @@ public:
                                 unsigned hook_id, // The id of the hookpoint
                                 seastar::stream<rte_packet, FlowKeyType*>& hook_input_stream // An input stream from hook
                                 ) {
-        _directions.at[direction].receive_from_hookpoint(hook_id, hook_input_stream,
+        _directions[direction].receive_from_hookpoint(hook_id, hook_input_stream,
                         [this, direction](rte_packet pkt, FlowKeyType* key) {
                 async_flow_debug("Receive a new packet from direction %d\n", direction);
                 auto afi = _flow_table.find(*key);
@@ -457,7 +457,7 @@ public:
             unsigned hook_id, // The id of the hookpoint
             std::function<seastar::future<>(rte_packet)> send_fn // The function for receiving
             ) {
-        return _directions.at(direction).send_to_hookpoint(hook_id, std::move(send_fn));
+        return _directions[direction].send_to_hookpoint(hook_id, std::move(send_fn));
     }
 
 private:
