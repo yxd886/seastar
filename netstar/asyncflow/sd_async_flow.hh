@@ -398,8 +398,8 @@ class sd_async_flow_manager {
 
 public:
     sd_async_flow_manager() {
-        _directions.emplace_back(0);
-        _directions.emplace_back(1);
+        _directions.emplace_back();
+        _directions.emplace_back();
     }
 
     // Public interface for accepting new async_flow.

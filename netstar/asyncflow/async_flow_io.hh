@@ -28,11 +28,10 @@ class async_flow_io {
     uint8_t _direction;
 
 public:
-    async_flow_io(uint8_t direction)
+    async_flow_io()
         : _receive_sub_hook_id(0)
         , _send_stream_hook_id(0)
-        , _direction(direction){
-        assert(direction ==0 || direction == 1);
+        , _direction(0){
     }
 
     void receive_from_hookpoint(unsigned hook_id,
