@@ -636,6 +636,7 @@ public:
                                     val_len, std::move(val));
             send_request_descriptor(rd_idx);
             return _rds[rd_idx].obtain_future();
+<<<<<<< HEAD
         }
         else{
             return _pending_work_queue.wait(1).then(
@@ -692,6 +693,24 @@ public:
                mica_cb cb) {
     }
     void query_with_cb(Operation op, mica_key key, mica_value value, mica_cb cb) {
+=======
+        }
+        else{
+            return _pending_work_queue.wait(1).then(
+                    [this, op, key_len, key=std::move(key),
+                     val_len, val=std::move(val)] () mutable{
+                auto rd_idx = _recycled_rds.front();
+                _recycled_rds.pop_front();
+                _rds[rd_idx].new_action(op, key_len, std::move(key),
+                                        val_len, std::move(val));
+                send_request_descriptor(rd_idx);
+                return _rds[rd_idx].obtain_future();
+            });
+        }
+    }
+    future<mica_response> query(Operation op, mica_key key, mica_value value) {
+        return query(op, key.get_actual_length(), key.get_roundup_buf(), value.get_actual_length(), value.get_roundup_buf());
+>>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
     }
 #endif
     size_t nr_request_descriptors() {

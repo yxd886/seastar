@@ -19,11 +19,6 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
-<<<<<<< HEAD
-
-#include "nf/firewall.hh"
-=======
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
 
 #include "core/reactor.hh"
 #include "core/app-template.hh"
@@ -41,7 +36,7 @@
 
 #include "netstar/work_unit.hh"
 #include "netstar/port_env.hh"
-#include "netstar/af/cb_async_flow.hh"
+#include "netstar/af/sd_async_flow.hh"
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
 
@@ -130,8 +125,6 @@ public:
     };
 };
 
-<<<<<<< HEAD
-=======
 
 
 class IPS{
@@ -180,9 +173,7 @@ public:
 
 };
 
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
 class forwarder;
-
 distributed<forwarder> forwarders;
 
 class forwarder {
@@ -193,15 +184,9 @@ class forwarder {
     std::experimental::optional<subscription<net::packet>> _egress_port_sub;
 
 
-<<<<<<< HEAD
-    cb_async_flow_manager<dummy_udp_ppr> _udp_manager;
-    cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
-    cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
-=======
     sd_async_flow_manager<dummy_udp_ppr> _udp_manager;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
 
     mica_client& _mc;
 
@@ -340,13 +325,6 @@ public:
         }));
     }
 
-<<<<<<< HEAD
-    struct firewall_flow_state {
-        uint8_t tcp_flags;
-        uint32_t sent_seq;
-        uint32_t recv_ack;
-        bool pass;
-=======
     struct ips_flow_state{
         uint8_t tag;
         uint32_t _state;
@@ -356,7 +334,6 @@ public:
     struct mp_list_t {
         int num_match;
         uint16_t ptrn_id[MAX_MATCH];
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
     };
 
     struct query_key {
@@ -364,21 +341,12 @@ public:
         uint64_t v2;
     };
 
-<<<<<<< HEAD
-    class firewall_runner {
-        cb_async_flow<dummy_udp_ppr> _ac;
-        forwarder& _f;
-        firewall_flow_state _fs;
-    public:
-        firewall_runner(cb_async_flow<dummy_udp_ppr> ac, forwarder& f)
-=======
     class ips_runner {
         sd_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
         ips_flow_state _fs;
     public:
         ips_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
             : _ac(std::move(ac))
             , _f(f){}
 
@@ -386,67 +354,7 @@ public:
             _ac.register_events(dummy_udp_events::pkt_in);
         }
 
-<<<<<<< HEAD
-        void close_cb() {
-            delete this;
-        }
-
-        void db_write_cb(int err_code, mica_response res) {
-            if(err_code!=0){
-                _ac.drop_cur_packet();
-                return;
-            }
-            forward_packet(_fs);
-        }
-
-        void db_read_cb(int err_code, mica_response res) {
-            if(err_code!=0){
-                _ac.drop_cur_packet();
-                return;
-            }
-
-            bool state_changed = true;
-            if(res.get_result() == Result::kNotFound) {
-                initialize_session_state(_ac.cur_packet(), _fs);
-            }
-            else{
-                _fs = res.get_value<firewall_flow_state>();
-               state_changed = update_session_state(_ac.cur_packet(), _fs);
-            }
-
-            if(state_changed) {
-                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
-                    db_write_cb(err_code, std::move(res));
-                });
-            }
-            else{
-                forward_packet(_fs);
-            }
-        }
-
-        void pkt_cb() {
-            if(_ac.cur_event().on_close_event()) {
-                _ac.drop_cur_packet();
-                _ac.unregister_packet_cb();
-                return;
-            }
-
-            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-            _f._mc.query_with_cb(Operation::kGet, mica_key(key),
-                        mica_value(0, temporary_buffer<char>()), [this](int err_code, mica_response res){
-                db_read_cb(err_code, std::move(res));
-            });
-        }
-
-        void run_firewall() {
-            _ac.register_cbs([this]{pkt_cb();}, [this]{close_cb();});
-        }
-
-        /*future<> run_firewall() {
-=======
         future<> run_ips() {
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
             return _ac.run_async_loop([this](){
                 if(_ac.cur_event().on_close_event()) {
                     return make_ready_future<af_action>(af_action::close_forward);
@@ -454,27 +362,6 @@ public:
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                 return _f._mc.query(Operation::kGet, mica_key(key),
                         mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
-<<<<<<< HEAD
-                    bool state_changed = true;
-                   if(res.get_result() == Result::kNotFound) {
-                       initialize_session_state(_ac.cur_packet(), _fs);
-                   }
-                   else{
-                       _fs = res.get_value<firewall_flow_state>();
-                      state_changed = update_session_state(_ac.cur_packet(), _fs);
-                   }
-
-                   if(state_changed) {
-                       auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                       return _f._mc.query(Operation::kSet, mica_key(key),
-                               mica_value(_fs)).then([this](mica_response response){
-                           return forward_packet(_fs);
-                       });
-                   }
-                   else{
-                       forward_packet(_fs);
-                   }
-=======
                     if(response.get_result() == Result::kNotFound) {
                         init_automataState(_fs);
                         auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
@@ -500,7 +387,6 @@ public:
                         }
                     }
 
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
                 }).then_wrapped([this](auto&& f){
                     try{
                         auto result = f.get0();
@@ -508,52 +394,17 @@ public:
 
                     }
                     catch(...){
-<<<<<<< HEAD
-=======
                         if(_f._mc.nr_request_descriptors() == 0){
                             _f._insufficient_mica_rd_erorr += 1;
                         }
                         else{
                             _f._mica_timeout_error += 1;
                         }
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
                         return af_action::drop;
                     }
                 });
             });
-        }*/
-
-        void initialize_session_state(net::packet& pkt, firewall_flow_state& state) {
-            auto ip_hdr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-            auto udp_hdr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
-
-            for(auto& rule : _f.firewall.rules){
-                if(ip_hdr->dst_ip.ip == rule._dst_addr &&
-                   udp_hdr->dst_port == rule._dst_port &&
-                   ip_hdr->src_ip.ip == rule._src_addr &&
-                   udp_hdr->src_port == rule._src_port){
-                    state.pass = false;
-                    return;
-                }
-            }
-
-            state.pass = true;
         }
-
-        bool update_session_state(net::packet& pkt, firewall_flow_state& state) {
-            return false;
-        }
-
-        void forward_packet(firewall_flow_state& fs) {
-            if(fs.pass){
-                _ac.forward_cur_packet();
-            }
-            else{
-                _ac.drop_cur_packet();
-            }
-        }
-<<<<<<< HEAD
-=======
 
        void init_automataState(struct ips_flow_state& state){
              srand((unsigned)time(NULL));
@@ -683,7 +534,6 @@ public:
                 return af_action::drop;
             }
         }
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
     };
 
     void run_udp_manager(int) {
@@ -691,16 +541,10 @@ public:
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
 
-<<<<<<< HEAD
-                auto runner = new firewall_runner(ic.get_cb_async_flow(), (*this));
-                runner->events_registration();
-                runner->run_firewall();
-=======
                 do_with(ips_runner(ic.get_sd_async_flow(), (*this)), [](ips_runner& r){
                      r.events_registration();
                      return r.run_ips();
                 });
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
 
                 return stop_iteration::no;
             });
@@ -760,11 +604,7 @@ public:
         });
     }
 public:
-<<<<<<< HEAD
-    Firewall firewall;
-=======
     IPS ips;
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
 };
 
 int main(int ac, char** av) {
@@ -826,8 +666,3 @@ int main(int ac, char** av) {
 // 1r1w: 5.35M
 // 2r2w: 3.4M
 // 3r3w: 2.43M
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4

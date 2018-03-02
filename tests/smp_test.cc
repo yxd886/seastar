@@ -18,10 +18,14 @@
 /*
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
-
+#include "nf/nat.h"
 #include "core/reactor.hh"
 #include "core/app-template.hh"
 #include "core/print.hh"
+#include "nf/aho-corasick/fpp.h"
+#include "nf/aho-corasick/aho.h"
+
+
 
 using namespace seastar;
 
@@ -58,6 +62,7 @@ future<bool> test_smp_exception() {
 }
 
 int tests, fails;
+
 
 future<>
 report(sstring msg, future<bool>&& result) {

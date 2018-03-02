@@ -79,6 +79,10 @@ public:
         fs._tcp_flags=0;
     }
     future<netstar::af_action> process_packet(net::packet* rte_pkt, mica_client& mc, firewall_state state, uint64_t key ){
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
 
         net::ip_hdr *iphdr;
 

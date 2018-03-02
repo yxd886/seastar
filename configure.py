@@ -410,6 +410,8 @@ boost_test_lib = [
 ]
 
 
+
+
 def maybe_static(flag, libs):
     if flag and not args.static:
         libs = '-Wl,-Bstatic {} -Wl,-Bdynamic'.format(libs)

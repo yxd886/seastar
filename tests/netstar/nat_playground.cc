@@ -1,4 +1,14 @@
 /*
+ * nat_playground.cc
+ *
+ *  Created on: Dec 28, 2017
+ *      Author: Admin
+ */
+
+
+
+
+/*
  * This file is open source software, licensed to you under the terms
  * of the Apache License, Version 2.0 (the "License").  See the NOTICE file
  * distributed with this work for additional information regarding copyright
@@ -19,11 +29,6 @@
  * Copyright (C) 2014 Cloudius Systems, Ltd.
  */
 
-<<<<<<< HEAD
-
-#include "nf/firewall.hh"
-=======
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
 
 #include "core/reactor.hh"
 #include "core/app-template.hh"
@@ -41,7 +46,7 @@
 
 #include "netstar/work_unit.hh"
 #include "netstar/port_env.hh"
-#include "netstar/af/cb_async_flow.hh"
+#include "netstar/af/sd_async_flow.hh"
 #include "netstar/mica_client.hh"
 #include "netstar/extendable_buffer.hh"
 
@@ -50,9 +55,6 @@
 
 #include <vector>
 #include <iostream>
-#include "nf/aho-corasick/fpp.h"
-#include "nf/aho-corasick/aho.h"
-#define MAX_MATCH 8192
 #include <stdlib.h>
 #include <time.h>
 
@@ -130,59 +132,25 @@ public:
     };
 };
 
-<<<<<<< HEAD
-=======
 
 
-class IPS{
+std::string ip_lists[64]={"192.168.122.131","192.168.122.132","192.168.122.133","192.168.122.134",
+                "192.168.122.135","192.168.122.136","192.168.122.137","192.168.122.138",
+                "192.168.122.139","192.168.122.140","192.168.122.141","192.168.122.142"};
+uint16_t port_lists[64]={10012,10013,10014,10015,10016,10017,10018,10019,10020,10021,10022,10023,10024,10025,10026,10027,10028};
+
+class NAT{
 public:
-    IPS(){
+    NAT():
+        _cluster_id(1){
 
-        int num_patterns, i;
-
-        int num_threads = 1;
-        assert(num_threads >= 1 && num_threads <= AHO_MAX_THREADS);
-
-        stats =(struct stat_t*)malloc(num_threads * sizeof(struct stat_t));
-        for(i = 0; i < num_threads; i++) {
-            stats[i].tput = 0;
-        }
-        struct aho_pattern *patterns;
-        /* Thread structures */
-        //pthread_t worker_threads[AHO_MAX_THREADS];
-
-
-        red_printf("State size = %lu\n", sizeof(struct aho_state));
-
-        /* Initialize the shared DFAs */
-        for(i = 0; i < AHO_MAX_DFA; i++) {
-            printf("Initializing DFA %d\n", i);
-            aho_init(&dfa_arr[i], i);
-        }
-
-        red_printf("Adding patterns to DFAs\n");
-        patterns = aho_get_patterns(AHO_PATTERN_FILE,
-            &num_patterns);
-
-        for(i = 0; i < num_patterns; i++) {
-            int dfa_id = patterns[i].dfa_id;
-            aho_add_pattern(&dfa_arr[dfa_id], &patterns[i], i);
-        }
-
-        red_printf("Building AC failure function\n");
-        for(i = 0; i < AHO_MAX_DFA; i++) {
-            aho_build_ff(&dfa_arr[i]);
-            aho_preprocess_dfa(&dfa_arr[i]);
-        }
     }
-    struct aho_dfa dfa_arr[AHO_MAX_DFA];
-    struct stat_t *stats;
+
+uint64_t _cluster_id;
 
 };
 
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
 class forwarder;
-
 distributed<forwarder> forwarders;
 
 class forwarder {
@@ -193,15 +161,9 @@ class forwarder {
     std::experimental::optional<subscription<net::packet>> _egress_port_sub;
 
 
-<<<<<<< HEAD
-    cb_async_flow_manager<dummy_udp_ppr> _udp_manager;
-    cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
-    cb_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
-=======
     sd_async_flow_manager<dummy_udp_ppr> _udp_manager;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_ingress;
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
 
     mica_client& _mc;
 
@@ -340,23 +302,11 @@ public:
         }));
     }
 
-<<<<<<< HEAD
-    struct firewall_flow_state {
-        uint8_t tcp_flags;
-        uint32_t sent_seq;
-        uint32_t recv_ack;
-        bool pass;
-=======
-    struct ips_flow_state{
-        uint8_t tag;
-        uint32_t _state;
-        uint32_t _dfa_id;
-        bool _alert;
-    };
-    struct mp_list_t {
-        int num_match;
-        uint16_t ptrn_id[MAX_MATCH];
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
+    struct nat_flow_state{
+        uint32_t _dst_ip_addr;
+        uint16_t _dst_port;
+        uint64_t _ip_port_list;
+
     };
 
     struct query_key {
@@ -364,21 +314,15 @@ public:
         uint64_t v2;
     };
 
-<<<<<<< HEAD
-    class firewall_runner {
-        cb_async_flow<dummy_udp_ppr> _ac;
-        forwarder& _f;
-        firewall_flow_state _fs;
-    public:
-        firewall_runner(cb_async_flow<dummy_udp_ppr> ac, forwarder& f)
-=======
-    class ips_runner {
+    class nat_runner {
         sd_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
-        ips_flow_state _fs;
+        nat_flow_state _fs;
+        std::vector<uint32_t> _ip_list;
+        std::vector<uint16_t> _port_list;
+        uint64_t ip_port_list_bit;
     public:
-        ips_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
+        nat_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
             : _ac(std::move(ac))
             , _f(f){}
 
@@ -386,121 +330,80 @@ public:
             _ac.register_events(dummy_udp_events::pkt_in);
         }
 
-<<<<<<< HEAD
-        void close_cb() {
-            delete this;
-        }
-
-        void db_write_cb(int err_code, mica_response res) {
-            if(err_code!=0){
-                _ac.drop_cur_packet();
-                return;
-            }
-            forward_packet(_fs);
-        }
-
-        void db_read_cb(int err_code, mica_response res) {
-            if(err_code!=0){
-                _ac.drop_cur_packet();
-                return;
-            }
-
-            bool state_changed = true;
-            if(res.get_result() == Result::kNotFound) {
-                initialize_session_state(_ac.cur_packet(), _fs);
-            }
-            else{
-                _fs = res.get_value<firewall_flow_state>();
-               state_changed = update_session_state(_ac.cur_packet(), _fs);
-            }
-
-            if(state_changed) {
-                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                _f._mc.query_with_cb(Operation::kSet, mica_key(key), mica_value(_fs), [this](int err_code, mica_response res){
-                    db_write_cb(err_code, std::move(res));
-                });
-            }
-            else{
-                forward_packet(_fs);
-            }
-        }
-
-        void pkt_cb() {
-            if(_ac.cur_event().on_close_event()) {
-                _ac.drop_cur_packet();
-                _ac.unregister_packet_cb();
-                return;
-            }
-
-            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-            _f._mc.query_with_cb(Operation::kGet, mica_key(key),
-                        mica_value(0, temporary_buffer<char>()), [this](int err_code, mica_response res){
-                db_read_cb(err_code, std::move(res));
-            });
-        }
-
-        void run_firewall() {
-            _ac.register_cbs([this]{pkt_cb();}, [this]{close_cb();});
-        }
-
-        /*future<> run_firewall() {
-=======
-        future<> run_ips() {
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
+        future<> run_nat() {
             return _ac.run_async_loop([this](){
                 if(_ac.cur_event().on_close_event()) {
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
+                ip_port_list_bit=0x111111;
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                 return _f._mc.query(Operation::kGet, mica_key(key),
                         mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
-<<<<<<< HEAD
-                    bool state_changed = true;
-                   if(res.get_result() == Result::kNotFound) {
-                       initialize_session_state(_ac.cur_packet(), _fs);
-                   }
-                   else{
-                       _fs = res.get_value<firewall_flow_state>();
-                      state_changed = update_session_state(_ac.cur_packet(), _fs);
-                   }
-
-                   if(state_changed) {
-                       auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                       return _f._mc.query(Operation::kSet, mica_key(key),
-                               mica_value(_fs)).then([this](mica_response response){
-                           return forward_packet(_fs);
-                       });
-                   }
-                   else{
-                       forward_packet(_fs);
-                   }
-=======
                     if(response.get_result() == Result::kNotFound) {
-                        init_automataState(_fs);
-                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                        return _f._mc.query(Operation::kSet, mica_key(key),
-                                mica_value(_fs)).then([this](mica_response response){
-                            return forward_packet(_fs);
+                        auto key = query_key{_f.nat._cluster_id, _f.nat._cluster_id};
+                        return _f._mc.query(Operation::kGet, mica_key(key),
+                                mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
+                            if(response.get_result() == Result::kNotFound) {
+
+                                printf("not find!\n");
+                                auto key = query_key{_f.nat._cluster_id, _f.nat._cluster_id};
+                                return _f._mc.query(Operation::kSet, mica_key(key),
+                                        mica_value(ip_port_list_bit)).then([this](mica_response response){
+                                    form_list(ip_port_list_bit);
+                                    uint32_t select_ip=0;
+                                    uint16_t select_port=0;
+                                    select_ip_port(&select_ip,&select_port);
+                                    _fs._dst_ip_addr=select_ip;
+                                    _fs._dst_port=select_port;
+                                    auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                                    return _f._mc.query(Operation::kSet, mica_key(key),
+                                            mica_value(_fs)).then([this](mica_response response){
+                                        net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+                                        _fs._dst_ip_addr=ip_hd->src_ip.ip;
+                                        auto udp_hdr = _ac.cur_packet().get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+                                        _fs._dst_port=udp_hdr->src_port;
+                                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                                        return _f._mc.query(Operation::kSet, mica_key(key),
+                                                mica_value(_fs)).then([this](mica_response response){
+                                            return af_action::forward;
+
+                                        });
+
+                                    });
+                                });
+                            }else {
+                                ip_port_list_bit = response.get_value<uint64_t>();
+                                form_list(ip_port_list_bit);
+                                uint32_t select_ip=0;
+                                uint16_t select_port=0;
+                                select_ip_port(&select_ip,&select_port);
+                                _fs._dst_ip_addr=select_ip;
+                                _fs._dst_port=select_port;
+                                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                                return _f._mc.query(Operation::kSet, mica_key(key),
+                                        mica_value(_fs)).then([this](mica_response response){
+                                    net::ip_hdr* ip_hd= _ac.cur_packet().get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+                                    _fs._dst_ip_addr=ip_hd->src_ip.ip;
+                                    auto udp_hdr = _ac.cur_packet().get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
+                                    _fs._dst_port=udp_hdr->src_port;
+                                    auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                                    return _f._mc.query(Operation::kSet, mica_key(key),
+                                            mica_value(_fs)).then([this](mica_response response){
+                                        return af_action::forward;
+
+                                    });
+
+                                });
+                            }
+
                         });
                     }
                     else {
-                        _fs = response.get_value<ips_flow_state>();
-                        ips_flow_state old=response.get_value<ips_flow_state>();
-                        ips_detect(&(_ac.cur_packet()),&_fs);
-                        auto state_changed=state_updated(&old,&_fs);
-                        if(state_changed) {
-                            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                            return _f._mc.query(Operation::kSet, mica_key(key),
-                                    mica_value(_fs)).then([this](mica_response response){
-                                return forward_packet(_fs);
-                            });
-                        }
-                        else{
-                            return make_ready_future<af_action>(forward_packet(_fs));
-                        }
+                        _fs = response.get_value<nat_flow_state>();
+                        update_packet_header(_fs._dst_ip_addr,_fs._dst_port,&(_ac.cur_packet()));
+                        return make_ready_future<af_action>(af_action::forward);
                     }
 
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
                 }).then_wrapped([this](auto&& f){
                     try{
                         auto result = f.get0();
@@ -508,182 +411,48 @@ public:
 
                     }
                     catch(...){
-<<<<<<< HEAD
-=======
                         if(_f._mc.nr_request_descriptors() == 0){
                             _f._insufficient_mica_rd_erorr += 1;
                         }
                         else{
                             _f._mica_timeout_error += 1;
                         }
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
                         return af_action::drop;
                     }
                 });
             });
-        }*/
-
-        void initialize_session_state(net::packet& pkt, firewall_flow_state& state) {
-            auto ip_hdr = pkt.get_header<net::ip_hdr>(sizeof(net::eth_hdr));
-            auto udp_hdr = pkt.get_header<net::udp_hdr>(sizeof(net::eth_hdr) + sizeof(net::ip_hdr));
-
-            for(auto& rule : _f.firewall.rules){
-                if(ip_hdr->dst_ip.ip == rule._dst_addr &&
-                   udp_hdr->dst_port == rule._dst_port &&
-                   ip_hdr->src_ip.ip == rule._src_addr &&
-                   udp_hdr->src_port == rule._src_port){
-                    state.pass = false;
-                    return;
+        }
+        void form_list(uint64_t backend_list_bit){
+            _ip_list.clear();
+            for (uint32_t i=0;i<sizeof(backend_list_bit);i++){
+                uint64_t t=backend_list_bit&0x1;
+                if(t==1){
+                    _ip_list.push_back(::net::ipv4_address(ip_lists[i].c_str()).ip);
+                    _port_list.push_back(port_lists[i]);
                 }
-            }
 
-            state.pass = true;
-        }
-
-        bool update_session_state(net::packet& pkt, firewall_flow_state& state) {
-            return false;
-        }
-
-        void forward_packet(firewall_flow_state& fs) {
-            if(fs.pass){
-                _ac.forward_cur_packet();
-            }
-            else{
-                _ac.drop_cur_packet();
+                backend_list_bit=backend_list_bit>>1;
             }
         }
-<<<<<<< HEAD
-=======
 
-       void init_automataState(struct ips_flow_state& state){
-             srand((unsigned)time(NULL));
-             state._state=0;
-             state._alert=false;
-             state._dfa_id=rand()%AHO_MAX_DFA;
-         }
-       void parse_pkt(net::packet *rte_pkt, struct ips_flow_state* state,struct aho_pkt*  aho_pkt){
-
-           aho_pkt->content=(uint8_t*)malloc(rte_pkt->len());
-           memcpy(aho_pkt->content,reinterpret_cast<uint8_t*>(rte_pkt->get_header(0,sizeof(char))),rte_pkt->len()-1);
-           aho_pkt->dfa_id=state->_dfa_id;
-           aho_pkt->len=rte_pkt->len();
-       }
-       bool state_updated(struct ips_flow_state* old_,struct ips_flow_state* new_){
-           if(old_->_alert==new_->_alert&&old_->_dfa_id==new_->_dfa_id&&old_->_state==new_->_state){
-               return false;
-           }
-           return true;
-       }
-
-       void process_batch(const struct aho_dfa *dfa_arr,
-           const struct aho_pkt *pkts, struct mp_list_t *mp_list, struct ips_flow_state* ips_state)
-       {
-           int I, j;
-
-           for(I = 0; I < BATCH_SIZE; I++) {
-               int dfa_id = pkts[I].dfa_id;
-               int len = pkts[I].len;
-               struct aho_state *st_arr = dfa_arr[dfa_id].root;
-
-               int state = ips_state->_state;
-             if(state>=dfa_arr[dfa_id].num_used_states){
-                 ips_state->_alert=false;
-                 ips_state->_state=state;
-                 return;
-             }
-
-
-               for(j = 0; j < len; j++) {
-
-                   int count = st_arr[state].output.count;
-
-                   if(count != 0) {
-                       /* This state matches some patterns: copy the pattern IDs
-                         *  to the output */
-                       int offset = mp_list[I].num_match;
-                       memcpy(&mp_list[I].ptrn_id[offset],
-                           st_arr[state].out_arr, count * sizeof(uint16_t));
-                       mp_list[I].num_match += count;
-                       ips_state->_alert=true;
-                       ips_state->_state=state;
-                       return;
-
-                   }
-                   int inp = pkts[I].content[j];
-                   state = st_arr[state].G[inp];
-               }
-               ips_state->_state=state;
-           }
-
-
-       }
-       void ids_func(struct aho_ctrl_blk *cb,struct ips_flow_state* state)
-       {
-           int i, j;
-
-
-
-           struct aho_dfa *dfa_arr = cb->dfa_arr;
-           struct aho_pkt *pkts = cb->pkts;
-           int num_pkts = cb->num_pkts;
-
-           /* Per-batch matched patterns */
-           struct mp_list_t mp_list[BATCH_SIZE];
-           for(i = 0; i < BATCH_SIZE; i++) {
-               mp_list[i].num_match = 0;
-           }
-
-           /* Being paranoid about GCC optimization: ensure that the memcpys in
-             *  process_batch functions don't get optimized out */
-
-
-           //int tot_proc = 0;     /* How many packets did we actually match ? */
-           //int tot_success = 0;  /* Packets that matched a DFA state */
-           // tot_bytes = 0;       /* Total bytes matched through DFAs */
-
-           for(i = 0; i < num_pkts; i += BATCH_SIZE) {
-               process_batch(dfa_arr, &pkts[i], mp_list,state);
-
-               for(j = 0; j < BATCH_SIZE; j++) {
-                   int num_match = mp_list[j].num_match;
-                   assert(num_match < MAX_MATCH);
-
-
-                   mp_list[j].num_match = 0;
-               }
-           }
-
-
-
-       }
-       void ips_detect(net::packet *rte_pkt, struct ips_flow_state* state){
-
-           struct aho_pkt* pkts=(struct aho_pkt* )malloc(sizeof(struct aho_pkt));
-           parse_pkt(rte_pkt, state,pkts);
-           struct aho_ctrl_blk worker_cb;
-           worker_cb.stats = _f.ips.stats;
-           worker_cb.tot_threads = 1;
-           worker_cb.tid = 0;
-           worker_cb.dfa_arr = _f.ips.dfa_arr;
-           worker_cb.pkts = pkts;
-           worker_cb.num_pkts = 1;
-
-           ids_func(&worker_cb,state);
-           free(pkts->content);
-           free(pkts);
-
-       }
-
-
-        af_action forward_packet(ips_flow_state& fs) {
-            if(!fs._alert) {
-                return af_action::forward;
-            }
-            else {
-                return af_action::drop;
-            }
+        void select_ip_port(uint32_t* ip,uint16_t* port){
+            srand((unsigned)time(nullptr));
+            long unsigned int index=(long unsigned int)rand()%_ip_list.size();
+            *port=_port_list[index];
+            *ip=_ip_list[index];
+            return;
         }
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
+
+        void update_packet_header(uint32_t ip, uint16_t port,net::packet* rte_pkt){
+            net::ip_hdr *iphdr;
+            net::udp_hdr *tcp;
+            iphdr =rte_pkt->get_header<net::ip_hdr>(sizeof(net::eth_hdr));
+            tcp = ( net::udp_hdr *)((unsigned char *)iphdr +sizeof(struct ipv4_hdr));
+            iphdr->dst_ip.ip=ip;
+            tcp->dst_port=port;
+            return;
+        }
+
     };
 
     void run_udp_manager(int) {
@@ -691,16 +460,10 @@ public:
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
 
-<<<<<<< HEAD
-                auto runner = new firewall_runner(ic.get_cb_async_flow(), (*this));
-                runner->events_registration();
-                runner->run_firewall();
-=======
-                do_with(ips_runner(ic.get_sd_async_flow(), (*this)), [](ips_runner& r){
+                do_with(nat_runner(ic.get_sd_async_flow(), (*this)), [](nat_runner& r){
                      r.events_registration();
-                     return r.run_ips();
+                     return r.run_nat();
                 });
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
 
                 return stop_iteration::no;
             });
@@ -760,11 +523,7 @@ public:
         });
     }
 public:
-<<<<<<< HEAD
-    Firewall firewall;
-=======
-    IPS ips;
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
+    NAT nat;
 };
 
 int main(int ac, char** av) {
@@ -826,8 +585,3 @@ int main(int ac, char** av) {
 // 1r1w: 5.35M
 // 2r2w: 3.4M
 // 3r3w: 2.43M
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 4f014fc05489912398a3fdc8b438cb59a504c6f4
