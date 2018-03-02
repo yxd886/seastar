@@ -453,7 +453,7 @@ memcache_base = [
 ] + libnet + core
 
 deps = {
-    'libseastar.a' : core + libnet + http + protobuf + prometheus,
+    'libseastar.a' : core + libnet + http + protobuf + prometheus+ libnetstar,
     'seastar.pc': [],
     'apps/httpd/httpd': ['apps/httpd/demo.json', 'apps/httpd/main.cc'] + http + libnet + core,
     'apps/memcached/memcached': ['apps/memcached/memcache.cc'] + memcache_base,
