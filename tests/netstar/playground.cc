@@ -291,7 +291,7 @@ public:
         _ingress_port_sub.emplace(_ingress_port.receive([this](net::packet pkt){
 
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
-            printf("eth_dst:0x%x:%x:%x:%x:%x:%x\n",eth_h->dst_mac.mac[0],eth_h->dst_mac.mac[1],eth_h->dst_mac.mac[2],eth_h->dst_mac.mac[3],eth_h->dst_mac.mac[4],eth_h->dst_mac.mac[5],eth_h->dst_mac.mac[6]);
+            printf("eth_dst:0x%x:%x:%x:%x:%x:%x\n",eth_h->dst_mac.mac[0],eth_h->dst_mac.mac[1],eth_h->dst_mac.mac[2],eth_h->dst_mac.mac[3],eth_h->dst_mac.mac[4],eth_h->dst_mac.mac[5]);
             if(!eth_h) {
                 return make_ready_future<>();
             }
