@@ -52,7 +52,7 @@
 #include <time.h>
 
 #include <unordered_map>
-#define BATCH_SIZE 10000
+#define GPU_BATCH_SIZE 10000
 
 using namespace seastar;
 using namespace netstar;
@@ -179,13 +179,13 @@ public:
 class forwarder;
 distributed<forwarder> forwarders;
 
-template<typename NF_runner>
+
 class batch{
 public:
     uint64_t active_flow_num;
-    std::unordered_map<NF_runner*,uint64_t> pkt_number;
-    std::unordered_map<NF_runner*,uint64_t> flow_index;
-    std::unordered_map<uint64_t,NF_runner*> index_flow;
+    std::unordered_map<char*,uint64_t> pkt_number;
+    std::unordered_map<char*,uint64_t> flow_index;
+    std::unordered_map<uint64_t,char*> index_flow;
     char* all_pkts[BATCH_SIZE][BATCH_SIZE];
     char* states[BATCH_SIZE];
     char* gpu_pkts;
@@ -199,7 +199,6 @@ public:
 
 };
 
-class ips_runner;
 
 class forwarder {
     port& _ingress_port;
@@ -214,8 +213,8 @@ class forwarder {
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
 
     mica_client& _mc;
-    uint_64_t _pkt_counter;
-    batch<ips_runner> _batch;
+    uint64_t _pkt_counter;
+    batch _batch;
 
 public:
     forwarder (ports_env& all_ports, per_core_objs<mica_client>& mica_clients)
@@ -388,7 +387,7 @@ public:
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
                 _f._pkt_counter++;
-                if(_f._pkt_counter>=10000){
+                if(_f._pkt_counter>=GPU_BATCH_SIZE){
                     //reach batch size schedule
                 }else{
                     if(_f._batch.flow_index.find(this)==_f._batch.flow_index.end()){ //new flow at this round
