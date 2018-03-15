@@ -392,22 +392,22 @@ public:
                 }else{
                     if(_f._batch.flow_index.find(this)==_f._batch.flow_index.end()){ //new flow at this round
                         _f._batch.active_flow_num++;
-                        _f._batch.pkt_number[this]=1;
-                        _f._batch.flow_index[this]=_f._batch.active_flow_num-1;
-                        _f._batch.index_flow[_f._batch.active_flow_num-1]=this;
-                        _f._batch.all_pkts[_f._batch.flow_index[this]][_f._batch.pkt_number[this]-1]=static_cast<char*>(&(_ac.cur_packet()));
+                        _f._batch.pkt_number[reinterpret_cast<char*>(this)]=1;
+                        _f._batch.flow_index[reinterpret_cast<char*>(this)]=_f._batch.active_flow_num-1;
+                        _f._batch.index_flow[_f._batch.active_flow_num-1]=reinterpret_cast<char*>(this);
+                        _f._batch.all_pkts[_f._batch.flow_index[this]][_f._batch.pkt_number[reinterpret_cast<char*>(this)]-1]=reinterpret_cast<char*>(&(_ac.cur_packet()));
                         auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                         return _f._mc.query(Operation::kGet, mica_key(key),
                                 mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
                             if(response.get_result() == Result::kNotFound) {
                                 init_automataState(_fs);
-                                _f._batch.states[_f._batch.flow_index[this]]=reinterpret_cast<char*>(&_fs);
+                                _f._batch.states[_f._batch.flow_index[reinterpret_cast<char*>(this)]]=reinterpret_cast<char*>(&_fs);
                                 return make_ready_future<af_action>(af_action::hold);
 
                             }
                             else {
                                 _fs = response.get_value<ips_flow_state>();
-                                _f._batch.states[_f._batch.flow_index[this]]=reinterpret_cast<char*>(&_fs);
+                                _f._batch.states[_f._batch.flow_index[reinterpret_cast<char*>(this)]]=reinterpret_cast<char*>(&_fs);
                                 return make_ready_future<af_action>(af_action::hold);
                             }
 
