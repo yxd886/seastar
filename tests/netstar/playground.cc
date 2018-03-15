@@ -402,13 +402,13 @@ public:
                                 mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
                             if(response.get_result() == Result::kNotFound) {
                                 init_automataState(_fs);
-                                _f._batch.states[_f._batch.flow_index[this]]=static_cast<char*>(&_fs);
+                                _f._batch.states[_f._batch.flow_index[this]]=reinterpret_cast<char*>(&_fs);
                                 return make_ready_future<af_action>(af_action::hold);
 
                             }
                             else {
                                 _fs = response.get_value<ips_flow_state>();
-                                _f._batch.states[_f._batch.flow_index[this]]=static_cast<char*>(&_fs);
+                                _f._batch.states[_f._batch.flow_index[this]]=reinterpret_cast<char*>(&_fs);
                                 return make_ready_future<af_action>(af_action::hold);
                             }
 
