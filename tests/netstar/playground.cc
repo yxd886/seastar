@@ -50,8 +50,7 @@
 #define MAX_MATCH 8192
 #include <stdlib.h>
 #include <time.h>
-#include <cuda_runtime.h>
-#include <helper_cuda.h>
+
 #include <unordered_map>
 #define BATCH_SIZE 10000
 
