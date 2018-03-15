@@ -50,6 +50,10 @@
 #define MAX_MATCH 8192
 #include <stdlib.h>
 #include <time.h>
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+#include <unordered_map>
+#define BATCH_SIZE 10000
 
 using namespace seastar;
 using namespace netstar;
@@ -176,6 +180,28 @@ public:
 class forwarder;
 distributed<forwarder> forwarders;
 
+template<typename NF_runner>
+class batch{
+public:
+    uint64_t active_flow_num;
+    std::unordered_map<NF_runner*,uint64_t> pkt_number;
+    std::unordered_map<NF_runner*,uint64_t> flow_index;
+    std::unordered_map<uint64_t,NF_runner*> index_flow;
+    char* all_pkts[BATCH_SIZE][BATCH_SIZE];
+    char* states[BATCH_SIZE];
+    char* gpu_pkts;
+
+    batch():active_flow_num(0),gpu_pkts(nullptr){
+
+    }
+    ~batch(){
+        free(gpu_pkts);
+    }
+
+};
+
+class ips_runner;
+
 class forwarder {
     port& _ingress_port;
     std::experimental::optional<subscription<net::packet>> _ingress_port_sub;
@@ -189,6 +215,8 @@ class forwarder {
     sd_async_flow_manager<dummy_udp_ppr>::external_io_direction _udp_manager_egress;
 
     mica_client& _mc;
+    uint_64_t _pkt_counter;
+    batch<ips_runner> _batch;
 
 public:
     forwarder (ports_env& all_ports, per_core_objs<mica_client>& mica_clients)
@@ -196,7 +224,8 @@ public:
         , _egress_port(std::ref(all_ports.local_port(1)))
         , _udp_manager_ingress(0)
         , _udp_manager_egress(1)
-        , _mc(std::ref(mica_clients.local_obj())){
+        , _mc(std::ref(mica_clients.local_obj()))
+        ,_pkt_counter(0){
     }
 
     future<> stop(){
@@ -291,7 +320,6 @@ public:
         _ingress_port_sub.emplace(_ingress_port.receive([this](net::packet pkt){
 
             auto eth_h = pkt.get_header<net::eth_hdr>(0);
-            //printf("eth_dst:0x%x:%x:%x:%x:%x:%x\n",eth_h->dst_mac.mac[0],eth_h->dst_mac.mac[1],eth_h->dst_mac.mac[2],eth_h->dst_mac.mac[3],eth_h->dst_mac.mac[4],eth_h->dst_mac.mac[5]);
             if(!eth_h) {
                 return make_ready_future<>();
             }
@@ -359,6 +387,51 @@ public:
             return _ac.run_async_loop([this](){
                 if(_ac.cur_event().on_close_event()) {
                     return make_ready_future<af_action>(af_action::close_forward);
+                }
+                _f._pkt_counter++;
+                if(_f._pkt_counter>=10000){
+                    //reach batch size schedule
+                }else{
+                    if(_f._batch.flow_index.find(this)==_f._batch.flow_index.end()){ //new flow at this round
+                        _f._batch.active_flow_num++;
+                        _f._batch.pkt_number[this]=1;
+                        _f._batch.flow_index[this]=_f._batch.active_flow_num-1;
+                        _f._batch.index_flow[_f._batch.active_flow_num-1]=this;
+                        _f._batch.all_pkts[_f._batch.flow_index[this]][_f._batch.pkt_number[this]-1]=static_cast<char*>(&(_ac.cur_packet()));
+                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                        return _f._mc.query(Operation::kGet, mica_key(key),
+                                mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
+                            if(response.get_result() == Result::kNotFound) {
+                                init_automataState(_fs);
+                                _f._batch.states[_f._batch.flow_index[this]]=static_cast<char*>(&_fs);
+                                return make_ready_future<af_action>(af_action::hold);
+
+                            }
+                            else {
+                                _fs = response.get_value<ips_flow_state>();
+                                _f._batch.states[_f._batch.flow_index[this]]=static_cast<char*>(&_fs);
+                                return make_ready_future<af_action>(af_action::hold);
+                            }
+
+                        }).then_wrapped([this](auto&& f){
+                            try{
+                                auto result = f.get0();
+                                return result;
+
+                            }
+                            catch(...){
+                                if(_f._mc.nr_request_descriptors() == 0){
+                                    _f._insufficient_mica_rd_erorr += 1;
+                                }
+                                else{
+                                    _f._mica_timeout_error += 1;
+                                }
+                                return af_action::drop;
+                            }
+                        });
+
+                    }
+
                 }
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                 return _f._mc.query(Operation::kGet, mica_key(key),
@@ -510,7 +583,16 @@ public:
        }
        void ips_detect(net::packet *rte_pkt, struct ips_flow_state* state){
 
+           cudaError_t err=cudaSuccess;
            struct aho_pkt* pkts=(struct aho_pkt* )malloc(sizeof(struct aho_pkt));
+           err=cudaHostRegister(rte_pkt,sizeof(net::packet),cudaHostRegisterPortable);
+           if(err==cudaSuccess){
+               printf("cudaHostRegister success!\n");
+           }else if(err==cudaErrorHostMemoryAlreadyRegistered){
+               printf("cudaErrorHostMemoryAlreadyRegistered!\n");
+           }else{
+               printf("cudaHostRegister fail!\n");
+           }
            parse_pkt(rte_pkt, state,pkts);
            struct aho_ctrl_blk worker_cb;
            worker_cb.stats = _f.ips.stats;

@@ -289,6 +289,7 @@ template<typename Ppr>
 class sd_async_flow{
     using impl_type = lw_shared_ptr<internal::sd_async_flow_impl<Ppr>>;
     using EventEnumType = typename Ppr::EventEnumType;
+    using FlowKeyType = typename Ppr::FlowKeyType;
     impl_type _impl;
 public:
     explicit sd_async_flow(impl_type impl)
@@ -331,6 +332,10 @@ public:
 
     uint64_t get_flow_key_hash () {
         return _impl->_flow_key_hash;
+    }
+
+    FlowKeyType get_flow_key_type () {
+        return _impl->_client.flow_key;
     }
 
     // One shot interface, continuous call without shutting down
