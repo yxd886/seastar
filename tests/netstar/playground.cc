@@ -390,7 +390,7 @@ public:
                 if(_f._pkt_counter>=GPU_BATCH_SIZE){
                     //reach batch size schedule
                 }else{
-                    if(_f._batch.flow_index.find(this)==_f._batch.flow_index.end()){ //new flow at this round
+                    if(_f._batch.flow_index.find(reinterpret_cast<char*>(this))==_f._batch.flow_index.end()){ //new flow at this round
                         _f._batch.active_flow_num++;
                         _f._batch.pkt_number[reinterpret_cast<char*>(this)]=1;
                         _f._batch.flow_index[reinterpret_cast<char*>(this)]=_f._batch.active_flow_num-1;
