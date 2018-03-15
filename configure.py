@@ -526,6 +526,7 @@ deps = {
     'tests/netstar/static_udp_traffic_gen': ['tests/netstar/static_udp_traffic_gen.cc'] + core + libnet + libnetstar,
 }
 
+
 boost_tests = [
     'tests/memcached/test_ascii_parser',
     'tests/fileiotest',
