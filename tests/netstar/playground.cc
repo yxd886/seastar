@@ -183,7 +183,7 @@ class forwarder;
 distributed<forwarder> forwarders;
 
 class forwarder {
-    class batch;
+
     port& _ingress_port;
     std::experimental::optional<subscription<net::packet>> _ingress_port_sub;
 
@@ -197,7 +197,7 @@ class forwarder {
 
     mica_client& _mc;
     uint64_t _pkt_counter;
-    batch _batch;
+
 
 public:
     forwarder (ports_env& all_ports, per_core_objs<mica_client>& mica_clients)
@@ -355,7 +355,7 @@ public:
         sd_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
         ips_flow_state _fs;
-        std:vector<net::packet> packets;
+        std::vector<net::packet> packets;
 
     public:
         flow_operator(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
@@ -679,6 +679,7 @@ public:
     };
 public:
     IPS ips;
+    batch _batch;
 };
 
 
