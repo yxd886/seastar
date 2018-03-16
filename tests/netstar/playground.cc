@@ -624,6 +624,9 @@ public:
             int partition=get_partition();
             gpu_pkts=(char***)malloc(partition*_flows[partition-1]->packets.size()*sizeof(char*));
             gpu_states=(char**)malloc(partition*sizeof(char*));
+            if(gpu_pkts==nullptr||gpu_states==nullptr){
+                std::cout<<"memory alloc fail"<<std::endl;
+            }
             std::cout<<"memory alloc finished"<<std::endl;
             for(int i=0; i<partition; i++){
                 gpu_states[i]=reinterpret_cast<char*>(&(_flows[i]->_fs));
@@ -636,6 +639,7 @@ public:
             //
             //
             //
+            std::cout<<"begin to process_pkts"<<std::endl;
             for(unsigned int i=partition; i<_flows.size(); i++){
                 _flows[i]->process_pkts();
                 std::cout<<"process_pkts finished"<<std::endl;
