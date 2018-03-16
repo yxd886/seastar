@@ -407,6 +407,7 @@ public:
                 }else{
                     if(!packets.empty()){
                         packets.push_back(std::move(_ac.cur_packet()));
+                        return make_ready_future<af_action>(af_action::hold);
 
                     }else{
                         _f._batch._flows.push_back(this);
