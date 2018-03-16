@@ -52,7 +52,7 @@
 #include <time.h>
 
 #include <unordered_map>
-#define GPU_BATCH_SIZE 10000
+#define GPU_BATCH_SIZE 200
 
 using namespace seastar;
 using namespace netstar;
@@ -398,6 +398,7 @@ public:
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
                 _f._pkt_counter++;
+                printf("pkt_num:%d\n",_f._pkt_counter);
                 if(_f._pkt_counter>=GPU_BATCH_SIZE){
                     //reach batch size schedule
                     _f._pkt_counter=0;
