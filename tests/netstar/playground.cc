@@ -648,7 +648,7 @@ public:
                 std::cout<<"process_pkts finished"<<std::endl;
             }
 
-            for(unsigned int i=0; i<partition; i++){
+            for( int i=0; i<partition; i++){
                 _flows[i]->process_pkts();
 
             }
