@@ -183,6 +183,7 @@ class forwarder;
 distributed<forwarder> forwarders;
 
 class forwarder {
+    class batch;
     port& _ingress_port;
     std::experimental::optional<subscription<net::packet>> _ingress_port_sub;
 
