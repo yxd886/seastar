@@ -665,8 +665,8 @@ public:
             gpu_pkts=(char*)malloc(partition*_flows[partition-1]->packets.size()*sizeof(char*));
             gpu_states=(char*)malloc(partition*sizeof(char*));
             for(uint64_t i=0; i<partition; i++){
-                gpu_states[i]=reinterpret_cast<char*>(_flows[i]->_fs);
-                for(unsigned int j=0;j<_flows[i]->packets.size();j++){
+                gpu_states[i]=reinterpret_cast<char*>(&(_flows[i]->_fs));
+                for(uint64_t j=0;j<_flows[i]->packets.size();j++){
                     gpu_pkts[i][j]=reinterpret_cast<char*>(_flows[i]->packets[j].get_header<net::eth_hdr>(0));
                 }
             }
