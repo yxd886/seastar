@@ -176,29 +176,11 @@ public:
 
 };
 
+
+
+
 class forwarder;
 distributed<forwarder> forwarders;
-
-
-class batch{
-public:
-    uint64_t active_flow_num;
-    std::unordered_map<char*,uint64_t> pkt_number;
-    std::unordered_map<char*,uint64_t> flow_index;
-    std::unordered_map<uint64_t,char*> index_flow;
-    char* all_pkts[BATCH_SIZE][BATCH_SIZE];
-    char* states[BATCH_SIZE];
-    char* gpu_pkts;
-
-    batch():active_flow_num(0),gpu_pkts(nullptr){
-
-    }
-    ~batch(){
-        free(gpu_pkts);
-    }
-
-};
-
 
 class forwarder {
     port& _ingress_port;
@@ -368,12 +350,14 @@ public:
         uint64_t v2;
     };
 
-    class ips_runner {
+    class flow_operator {
         sd_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
         ips_flow_state _fs;
+        std:vector<net::packet> packets;
+
     public:
-        ips_runner(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
+        flow_operator(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
             : _ac(std::move(ac))
             , _f(f){}
 
@@ -389,46 +373,19 @@ public:
                 _f._pkt_counter++;
                 if(_f._pkt_counter>=GPU_BATCH_SIZE){
                     //reach batch size schedule
+                    _f._pkt_counter=0;
+                    _f._batch.schedule_task();
+                    //To to launch GPU kernel:
+                    //launch_kernel();
+                    //
+
+
                 }else{
-                    if(_f._batch.flow_index.find(reinterpret_cast<char*>(this))==_f._batch.flow_index.end()){ //new flow at this round
-                        _f._batch.active_flow_num++;
-                        _f._batch.pkt_number[reinterpret_cast<char*>(this)]=1;
-                        _f._batch.flow_index[reinterpret_cast<char*>(this)]=_f._batch.active_flow_num-1;
-                        _f._batch.index_flow[_f._batch.active_flow_num-1]=reinterpret_cast<char*>(this);
-                        _f._batch.all_pkts[_f._batch.flow_index[reinterpret_cast<char*>(this)]][_f._batch.pkt_number[reinterpret_cast<char*>(this)]-1]=reinterpret_cast<char*>(&(_ac.cur_packet()));
-                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                        return _f._mc.query(Operation::kGet, mica_key(key),
-                                mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
-                            if(response.get_result() == Result::kNotFound) {
-                                init_automataState(_fs);
-                                _f._batch.states[_f._batch.flow_index[reinterpret_cast<char*>(this)]]=reinterpret_cast<char*>(&_fs);
-                                return make_ready_future<af_action>(af_action::hold);
-
-                            }
-                            else {
-                                _fs = response.get_value<ips_flow_state>();
-                                _f._batch.states[_f._batch.flow_index[reinterpret_cast<char*>(this)]]=reinterpret_cast<char*>(&_fs);
-                                return make_ready_future<af_action>(af_action::hold);
-                            }
-
-                        }).then_wrapped([this](auto&& f){
-                            try{
-                                auto result = f.get0();
-                                return result;
-
-                            }
-                            catch(...){
-                                if(_f._mc.nr_request_descriptors() == 0){
-                                    _f._insufficient_mica_rd_erorr += 1;
-                                }
-                                else{
-                                    _f._mica_timeout_error += 1;
-                                }
-                                return af_action::drop;
-                            }
-                        });
-
+                    if(packets.empty()){
+                        _f._batch.flows.push_back(this);
                     }
+                    packets.push_back(std::move(_ac.cur_packet()));
+
 
                 }
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
@@ -617,12 +574,47 @@ public:
         }
     };
 
+
+    class batch{
+    public:
+        //uint64_t active_flow_num;
+        //std::unordered_map<char*,uint64_t> pkt_number;
+        //std::unordered_map<char*,uint64_t> flow_index;
+        //std::unordered_map<uint64_t,char*> index_flow;
+        //char* all_pkts[GPU_BATCH_SIZE][GPU_BATCH_SIZE];
+        //char* states[GPU_BATCH_SIZE];
+        //char* gpu_pkts;
+        //char* gpu_states;
+        //uint64_t max_pktnumber;
+        //uint64_t gpu_flow_num;
+        std::vector<flow_operator*> _flows;
+        char* gpu_pkts;
+        char* gpu_states;
+
+        batch():gpu_pkts(nullptr),gpu_states(nullptr){
+
+        }
+        ~batch(){
+
+        }
+        void schedule_task(){
+            //To do list:
+            //schedule the task, following is the strategy offload all to GPU
+
+
+        }
+        void process_pkt(){
+
+        }
+
+    };
+
     void run_udp_manager(int) {
         repeat([this]{
             return _udp_manager.on_new_initial_context().then([this]() mutable {
                 auto ic = _udp_manager.get_initial_context();
 
-                do_with(ips_runner(ic.get_sd_async_flow(), (*this)), [](ips_runner& r){
+                do_with(flow_operator(ic.get_sd_async_flow(), (*this)), [](flow_operator& r){
                      r.events_registration();
                      return r.run_ips();
                 });
@@ -666,7 +658,7 @@ public:
                                             _mica_timeout_error,
                                             _insufficient_mica_rd_erorr});
     }
-    void collect_stats(int) {
+    void collect_stats(int){
         repeat([this]{
             return forwarders.map_reduce(adder<info>(), &forwarder::get_info).then([this](info i){
                 fprint(std::cout, "ingress_received=%d, egress_send=%d, egress_failed_send=%d, active_flow_num=%d, mica_timeout_error=%d, insufficient_mica_rd_erorr=%d.\n",
@@ -683,10 +675,14 @@ public:
                 });
             });
         });
-    }
+    };
 public:
     IPS ips;
 };
+
+
+
+
 
 int main(int ac, char** av) {
     app_template app;
