@@ -385,7 +385,7 @@ public:
 
         }
         void process_pkts(){
-            for(int i=0;i<packets.size();i++){
+            for(unsigned int i=0;i<packets.size();i++){
                 process_pkt(&packets[i],&_fs);
                 _f._udp_manager.send(std::move(packets[i]),1);
             }
@@ -629,7 +629,7 @@ public:
         }
     };
 
-    bool CompLess(const flow_operator* lhs, const flow_operator* rhs)
+    static bool CompLess(const flow_operator* lhs, const flow_operator* rhs)
     {
         return lhs->packets.size() < rhs->packets.size();
     }
@@ -662,12 +662,12 @@ public:
             //schedule the task, following is the strategy offload all to GPU
             sort(_flows.begin(),_flows.end(),CompLess);
             uint64_t partition=get_partition();
-            gpu_pkts=malloc(partition*_flows[partition-1].packets.size()*sizeof(char*));
-            gpu_states=malloc(partition*sizeof(char*));
-            for(int i=0; i<partition; i++){
-                gpu_states[i]=reinterpret_cast<char*>(_flows[i]._fs);
-                for(int j=0;j<_flows[i].packets.size();j++){
-                    gpu_pkts[i][j]=reinterpret_cast<char*>(_flows[i].packets[j].get_header<net::eth_hdr>(0));
+            gpu_pkts=(char*)malloc(partition*_flows[partition-1]->packets.size()*sizeof(char*));
+            gpu_states=(char*)malloc(partition*sizeof(char*));
+            for(uint64_t i=0; i<partition; i++){
+                gpu_states[i]=reinterpret_cast<char*>(_flows[i]->_fs);
+                for(unsigned int j=0;j<_flows[i]->packets.size();j++){
+                    gpu_pkts[i][j]=reinterpret_cast<char*>(_flows[i]->packets[j].get_header<net::eth_hdr>(0));
                 }
             }
             //launch kernel
@@ -675,8 +675,8 @@ public:
             //
             //
             //
-            for(int i=partition; i<_flows.size(); i++){
-                _flows[i].process_pkts();
+            for(unsigned int i=partition; i<_flows.size(); i++){
+                _flows[i]->process_pkts();
             }
 
 
