@@ -653,6 +653,7 @@ public:
 
             }
             std::cout<<"gpu_process_pkts finished"<<std::endl;
+            _flows.clear();
 
 
 
