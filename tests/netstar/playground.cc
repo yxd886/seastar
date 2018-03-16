@@ -183,7 +183,7 @@ class forwarder;
 distributed<forwarder> forwarders;
 
 class forwarder {
-
+public:
     port& _ingress_port;
     std::experimental::optional<subscription<net::packet>> _ingress_port_sub;
 
@@ -199,7 +199,7 @@ class forwarder {
     uint64_t _pkt_counter;
 
 
-public:
+
     forwarder (ports_env& all_ports, per_core_objs<mica_client>& mica_clients)
         : _ingress_port(std::ref(all_ports.local_port(0)))
         , _egress_port(std::ref(all_ports.local_port(1)))
@@ -352,18 +352,44 @@ public:
     };
 
     class flow_operator {
+    public:
         sd_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
         ips_flow_state _fs;
         std::vector<net::packet> packets;
 
-    public:
+
         flow_operator(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
             : _ac(std::move(ac))
             , _f(f){}
 
         void events_registration() {
             _ac.register_events(dummy_udp_events::pkt_in);
+        }
+
+        void process_pkt(net::packet* pkt, ips_flow_state* fs){
+
+
+            ips_flow_state old;
+            old._alert=fs->_alert;
+            old._dfa_id=fs->_dfa_id;
+            old._state=fs->_state;
+            old.tag=fs->tag;
+            ips_detect(pkt,fs);
+            auto state_changed=state_updated(&old,fs);
+            if(state_changed) {
+                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                _f._mc.query(Operation::kSet, mica_key(key),
+                        mica_value(*fs));
+            }
+
+        }
+        void process_pkts(){
+            for(int i=0;i<packets.size();i++){
+                process_pkt(&packets[i],&_fs);
+                _f._udp_manager.send(std::move(packets[i]),1);
+            }
+            packets.clear();
         }
 
         future<> run_ips() {
@@ -376,16 +402,44 @@ public:
                     //reach batch size schedule
                     _f._pkt_counter=0;
                     _f._batch.schedule_task();
-                    //To to launch GPU kernel:
-                    //launch_kernel();
-                    //
-
 
                 }else{
-                    if(packets.empty()){
+                    if(!packets.empty()){
+                        packets.push_back(std::move(_ac.cur_packet()));
+
+                    }else{
                         _f._batch._flows.push_back(this);
+                        packets.push_back(std::move(_ac.cur_packet()));
+                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                        return _f._mc.query(Operation::kGet, mica_key(key),
+                                mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
+                            if(response.get_result() == Result::kNotFound) {
+                                init_automataState(_fs);
+                                return make_ready_future<af_action>(af_action::hold);
+                            }
+                            else {
+                                _fs = response.get_value<ips_flow_state>();
+                                return make_ready_future<af_action>(af_action::hold);
+                            }
+
+                        }).then_wrapped([this](auto&& f){
+                            try{
+                                auto result = f.get0();
+                                return result;
+
+                            }
+                            catch(...){
+                                if(_f._mc.nr_request_descriptors() == 0){
+                                    _f._insufficient_mica_rd_erorr += 1;
+                                }
+                                else{
+                                    _f._mica_timeout_error += 1;
+                                }
+                                return af_action::drop;
+                            }
+                        });
                     }
-                    packets.push_back(std::move(_ac.cur_packet()));
+
 
 
                 }
@@ -575,6 +629,11 @@ public:
         }
     };
 
+    bool CompLess(const flow_operator* lhs, const flow_operator* rhs)
+    {
+        return lhs->packets.size() < rhs->packets.size();
+    }
+
 
     class batch{
     public:
@@ -601,11 +660,30 @@ public:
         void schedule_task(){
             //To do list:
             //schedule the task, following is the strategy offload all to GPU
+            sort(_flows.begin(),_flows.end(),CompLess);
+            uint64_t partition=get_partition();
+            gpu_pkts=malloc(partition*_flows[partition-1].packets.size()*sizeof(char*));
+            gpu_states=malloc(partition*sizeof(char*));
+            for(int i=0; i<partition; i++){
+                gpu_states[i]=reinterpret_cast<char*>(_flows[i]._fs);
+                for(int j=0;j<_flows[i].packets.size();j++){
+                    gpu_pkts[i][j]=reinterpret_cast<char*>(_flows[i].packets[j].get_header<net::eth_hdr>(0));
+                }
+            }
+            //launch kernel
+            //
+            //
+            //
+            //
+            for(int i=partition; i<_flows.size(); i++){
+                _flows[i].process_pkts();
+            }
+
 
 
         }
-        void process_pkt(){
-
+        uint64_t get_partition(){
+            return _flows.size()/2;
         }
 
     };

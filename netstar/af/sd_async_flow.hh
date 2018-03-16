@@ -456,6 +456,9 @@ public:
     size_t peek_active_flow_num() {
         return _flow_table.size();
     }
+    future<> send(net::packet pkt, uint8_t direction) {
+        return _directions[direction].output_stream.produce(std::move(pkt));
+    }
 
 private:
     subscription<net::packet> direction_registration(uint8_t direction,
@@ -492,9 +495,7 @@ private:
         _directions[direction].reverse_direction = reverse_direction;
         return sub;
     }
-    future<> send(net::packet pkt, uint8_t direction) {
-        return _directions[direction].output_stream.produce(std::move(pkt));
-    }
+
     uint8_t get_reverse_direction(uint8_t direction) {
         return _directions[direction].reverse_direction;
     }
