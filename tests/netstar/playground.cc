@@ -383,7 +383,7 @@ public:
 
                 }else{
                     if(packets.empty()){
-                        _f._batch.flows.push_back(this);
+                        _f._batch._flows.push_back(this);
                     }
                     packets.push_back(std::move(_ac.cur_packet()));
 
