@@ -402,6 +402,7 @@ public:
                     //reach batch size schedule
                     _f._pkt_counter=0;
                     _f._batch.schedule_task();
+                    return af_action::nothing;
 
                 }else{
                     if(!packets.empty()){
@@ -443,50 +444,7 @@ public:
 
 
                 }
-                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                return _f._mc.query(Operation::kGet, mica_key(key),
-                        mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
-                    if(response.get_result() == Result::kNotFound) {
-                        init_automataState(_fs);
-                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                        return _f._mc.query(Operation::kSet, mica_key(key),
-                                mica_value(_fs)).then([this](mica_response response){
-                            return forward_packet(_fs);
-                        });
-                    }
-                    else {
-                        _fs = response.get_value<ips_flow_state>();
-                        ips_flow_state old=response.get_value<ips_flow_state>();
-                        ips_detect(&(_ac.cur_packet()),&_fs);
-                        auto state_changed=state_updated(&old,&_fs);
-                        if(state_changed) {
-                            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                            return _f._mc.query(Operation::kSet, mica_key(key),
-                                    mica_value(_fs)).then([this](mica_response response){
-                                return forward_packet(_fs);
-                            });
-                        }
-                        else{
-                            return make_ready_future<af_action>(forward_packet(_fs));
-                        }
-                    }
 
-                }).then_wrapped([this](auto&& f){
-                    try{
-                        auto result = f.get0();
-                        return result;
-
-                    }
-                    catch(...){
-                        if(_f._mc.nr_request_descriptors() == 0){
-                            _f._insufficient_mica_rd_erorr += 1;
-                        }
-                        else{
-                            _f._mica_timeout_error += 1;
-                        }
-                        return af_action::drop;
-                    }
-                });
             });
         }
 

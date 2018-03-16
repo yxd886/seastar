@@ -46,6 +46,7 @@ enum class af_action {
     drop,
     close_forward,
     hold,
+    nothing,
     close_drop
 };
 
