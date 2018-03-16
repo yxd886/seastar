@@ -648,8 +648,8 @@ public:
         //uint64_t max_pktnumber;
         //uint64_t gpu_flow_num;
         std::vector<flow_operator*> _flows;
-        char* gpu_pkts;
-        char* gpu_states;
+        char** gpu_pkts;
+        char** gpu_states;
 
         batch():gpu_pkts(nullptr),gpu_states(nullptr){
 
@@ -662,8 +662,8 @@ public:
             //schedule the task, following is the strategy offload all to GPU
             sort(_flows.begin(),_flows.end(),CompLess);
             int partition=get_partition();
-            gpu_pkts=(char*)malloc(partition*_flows[partition-1]->packets.size()*sizeof(char*));
-            gpu_states=(char*)malloc(partition*sizeof(char*));
+            gpu_pkts=(char**)malloc(partition*_flows[partition-1]->packets.size()*sizeof(char*));
+            gpu_states=(char**)malloc(partition*sizeof(char*));
             for(int i=0; i<partition; i++){
                 gpu_states[i]=reinterpret_cast<char*>(&(_flows[i]->_fs));
                 for(int j=0;j<(int)_flows[i]->packets.size();j++){
