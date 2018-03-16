@@ -630,8 +630,10 @@ public:
             std::cout<<"memory alloc finished"<<std::endl;
             for(int i=0; i<partition; i++){
                 gpu_states[i]=reinterpret_cast<char*>(&(_flows[i]->_fs));
+                std::cout<<"assign gpu_states["<<i<<"]"<<std::endl;
                 for(int j=0;j<(int)_flows[i]->packets.size();j++){
                     gpu_pkts[i][j]=reinterpret_cast<char*>(_flows[i]->packets[j].get_header<net::eth_hdr>(0));
+                    std::cout<<"assign gpu_pkts["<<i<<"]"<<"["<<j<<"]"<<std::endl;
                 }
             }
             //launch kernel
