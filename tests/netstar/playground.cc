@@ -622,7 +622,8 @@ public:
             //schedule the task, following is the strategy offload all to GPU
             sort(_flows.begin(),_flows.end(),CompLess);
             int partition=get_partition();
-            gpu_pkts=(char***)malloc(partition*_flows[partition-1]->packets.size()*sizeof(char*));
+            int max_pkt_num_per_flow=_flows[partition-1]->packets.size();
+            gpu_pkts=(char**)malloc(partition*max_pkt_num_per_flow*sizeof(char*));
             gpu_states=(char**)malloc(partition*sizeof(char*));
             if(gpu_pkts==nullptr||gpu_states==nullptr){
                 std::cout<<"memory alloc fail"<<std::endl;
@@ -632,7 +633,7 @@ public:
                 gpu_states[i]=reinterpret_cast<char*>(&(_flows[i]->_fs));
                 std::cout<<"assign gpu_states["<<i<<"]"<<std::endl;
                 for(int j=0;j<(int)_flows[i]->packets.size();j++){
-                    gpu_pkts[i][j]=reinterpret_cast<char*>(_flows[i]->packets[j].get_header<net::eth_hdr>(0));
+                    gpu_pkts[i*max_pkt_num_per_flow+j]=reinterpret_cast<char*>(_flows[i]->packets[j].get_header<net::eth_hdr>(0));
                     std::cout<<"assign gpu_pkts["<<i<<"]"<<"["<<j<<"]"<<std::endl;
                 }
             }
