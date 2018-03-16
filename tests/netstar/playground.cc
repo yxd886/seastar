@@ -402,7 +402,7 @@ public:
                     //reach batch size schedule
                     _f._pkt_counter=0;
                     _f._batch.schedule_task();
-                    return make_ready_future<af_action>(af_action::nothing);
+                    return make_ready_future<af_action>(af_action::hold);
 
                 }else{
                     if(!packets.empty()){
