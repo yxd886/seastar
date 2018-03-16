@@ -104,7 +104,7 @@ private:
             internal_packet_forward(std::move(context.pkt));
         }
 
-        if(action == af_action::drop || action == af_action::close_drop) {
+        if(action == af_action::drop || action == af_action::close_drop ||action == af_action::hold) {
             _pkts_in_pipeline -= 1;
         }
 
@@ -456,9 +456,12 @@ public:
     size_t peek_active_flow_num() {
         return _flow_table.size();
     }
+
+
     future<> send(net::packet pkt, uint8_t direction) {
         return _directions[direction].output_stream.produce(std::move(pkt));
     }
+
 
 private:
     subscription<net::packet> direction_registration(uint8_t direction,
@@ -495,6 +498,8 @@ private:
         _directions[direction].reverse_direction = reverse_direction;
         return sub;
     }
+
+
 
     uint8_t get_reverse_direction(uint8_t direction) {
         return _directions[direction].reverse_direction;
