@@ -608,7 +608,7 @@ public:
         //uint64_t max_pktnumber;
         //uint64_t gpu_flow_num;
         std::vector<flow_operator*> _flows;
-        char*** gpu_pkts;
+        char** gpu_pkts;
         char** gpu_states;
 
         batch():gpu_pkts(nullptr),gpu_states(nullptr){
