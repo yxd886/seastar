@@ -431,6 +431,7 @@ public:
                             }
                             else {
                                 _fs = response.get_value<ips_flow_state>();
+                                std::cout<<"fs_dfa_id from server:"<<_fs._dfa_id<<std::endl;
                                 return make_ready_future<af_action>(af_action::hold);
                             }
 
@@ -464,6 +465,7 @@ public:
              state._state=0;
              state._alert=false;
              state._dfa_id=rand()%AHO_MAX_DFA;
+             std::cout<<"init_automataState_dfa_id:"<<state._dfa_id<<std::endl;
          }
        void parse_pkt(net::packet *rte_pkt, struct ips_flow_state* state,struct aho_pkt*  aho_pkt){
 
