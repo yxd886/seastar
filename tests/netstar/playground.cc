@@ -368,8 +368,12 @@ public:
         flow_operator(const flow_operator& other) = delete;
         flow_operator(flow_operator&& other) noexcept
             : _ac(std::move(other._ac)),_f(other._f),_fs(other._fs),packets(std::move(other.packets)) ,_initialized(other._initialized){
+        	std::cout<<"in construction function"<<std::endl;
+        	getchar();
         }
         ~flow_operator(){
+        	std::cout<<"packets.size:"<<packets.size()<<std::endl;
+        	getchar();
         	if(!packets.empty()){
         		process_pkts();
         	}
