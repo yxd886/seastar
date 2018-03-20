@@ -370,7 +370,9 @@ public:
             : _ac(std::move(other._ac)),_f(other._f),_fs(other._fs),packets(std::move(other.packets)) ,_initialized(other._initialized){
         }
         ~flow_operator(){
-
+        	if(!packets.empty()){
+        		process_pkts();
+        	}
         }
 
 
