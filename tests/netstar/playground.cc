@@ -411,7 +411,7 @@ public:
                 if(_ac.cur_event().on_close_event()) {
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
-                std::cout<<"pkt_num:"<<_f._pkt_counter<<std::endl;
+                /*std::cout<<"pkt_num:"<<_f._pkt_counter<<std::endl;
 
                 if(packets.empty()){
                     _f._batch._flows.push_back(this);
@@ -427,7 +427,8 @@ public:
 
                 }else{
                     return make_ready_future<af_action>(af_action::hold);
-                }
+                }*/
+                return make_ready_future<af_action>(af_action::forward);
 
 
             });
