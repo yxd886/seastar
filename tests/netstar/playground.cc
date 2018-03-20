@@ -352,8 +352,9 @@ public:
     };
 
     class flow_operator {
+
+    	sd_async_flow<dummy_udp_ppr> _ac;
     public:
-        sd_async_flow<dummy_udp_ppr> _ac;
         forwarder& _f;
         ips_flow_state _fs;
         std::vector<net::packet> packets;
