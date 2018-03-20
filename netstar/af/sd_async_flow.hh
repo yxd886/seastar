@@ -79,10 +79,7 @@ private:
         internal_packet_forward(std::move(pkt));
     }
 
-    void internal_packet_forward(net::packet pkt) {
-        send_packet_out(std::move(pkt), _manager.get_reverse_direction(_client.direction));
-        _pkts_in_pipeline -= 1;
-    }
+
 
 private:
     // Critical functions for controlling the loop
@@ -104,7 +101,7 @@ private:
             internal_packet_forward(std::move(context.pkt));
         }
 
-        if(action == af_action::drop || action == af_action::close_drop ||action == af_action::hold) {
+        if(action == af_action::drop || action == af_action::close_drop) {
             _pkts_in_pipeline -= 1;
         }
 
@@ -197,6 +194,11 @@ public:
         async_flow_debug("sd_async_flow_impl: deconstruction.\n");
         async_flow_assert(!_client.cur_context);
         async_flow_assert(_pkts_in_pipeline == 0);
+    }
+
+    void internal_packet_forward(net::packet pkt) {
+        send_packet_out(std::move(pkt), _manager.get_reverse_direction(_client.direction));
+        _pkts_in_pipeline -= 1;
     }
 
     void destroy_initial_context() {
@@ -333,6 +335,12 @@ public:
 
     uint64_t get_flow_key_hash () {
         return _impl->_flow_key_hash;
+    }
+
+    void internal_send(net::packet pkt){
+
+        _impl->internal_packet_forward(std::move(pkt));
+
     }
 
     FlowKeyType get_flow_key_type () {

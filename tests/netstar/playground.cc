@@ -400,7 +400,7 @@ public:
             for(unsigned int i=0;i<packets.size();i++){
 
                 std::cout<<"begin to send pkt"<<std::endl;
-                _f._udp_manager.send(std::move(packets[i]),1);
+                _ac.internal_send(std::move(packets[i]));
                 std::cout<<"finish sending pkt"<<std::endl;
             }
             packets.clear();
