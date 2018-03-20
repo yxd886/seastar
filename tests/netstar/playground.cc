@@ -481,7 +481,9 @@ public:
 
            for(I = 0; I < BATCH_SIZE; I++) {
                int dfa_id = pkts[I].dfa_id;
+               std::cout<<"      dfa_id:"<<dfa_id<<std::endl;
                int len = pkts[I].len;
+               std::cout<<"      len:"<<len<<std::endl;
                struct aho_state *st_arr = dfa_arr[dfa_id].root;
 
                int state = ips_state->_state;
