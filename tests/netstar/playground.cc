@@ -404,6 +404,7 @@ public:
         void process_pkts(){
             std::cout<<"packets.size:"<<packets.size()<<std::endl;
             for(unsigned int i=0;i<packets.size();i++){
+            	std::cout<<"packets.size:"<<packets.size()<<std::endl;
                 std::cout<<"process "<<i<<" packets"<<std::endl;
                 //process_pkt(&packets[i],&_fs);
 
