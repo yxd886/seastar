@@ -541,7 +541,9 @@ public:
            // tot_bytes = 0;       /* Total bytes matched through DFAs */
 
            for(i = 0; i < num_pkts; i += BATCH_SIZE) {
+               std::cout<<"    before process_batch"<<std::endl;
                process_batch(dfa_arr, &pkts[i], mp_list,state);
+               std::cout<<"    after process_batch"<<std::endl;
 
                for(j = 0; j < BATCH_SIZE; j++) {
                    int num_match = mp_list[j].num_match;
@@ -567,7 +569,9 @@ public:
            //}else{
             //   printf("cudaHostRegister fail!\n");
            //}
+           std::cout<<"  before parse_pkt"<<std::endl;
            parse_pkt(rte_pkt, state,pkts);
+           std::cout<<"  after parse_pkt"<<std::endl;
            struct aho_ctrl_blk worker_cb;
            worker_cb.stats = _f.ips.stats;
            worker_cb.tot_threads = 1;
@@ -575,8 +579,9 @@ public:
            worker_cb.dfa_arr = _f.ips.dfa_arr;
            worker_cb.pkts = pkts;
            worker_cb.num_pkts = 1;
-
+           std::cout<<"  before ids_func"<<std::endl;
            ids_func(&worker_cb,state);
+           std::cout<<"  after ids_func"<<std::endl;
            free(pkts->content);
            free(pkts);
 
