@@ -360,13 +360,11 @@ public:
         bool _initialized;
 
 
-        explicit flow_operator(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
+        flow_operator(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
             : _ac(std::move(ac))
             , _f(f)
             ,_initialized(false){}
-        ~flow_operator(){
 
-        }
 
 
         void events_registration() {
