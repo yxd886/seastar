@@ -364,6 +364,11 @@ public:
             : _ac(std::move(ac))
             , _f(f)
             ,_initialized(false){}
+        ~flow_operator(){
+            if(!packets.empty()){
+                process_pkts();
+            }
+        }
 
         void events_registration() {
             _ac.register_events(dummy_udp_events::pkt_in);
