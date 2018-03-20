@@ -357,11 +357,13 @@ public:
         forwarder& _f;
         ips_flow_state _fs;
         std::vector<net::packet> packets;
+        bool _initialized;
 
 
         flow_operator(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
             : _ac(std::move(ac))
-            , _f(f){}
+            , _f(f)
+            ,_initialized(false){}
 
         void events_registration() {
             _ac.register_events(dummy_udp_events::pkt_in);
@@ -422,57 +424,72 @@ public:
 
                 }else{
 
-                    auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                    return _f._mc.query(Operation::kGet, mica_key(key),
-                            mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
-                        if(response.get_result() == Result::kNotFound) {
-                            init_automataState(_fs);
-                            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                            return _f._mc.query(Operation::kSet, mica_key(key),
-                                    mica_value(_fs)).then([this](mica_response response){
+                    if(_initialized==false){
+                        _initialized=true;
+                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                        return _f._mc.query(Operation::kGet, mica_key(key),
+                                mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
+                            if(response.get_result() == Result::kNotFound) {
+                                init_automataState(_fs);
+                                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                                return _f._mc.query(Operation::kSet, mica_key(key),
+                                        mica_value(_fs)).then([this](mica_response response){
+                                    _f._batch._flows.push_back(this);
+                                    packets.push_back(std::move(_ac.cur_packet()));
+                                    _f._pkt_counter++;
+                                    if(_f._pkt_counter>=GPU_BATCH_SIZE){
+                                        //reach batch size schedule
+                                        _f._pkt_counter=0;
+                                        _f._batch.schedule_task();
+                                    }
+                                    return make_ready_future<af_action>(af_action::hold);
+                                });
+
+                            }
+                            else {
+                                _fs = response.get_value<ips_flow_state>();
                                 _f._batch._flows.push_back(this);
                                 packets.push_back(std::move(_ac.cur_packet()));
                                 _f._pkt_counter++;
+                                //std::cout<<"fs_dfa_id from server:"<<_fs._dfa_id<<std::endl;
+                                //std::cout<<"fs_dfa_state from server:"<<_fs._state<<std::endl;
                                 if(_f._pkt_counter>=GPU_BATCH_SIZE){
                                     //reach batch size schedule
                                     _f._pkt_counter=0;
                                     _f._batch.schedule_task();
                                 }
                                 return make_ready_future<af_action>(af_action::hold);
-                            });
-
-                        }
-                        else {
-                            _fs = response.get_value<ips_flow_state>();
-                            _f._batch._flows.push_back(this);
-                            packets.push_back(std::move(_ac.cur_packet()));
-                            _f._pkt_counter++;
-                            //std::cout<<"fs_dfa_id from server:"<<_fs._dfa_id<<std::endl;
-                            //std::cout<<"fs_dfa_state from server:"<<_fs._state<<std::endl;
-                            if(_f._pkt_counter>=GPU_BATCH_SIZE){
-                                //reach batch size schedule
-                                _f._pkt_counter=0;
-                                _f._batch.schedule_task();
                             }
-                            return make_ready_future<af_action>(af_action::hold);
-                        }
 
-                    }).then_wrapped([this](auto&& f){
-                        try{
-                            auto result = f.get0();
-                            return result;
+                        }).then_wrapped([this](auto&& f){
+                            try{
+                                auto result = f.get0();
+                                return result;
 
-                        }
-                        catch(...){
-                            if(_f._mc.nr_request_descriptors() == 0){
-                                _f._insufficient_mica_rd_erorr += 1;
                             }
-                            else{
-                                _f._mica_timeout_error += 1;
+                            catch(...){
+                                if(_f._mc.nr_request_descriptors() == 0){
+                                    _f._insufficient_mica_rd_erorr += 1;
+                                }
+                                else{
+                                    _f._mica_timeout_error += 1;
+                                }
+                                return af_action::drop;
                             }
-                            return af_action::drop;
+                        });
+
+                    }else{
+                        packets.push_back(std::move(_ac.cur_packet()));
+                        _f._pkt_counter++;
+                        if(_f._pkt_counter>=GPU_BATCH_SIZE){
+                            //reach batch size schedule
+                            _f._pkt_counter=0;
+                            _f._batch.schedule_task();
                         }
-                    });
+                        return make_ready_future<af_action>(af_action::hold);
+
+                    }
+
                 }
 
 
