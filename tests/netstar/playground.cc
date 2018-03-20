@@ -375,7 +375,9 @@ public:
             old._dfa_id=fs->_dfa_id;
             old._state=fs->_state;
             old.tag=fs->tag;
+            std::cout<<"before ips_detect"<<std::endl;
             ips_detect(pkt,fs);
+            std::cout<<"after ips_detect"<<std::endl;
             auto state_changed=state_updated(&old,fs);
             if(state_changed) {
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
