@@ -360,7 +360,7 @@ public:
         bool _initialized;
 
 
-        flow_operator(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
+        explicit flow_operator(sd_async_flow<dummy_udp_ppr> ac, forwarder& f)
             : _ac(std::move(ac))
             , _f(f)
             ,_initialized(false){}
