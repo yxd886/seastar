@@ -391,6 +391,10 @@ public:
         void process_pkts(){
             for(unsigned int i=0;i<packets.size();i++){
                 process_pkt(&packets[i],&_fs);
+
+            }
+            for(unsigned int i=0;i<packets.size();i++){
+
                 _f._udp_manager.send(std::move(packets[i]),1);
             }
             packets.clear();
