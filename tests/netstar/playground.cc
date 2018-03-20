@@ -407,7 +407,6 @@ public:
                 if(_ac.cur_event().on_close_event()) {
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
-                _f._pkt_counter++;
                 //std::cout<<"pkt_num:"<<_f._pkt_counter<<std::endl;
                 if(_f._pkt_counter>=GPU_BATCH_SIZE){
                     //reach batch size schedule
@@ -432,6 +431,7 @@ public:
                                         mica_value(_fs)).then([this](mica_response response){
                                     _f._batch._flows.push_back(this);
                                     packets.push_back(std::move(_ac.cur_packet()));
+                                    _f._pkt_counter++;
                                     return make_ready_future<af_action>(af_action::hold);
                                 });
 
@@ -440,6 +440,7 @@ public:
                                 _fs = response.get_value<ips_flow_state>();
                                 _f._batch._flows.push_back(this);
                                 packets.push_back(std::move(_ac.cur_packet()));
+                                _f._pkt_counter++;
                                 std::cout<<"fs_dfa_id from server:"<<_fs._dfa_id<<std::endl;
                                 return make_ready_future<af_action>(af_action::hold);
                             }
