@@ -606,7 +606,7 @@ public:
         ~batch(){
 
         }
-        future<af_action> schedule_task(){
+        void schedule_task(){
             //To do list:
             //schedule the task, following is the strategy offload all to GPU
             sort(_flows.begin(),_flows.end(),CompLess);
