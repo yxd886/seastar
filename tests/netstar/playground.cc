@@ -393,7 +393,7 @@ public:
         void process_pkts(){
             //std::cout<<"packets.size:"<<packets.size()<<std::endl;
             for(unsigned int i=0;i<packets.size();i++){
-                //std::cout<<"process "<<i<<" packets"<<std::endl;
+                std::cout<<"process "<<i<<" packets"<<std::endl;
                 //process_pkt(&packets[i],&_fs);
 
             }
@@ -632,7 +632,8 @@ public:
             //
             //
             //
-            //std::cout<<"begin to process_pkts"<<std::endl;
+            std::cout<<"begin to process_pkts"<<std::endl;
+
             for(unsigned int i=partition; i<_flows.size(); i++){
                 _flows[i]->process_pkts();
                 //std::cout<<"process_pkts finished"<<std::endl;
