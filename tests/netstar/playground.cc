@@ -422,6 +422,7 @@ public:
                                 mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
                             if(response.get_result() == Result::kNotFound) {
                                 init_automataState(_fs);
+                                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                                 return _f._mc.query(Operation::kSet, mica_key(key),
                                         mica_value(_fs)).then([this](mica_response response){
                                     return make_ready_future<af_action>(af_action::hold);
