@@ -411,7 +411,9 @@ public:
                 }
                 std::cout<<"pkt_num:"<<_f._pkt_counter<<std::endl;
 
-
+                if(packets.empty()){
+                    _f._batch._flows.push_back(this);
+                }
                 packets.push_back(std::move(_ac.cur_packet()));
                 _f._pkt_counter++;
                 if(_f._pkt_counter>=GPU_BATCH_SIZE){
