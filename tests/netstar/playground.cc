@@ -392,7 +392,7 @@ public:
             std::cout<<"packets.size:"<<packets.size()<<std::endl;
             for(unsigned int i=0;i<packets.size();i++){
                 std::cout<<"process "<<i<<" packets"<<std::endl;
-                process_pkt(&packets[i],&_fs);
+                //process_pkt(&packets[i],&_fs);
 
             }
             for(unsigned int i=0;i<packets.size();i++){
@@ -442,6 +442,7 @@ public:
                                 packets.push_back(std::move(_ac.cur_packet()));
                                 _f._pkt_counter++;
                                 std::cout<<"fs_dfa_id from server:"<<_fs._dfa_id<<std::endl;
+                                std::cout<<"fs_dfa_state from server:"<<_fs._state<<std::endl;
                                 return make_ready_future<af_action>(af_action::hold);
                             }
 
