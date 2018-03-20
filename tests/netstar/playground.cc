@@ -364,7 +364,9 @@ public:
             : _ac(std::move(ac))
             , _f(f)
             ,_initialized(false){}
+        ~flow_operator(){
 
+        }
 
 
         void events_registration() {
