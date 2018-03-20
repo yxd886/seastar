@@ -411,89 +411,18 @@ public:
                 }
                 //std::cout<<"pkt_num:"<<_f._pkt_counter<<std::endl;
 
-                if(!packets.empty()){
-                    packets.push_back(std::move(_ac.cur_packet()));
-                    _f._pkt_counter++;
-                    if(_f._pkt_counter>=GPU_BATCH_SIZE){
-                        //reach batch size schedule
-                        _f._pkt_counter=0;
-                        _f._batch.schedule_task();
 
-                    }
+                packets.push_back(std::move(_ac.cur_packet()));
+                _f._pkt_counter++;
+                if(_f._pkt_counter>=GPU_BATCH_SIZE){
+                    //reach batch size schedule
+                    _f._pkt_counter=0;
+                    _f._batch.schedule_task();
                     return make_ready_future<af_action>(af_action::hold);
 
                 }else{
-
-                    if(_initialized==false){
-                        _initialized=true;
-                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                        return _f._mc.query(Operation::kGet, mica_key(key),
-                                mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
-                            if(response.get_result() == Result::kNotFound) {
-                                init_automataState(_fs);
-                                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                                return _f._mc.query(Operation::kSet, mica_key(key),
-                                        mica_value(_fs)).then([this](mica_response response){
-                                    _f._batch._flows.push_back(this);
-                                    packets.push_back(std::move(_ac.cur_packet()));
-                                    _f._pkt_counter++;
-                                    if(_f._pkt_counter>=GPU_BATCH_SIZE){
-                                        //reach batch size schedule
-                                        _f._pkt_counter=0;
-                                        _f._batch.schedule_task();
-                                    }
-                                    return make_ready_future<af_action>(af_action::hold);
-                                });
-
-                            }
-                            else {
-                                _fs = response.get_value<ips_flow_state>();
-                                _f._batch._flows.push_back(this);
-                                packets.push_back(std::move(_ac.cur_packet()));
-                                _f._pkt_counter++;
-                                //std::cout<<"fs_dfa_id from server:"<<_fs._dfa_id<<std::endl;
-                                //std::cout<<"fs_dfa_state from server:"<<_fs._state<<std::endl;
-                                if(_f._pkt_counter>=GPU_BATCH_SIZE){
-                                    //reach batch size schedule
-                                    _f._pkt_counter=0;
-                                    _f._batch.schedule_task();
-                                }
-                                return make_ready_future<af_action>(af_action::hold);
-                            }
-
-                        }).then_wrapped([this](auto&& f){
-                            try{
-                                auto result = f.get0();
-                                return result;
-
-                            }
-                            catch(...){
-                                if(_f._mc.nr_request_descriptors() == 0){
-                                    _f._insufficient_mica_rd_erorr += 1;
-                                }
-                                else{
-                                    _f._mica_timeout_error += 1;
-                                }
-                                return af_action::drop;
-                            }
-                        });
-
-                    }else{
-                        packets.push_back(std::move(_ac.cur_packet()));
-                        _f._pkt_counter++;
-                        if(_f._pkt_counter>=GPU_BATCH_SIZE){
-                            //reach batch size schedule
-                            _f._pkt_counter=0;
-                            _f._batch.schedule_task();
-                        }
-                        return make_ready_future<af_action>(af_action::hold);
-
-                    }
-
+                    return make_ready_future<af_action>(af_action::hold);
                 }
-
-
-
 
 
             });
@@ -677,7 +606,7 @@ public:
         ~batch(){
 
         }
-        void schedule_task(){
+        future<af_action> schedule_task(){
             //To do list:
             //schedule the task, following is the strategy offload all to GPU
             sort(_flows.begin(),_flows.end(),CompLess);
