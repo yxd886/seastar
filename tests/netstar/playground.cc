@@ -409,7 +409,7 @@ public:
                 if(_ac.cur_event().on_close_event()) {
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
-                //std::cout<<"pkt_num:"<<_f._pkt_counter<<std::endl;
+                std::cout<<"pkt_num:"<<_f._pkt_counter<<std::endl;
 
 
                 packets.push_back(std::move(_ac.cur_packet()));
@@ -417,6 +417,7 @@ public:
                 if(_f._pkt_counter>=GPU_BATCH_SIZE){
                     //reach batch size schedule
                     _f._pkt_counter=0;
+                    std::cout<<"schedule_task"<<std::endl;
                     _f._batch.schedule_task();
                     return make_ready_future<af_action>(af_action::hold);
 
