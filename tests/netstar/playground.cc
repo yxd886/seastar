@@ -380,13 +380,15 @@ public:
             if(state_changed) {
                 auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                 _f._mc.query(Operation::kSet, mica_key(key),
-                        mica_value(*fs));
+                        mica_value(*fs)).then([this](mica_response response){
+                    return make_ready_future<>();
+                });
             }
 
         }
         void process_pkts(){
             for(unsigned int i=0;i<packets.size();i++){
-                //process_pkt(&packets[i],&_fs);
+                process_pkt(&packets[i],&_fs);
                 _f._udp_manager.send(std::move(packets[i]),1);
             }
             packets.clear();
@@ -398,7 +400,7 @@ public:
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
                 _f._pkt_counter++;
-                std::cout<<"pkt_num:"<<_f._pkt_counter<<std::endl;
+                //std::cout<<"pkt_num:"<<_f._pkt_counter<<std::endl;
                 if(_f._pkt_counter>=GPU_BATCH_SIZE){
                     //reach batch size schedule
                     _f._pkt_counter=0;

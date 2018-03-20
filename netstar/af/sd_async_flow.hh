@@ -116,7 +116,7 @@ private:
         }
 
         while(!_client.buffer_q.empty()) {
-            printf("!_client.buffer_q.empty()\n");
+            //printf("!_client.buffer_q.empty()\n");
             auto& next_pkt = _client.buffer_q.front();
             auto fe = preprocess_packet(next_pkt.pkt);
             if(fe.no_event()) {
