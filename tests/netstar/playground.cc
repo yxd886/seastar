@@ -416,6 +416,7 @@ public:
                 std::cout<<"finish sending pkt"<<std::endl;
             }
             packets.clear();
+            assert(packets.size()==0);
         }
 
         future<> run_ips() {
