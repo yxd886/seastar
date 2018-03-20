@@ -374,6 +374,7 @@ public:
         }
         ~flow_operator(){
         	std::cout<<"packets.size:"<<packets.size()<<std::endl;
+        	getchar();
         	assert(packets.size()<100);
 
         	if(!packets.empty()){
