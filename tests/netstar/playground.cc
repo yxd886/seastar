@@ -366,12 +366,12 @@ public:
             , _f(f)
             ,_initialized(false){}
         flow_operator(const flow_operator& other) = delete;
-        flow_operator(flow_operator&& other) noexcept
+       /* flow_operator(flow_operator&& other) noexcept
             : _ac(std::move(other._ac)),_f(other._f),_fs(other._fs) ,_initialized(other._initialized){
         	for(unsigned int i=0;i<other.packets.size();i++){
         		packets.push_back(std::move(other.packets[i]));
         	}
-        }
+        }*/
         ~flow_operator(){
         	std::cout<<"packets.size:"<<packets.size()<<std::endl;
         	std::cout<<"deconstruction:"<<std::endl;
