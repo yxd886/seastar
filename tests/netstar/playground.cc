@@ -490,8 +490,8 @@ public:
                  ips_state->_state=state;
                  return;
              }
-
-
+               std::cout<<"      state:"<<state<<std::endl;
+               std::cout<<"      before for loop"<<std::endl;
                for(j = 0; j < len; j++) {
 
                    int count = st_arr[state].output.count;
@@ -511,6 +511,7 @@ public:
                    int inp = pkts[I].content[j];
                    state = st_arr[state].G[inp];
                }
+               std::cout<<"      after for loop"<<std::endl;
                ips_state->_state=state;
            }
 
