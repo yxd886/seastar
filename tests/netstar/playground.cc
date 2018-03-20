@@ -466,6 +466,7 @@ public:
            memcpy(aho_pkt->content,reinterpret_cast<uint8_t*>(rte_pkt->get_header(0,sizeof(char))),rte_pkt->len()-1);
            aho_pkt->dfa_id=state->_dfa_id;
            aho_pkt->len=rte_pkt->len();
+           std::cout<<"    aho_pkt->len:"<<rte_pkt->len()<<std::endl;
        }
        bool state_updated(struct ips_flow_state* old_,struct ips_flow_state* new_){
            if(old_->_alert==new_->_alert&&old_->_dfa_id==new_->_dfa_id&&old_->_state==new_->_state){
