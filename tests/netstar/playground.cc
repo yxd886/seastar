@@ -386,7 +386,7 @@ public:
         }
         void process_pkts(){
             for(unsigned int i=0;i<packets.size();i++){
-                //process_pkt(&packets[i],&_fs);
+                process_pkt(&packets[i],&_fs);
                 _f._udp_manager.send(std::move(packets[i]),1);
             }
             packets.clear();
@@ -628,13 +628,13 @@ public:
             if(gpu_pkts==nullptr||gpu_states==nullptr){
                 std::cout<<"memory alloc fail"<<std::endl;
             }
-            std::cout<<"memory alloc finished"<<std::endl;
+            //std::cout<<"memory alloc finished"<<std::endl;
             for(int i=0; i<partition; i++){
                 gpu_states[i]=reinterpret_cast<char*>(&(_flows[i]->_fs));
-                std::cout<<"assign gpu_states["<<i<<"]"<<std::endl;
+                //std::cout<<"assign gpu_states["<<i<<"]"<<std::endl;
                 for(int j=0;j<(int)_flows[i]->packets.size();j++){
                     gpu_pkts[i*max_pkt_num_per_flow+j]=reinterpret_cast<char*>(_flows[i]->packets[j].get_header<net::eth_hdr>(0));
-                    std::cout<<"assign gpu_pkts["<<i<<"]"<<"["<<j<<"]"<<std::endl;
+                    //std::cout<<"assign gpu_pkts["<<i<<"]"<<"["<<j<<"]"<<std::endl;
                 }
             }
             //launch kernel
@@ -642,17 +642,17 @@ public:
             //
             //
             //
-            std::cout<<"begin to process_pkts"<<std::endl;
+            //std::cout<<"begin to process_pkts"<<std::endl;
             for(unsigned int i=partition; i<_flows.size(); i++){
                 _flows[i]->process_pkts();
-                std::cout<<"process_pkts finished"<<std::endl;
+                //std::cout<<"process_pkts finished"<<std::endl;
             }
 
             for( int i=0; i<partition; i++){
                 _flows[i]->process_pkts();
 
             }
-            std::cout<<"gpu_process_pkts finished"<<std::endl;
+            //std::cout<<"gpu_process_pkts finished"<<std::endl;
             _flows.clear();
 
 
