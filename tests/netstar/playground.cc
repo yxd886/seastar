@@ -473,6 +473,7 @@ public:
        void parse_pkt(net::packet *rte_pkt, struct ips_flow_state* state,struct aho_pkt*  aho_pkt){
 
            aho_pkt->content=(uint8_t*)malloc(rte_pkt->len());
+           std::cout<<"    rte_pkt->len():"<<rte_pkt->len()<<std::endl;
            memcpy(aho_pkt->content,reinterpret_cast<uint8_t*>(rte_pkt->get_header(0,sizeof(char))),rte_pkt->len()-1);
            aho_pkt->dfa_id=state->_dfa_id;
            aho_pkt->len=rte_pkt->len();
