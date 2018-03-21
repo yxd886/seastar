@@ -680,24 +680,27 @@ public:
             }
             //std::cout<<"gpu_process_pkts finished"<<std::endl;
 
-
-
-            return seastar::do_with(seastar::semaphore(100), [_flows,this] (auto& limit) {
-            	this->_flows.clear();
-                return seastar::do_for_each(boost::counting_iterator<int>(0),
-                        boost::counting_iterator<int>(456), [&limit,_flows] (int i) {
-                	std::cout<<"flows_size:"<<_flows.size()<<std::endl;
-                    return seastar::get_units(limit, 1).then([_flows,i] (auto units) {
-                    	auto key = query_key{_flows[i]->_ac.get_flow_key_hash(), _flows[i]->_ac.get_flow_key_hash()};
-						return _flows[i]->_f._mc.query(Operation::kSet, mica_key(key),
-								mica_value(_flows[i]->_fs)).then([_flows](mica_response response){
-							return make_ready_future<>();
-						}).finally([units = std::move(units)] {});
-        	        });
-                }).finally([&limit] {
-                    return limit.wait(100);
+            return seastar::do_with(std::vector<flow_operator*>(_flows), [this] (auto& obj) {
+                    // obj is passed by reference to slow_op, and this is fine:
+            	_flows.clear();
+                return seastar::do_with(seastar::semaphore(100), [& obj] (auto& limit) {
+                    return seastar::do_for_each(boost::counting_iterator<int>(0),
+                            boost::counting_iterator<int>(456), [&limit,& obj] (int i) {
+                    	std::cout<<"flows_size:"<<obj.size()<<std::endl;
+                        return seastar::get_units(limit, 1).then([i,& obj] (auto units) {
+                        	auto key = query_key{obj[i]->_ac.get_flow_key_hash(), obj[i]->_ac.get_flow_key_hash()};
+    						return obj[i]->_f._mc.query(Operation::kSet, mica_key(key),
+    								mica_value(obj[i]->_fs)).then([](mica_response response){
+    							return make_ready_future<>();
+    						}).finally([units = std::move(units)] {});
+            	        });
+                    }).finally([&limit] {
+                        return limit.wait(100);
+                    });
                 });
-            });
+            }
+
+
 
 
 
