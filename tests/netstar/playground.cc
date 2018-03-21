@@ -685,7 +685,7 @@ public:
             	_flows.clear();
                 return seastar::do_with(seastar::semaphore(100), [& obj] (auto& limit) {
                     return seastar::do_for_each(boost::counting_iterator<int>(0),
-                            boost::counting_iterator<int>(456), [&limit,& obj] (int i) {
+                            boost::counting_iterator<int>((int)obj.size()), [&limit,& obj] (int i) {
                     	std::cout<<"flows_size:"<<obj.size()<<std::endl;
                         return seastar::get_units(limit, 1).then([i,& obj] (auto units) {
                         	auto key = query_key{obj[i]->_ac.get_flow_key_hash(), obj[i]->_ac.get_flow_key_hash()};
