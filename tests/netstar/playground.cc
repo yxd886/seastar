@@ -692,6 +692,11 @@ public:
                 }
                 processing_time.push_back(std::max(gpu_time,cpu_time/COMPUTE_RATIO));
             }
+            std::cout<<"processing time begin"<<std::endl;
+            for(unsigned int i=0;i<processing_time.size();i++){
+                std::cout<<processing_time[i]<<" ";
+            }
+            std::cout<<"processing time end"<<std::endl;
 
 
             std::vector<int>::iterator result = std::min_element(std::begin(processing_time), std::end(processing_time));
