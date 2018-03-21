@@ -682,18 +682,19 @@ public:
 
 
 
-            return seastar::do_with(seastar::semaphore(100), [this] (auto& limit) {
+            return seastar::do_with(seastar::semaphore(100), [_flows,this] (auto& limit) {
+            	this->_flows.clear();
                 return seastar::do_for_each(boost::counting_iterator<int>(0),
-                        boost::counting_iterator<int>(456), [&limit,this] (int i) {
-                    return seastar::get_units(limit, 1).then([this,i] (auto units) {
+                        boost::counting_iterator<int>(456), [&limit,_flows] (int i) {
+                	std::cout<<"flows_size:"<<_flows.size()<<std::endl;
+                    return seastar::get_units(limit, 1).then([_flows,i] (auto units) {
                     	auto key = query_key{_flows[i]->_ac.get_flow_key_hash(), _flows[i]->_ac.get_flow_key_hash()};
 						return _flows[i]->_f._mc.query(Operation::kSet, mica_key(key),
-								mica_value(_flows[i]->_fs)).then([this](mica_response response){
+								mica_value(_flows[i]->_fs)).then([_flows](mica_response response){
 							return make_ready_future<>();
 						}).finally([units = std::move(units)] {});
         	        });
-                }).finally([&limit,this] {
-                	_flows.clear();
+                }).finally([&limit] {
                     return limit.wait(100);
                 });
             });
