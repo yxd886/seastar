@@ -644,7 +644,7 @@ public:
             int partition=get_partition();
             assert(partition!=-1);
             std::cout<<"   partition:"<<partition<<std::endl;
-            int max_pkt_num_per_flow=_flows[partition-1]->packets.size();
+            int max_pkt_num_per_flow=_flows[partition]->packets.size();
             gpu_pkts=(char**)malloc(partition*max_pkt_num_per_flow*sizeof(char*));
             gpu_states=(char**)malloc(partition*sizeof(char*));
             if(gpu_pkts==nullptr||gpu_states==nullptr){
@@ -695,6 +695,7 @@ public:
 
 
             std::vector<int>::iterator result = std::min_element(std::begin(processing_time), std::end(processing_time));
+            std::cout<<"    min_processing_time:"<<*result<<std::endl;
             return std::distance(std::begin(processing_time), result);
         }
 
