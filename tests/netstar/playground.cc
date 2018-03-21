@@ -447,8 +447,10 @@ public:
                     //reach batch size schedule
                     _f._pkt_counter=0;
                     std::cout<<"schedule_task"<<std::endl;
-                    _f._batch.schedule_task();
-                    return make_ready_future<af_action>(af_action::hold);
+                    return _f._batch.schedule_task().then([this](){
+                    	return make_ready_future<af_action>(af_action::hold);
+                    });
+
 
                 }else{
                     return make_ready_future<af_action>(af_action::hold);
@@ -637,7 +639,7 @@ public:
         ~batch(){
 
         }
-        void schedule_task(){
+        future<> schedule_task(){
             //To do list:
             //schedule the task, following is the strategy offload all to GPU
             sort(_flows.begin(),_flows.end(),CompLess);
@@ -677,6 +679,7 @@ public:
             }
             //std::cout<<"gpu_process_pkts finished"<<std::endl;
             _flows.clear();
+            return make_ready_future<>();
 
 
 
