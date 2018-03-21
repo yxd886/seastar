@@ -692,6 +692,16 @@ public:
                 }
                 processing_time.push_back(std::max(gpu_time,cpu_time/COMPUTE_RATIO));
             }
+
+
+            std::cout<<"packet num begin"<<std::endl;
+            for(unsigned int i=0;i<_flows.size();i++){
+                std::cout<<_flows[i]->packets.size()<<" ";
+            }
+            std::cout<<"packet num end"<<std::endl;
+
+
+
             std::cout<<"processing time begin"<<std::endl;
             for(unsigned int i=0;i<processing_time.size();i++){
                 std::cout<<processing_time[i]<<" ";
