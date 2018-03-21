@@ -683,6 +683,12 @@ public:
             return seastar::do_with(std::vector<flow_operator*>(_flows), [this] (auto& obj) {
                     // obj is passed by reference to slow_op, and this is fine:
             	_flows.clear();
+            	if(gpu_pkts){
+            		free(gpu_pkts);
+            	}
+            	if(gpu_states){
+            		free(gpu_states);
+            	}
                 return seastar::do_with(seastar::semaphore(100), [& obj] (auto& limit) {
                     return seastar::do_for_each(boost::counting_iterator<int>(0),
                             boost::counting_iterator<int>((int)obj.size()), [&limit,& obj] (int i) {
