@@ -683,10 +683,10 @@ public:
         }
         uint64_t get_partition(){
 
-            std::vector<int> processing_time;
+            std::vector<float> processing_time;
             for(unsigned int i=0;i<_flows.size();i++){
-                int cpu_time=0;
-                int gpu_time=_flows[i]->packets.size();
+                float cpu_time=0;
+                float gpu_time=_flows[i]->packets.size();
                 for(unsigned int j=i+1;j<_flows.size();j++){
                     cpu_time+=_flows[j]->packets.size();
                 }
@@ -709,7 +709,7 @@ public:
             std::cout<<"processing time end"<<std::endl;
 
 
-            std::vector<int>::iterator result = std::min_element(std::begin(processing_time), std::end(processing_time));
+            std::vector<float>::iterator result = std::min_element(std::begin(processing_time), std::end(processing_time));
             std::cout<<"    min_processing_time:"<<*result<<std::endl;
             return std::distance(std::begin(processing_time), result);
         }
