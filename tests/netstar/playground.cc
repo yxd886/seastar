@@ -681,10 +681,10 @@ public:
 
 
 
-            return seastar::do_with(seastar::semaphore(100), [] (auto& limit) {
+            return seastar::do_with(seastar::semaphore(100), [this] (auto& limit) {
                 return seastar::do_for_each(boost::counting_iterator<int>(0),
                         boost::counting_iterator<int>(456), [&limit,this] (int i) {
-                    return seastar::get_units(limit, 1).then([i] (auto units) {
+                    return seastar::get_units(limit, 1).then([this,i] (auto units) {
                     	auto key = query_key{_flows[i]->_ac.get_flow_key_hash(), _flows[i]->_ac.get_flow_key_hash()};
 						return _flows[i]->_f._mc.query(Operation::kSet, mica_key(key),
 								mica_value(_flows[i]->_fs)).then([this](mica_response response){
