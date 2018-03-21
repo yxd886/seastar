@@ -45,6 +45,7 @@
 
 #include <vector>
 #include <iostream>
+#include <algorithm>
 #include "nf/aho-corasick/fpp.h"
 #include "nf/aho-corasick/aho.h"
 #define MAX_MATCH 8192
@@ -53,6 +54,8 @@
 
 #include <unordered_map>
 #define GPU_BATCH_SIZE 200
+
+#define COMPUTE_RATIO 50
 
 using namespace seastar;
 using namespace netstar;
@@ -368,7 +371,7 @@ public:
         flow_operator(const flow_operator& other) = delete;
         flow_operator(flow_operator&& other) noexcept
             : _ac(std::move(other._ac)),_f(other._f),_fs(other._fs) ,_initialized(other._initialized){
-            assert(1==0);
+
         	for(unsigned int i=0;i<other.packets.size();i++){
         		packets.push_back(std::move(other.packets[i]));
         	}
@@ -639,6 +642,8 @@ public:
             //schedule the task, following is the strategy offload all to GPU
             sort(_flows.begin(),_flows.end(),CompLess);
             int partition=get_partition();
+            assert(partition!=-1);
+            std::cout<<"   partition:"<<partition<<std::endl;
             int max_pkt_num_per_flow=_flows[partition-1]->packets.size();
             gpu_pkts=(char**)malloc(partition*max_pkt_num_per_flow*sizeof(char*));
             gpu_states=(char**)malloc(partition*sizeof(char*));
@@ -677,7 +682,20 @@ public:
 
         }
         uint64_t get_partition(){
-            return _flows.size()/2;
+
+            std::vector<int> processing_time;
+            for(unsigned int i=0;i<_flows.size();i++){
+                int cpu_time=0;
+                int gpu_time=_flows[i]->packets.size();
+                for(unsigned int j=i+1;j<_flows.size();j++){
+                    cpu_time+=_flows[j]->packets.size();
+                }
+                processing_time.push_back(std::max(gpu_time,cpu_time/COMPUTE_RATIO));
+            }
+
+
+            std::vector<int>::iterator result = std::min_element(std::begin(processing_time), std::end(processing_time));
+            return std::distance(std::begin(processing_time), result);
         }
 
     };
