@@ -430,34 +430,39 @@ public:
             assert(packets.size()==0);
         }
         future<>update_state(){
-            if(_initialized){
-                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                return _f._mc.query(Operation::kSet, mica_key(key),
-                        mica_value(_fs)).then([](mica_response response){
-                    return make_ready_future<>();
-                });
-            }else{
-                _initialized=true;
-                auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                return _f._mc.query(Operation::kGet, mica_key(key),
-                        mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
-                    if(response.get_result() == Result::kNotFound) {
-                        init_automataState(_fs);
-                        auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
-                        return _f._mc.query(Operation::kSet, mica_key(key),
-                                mica_value(_fs)).then([this](mica_response response){
-                            return make_ready_future<>();
-                        });
-                    }
-                    else {
-                        _fs = response.get_value<ips_flow_state>();
+            if(packets.size()==1){
+                if(_initialized){
+                    auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                    return _f._mc.query(Operation::kSet, mica_key(key),
+                            mica_value(_fs)).then([](mica_response response){
                         return make_ready_future<>();
+                    });
+                }else{
+                    _initialized=true;
+                    auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                    return _f._mc.query(Operation::kGet, mica_key(key),
+                            mica_value(0, temporary_buffer<char>())).then([this](mica_response response){
+                        if(response.get_result() == Result::kNotFound) {
+                            init_automataState(_fs);
+                            auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
+                            return _f._mc.query(Operation::kSet, mica_key(key),
+                                    mica_value(_fs)).then([this](mica_response response){
+                                return make_ready_future<>();
+                            });
+                        }
+                        else {
+                            _fs = response.get_value<ips_flow_state>();
+                            return make_ready_future<>();
 
-                    }
+                        }
 
-                });
+                    });
 
+                }
+            }else{
+                return make_ready_future<>();
             }
+
         }
 
         future<> run_ips() {
@@ -474,23 +479,24 @@ public:
                 }
                 packets.push_back(std::move(_ac.cur_packet()));
                 _f._pkt_counter++;
-                if(_f._pkt_counter>=GPU_BATCH_SIZE){
-                    //reach batch size schedule
-                    _f._pkt_counter=0;
-                    std::cout<<"schedule_task"<<std::endl;
-                    return update_state()
-                            .then([this](){
-                        return _f._batch.schedule_task();})
-                            .then([this](){
-                    	return make_ready_future<af_action>(af_action::hold);
-                    });
+                return update_state().then([this](){
+                    if(_f._pkt_counter>=GPU_BATCH_SIZE){
+                        //reach batch size schedule
+                        _f._pkt_counter=0;
+                        std::cout<<"schedule_task"<<std::endl;
+                        return  _f._batch.schedule_task()
+                                .then([this](){
+                            return make_ready_future<af_action>(af_action::hold);
+                        });
 
 
-                }else{
-                    return make_ready_future<af_action>(af_action::hold);
-                }
-                //return make_ready_future<af_action>(af_action::forward);
+                    }else{
+                        return make_ready_future<af_action>(af_action::hold);
+                    }
+                    //return make_ready_future<af_action>(af_action::forward);
 
+
+                });
 
             });
         }
