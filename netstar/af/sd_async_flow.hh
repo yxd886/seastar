@@ -257,7 +257,7 @@ public:
 
         if(_client.cur_context){
             assert(1==0);
-            _client.ppr.handle_packet_send(net::packet::make_null_packet());
+            _client.ppr.handle_packet_send(_client.cur_context.value().pkt);
             return;
         }
 
