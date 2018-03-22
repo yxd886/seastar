@@ -192,7 +192,6 @@ public:
 
     ~sd_async_flow_impl() {
     	std::cout<<"         ~sd_async_flow_impl"<<std::endl;
-    	assert(1==0);
         async_flow_debug("sd_async_flow_impl: deconstruction.\n");
         async_flow_assert(!_client.cur_context);
         async_flow_assert(_pkts_in_pipeline == 0);
