@@ -430,14 +430,14 @@ public:
             assert(packets.size()==0);
         }
         future<>update_state(){
-            if(packets.size()==1){
-                if(_initialized){
+            if(packets.size()==1){   //if it is the first packets of this flow in this batch
+                if(_initialized){    //if it has already processed previous batch, then the state is newer than remote, so update to remote.
                     auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                     return _f._mc.query(Operation::kSet, mica_key(key),
                             mica_value(_fs)).then([](mica_response response){
                         return make_ready_future<>();
                     });
-                }else{
+                }else{              //if it is just initialized, it need get the flow state from the remote server.
                     _initialized=true;
                     auto key = query_key{_ac.get_flow_key_hash(), _ac.get_flow_key_hash()};
                     return _f._mc.query(Operation::kGet, mica_key(key),
@@ -479,7 +479,8 @@ public:
                 }
                 packets.push_back(std::move(_ac.cur_packet()));
                 _f._pkt_counter++;
-                return update_state().then([this](){
+                return update_state()                       //update the flow state when receive the first pkt of this flow in this batch.
+                        .then([this](){
                     if(_f._pkt_counter>=GPU_BATCH_SIZE){
                         //reach batch size schedule
                         _f._pkt_counter=0;
