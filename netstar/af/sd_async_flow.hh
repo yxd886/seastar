@@ -253,7 +253,7 @@ public:
     }
 
     void ppr_passive_close(){
-        close_ppr_and_remove_flow_key();
+
 
         if(_client.loop_fn != nullptr && !_client.cur_context) {
             _pkts_in_pipeline += 1;
@@ -262,6 +262,7 @@ public:
                                         true);
             invoke_async_loop();
         }
+        close_ppr_and_remove_flow_key();
     }
 
 private:

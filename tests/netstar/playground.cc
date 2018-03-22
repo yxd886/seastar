@@ -433,9 +433,7 @@ public:
         future<> run_ips() {
             return _ac.run_async_loop([this](){
                 if(_ac.cur_event().on_close_event()) {
-                    if(!packets.empty()){
-                            process_pkts();
-                        }
+                    _f._batch.post_process();
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
                 std::cout<<"pkt_num:"<<_f._pkt_counter<<std::endl;
@@ -639,6 +637,15 @@ public:
 
         }
         ~batch(){
+
+        }
+        void post_process(){
+
+            for(unsigned int i=0; i<_flows.size(); i++){
+                _flows[i]->process_pkts();
+                //std::cout<<"process_pkts finished"<<std::endl;
+            }
+            _flows.clear();
 
         }
         future<> schedule_task(){
