@@ -255,14 +255,22 @@ public:
     void ppr_passive_close(){
 
 
+        if(_client.cur_context){
+            assert(1==0);
+            _client.ppr.handle_packet_send(net::packet::make_null_packet());
+            return;
+        }
+
         if(_client.loop_fn != nullptr && !_client.cur_context) {
             _pkts_in_pipeline += 1;
             _client.cur_context.emplace(net::packet::make_null_packet(),
                                         filtered_events<EventEnumType>::make_close_event(),
                                         true);
             invoke_async_loop();
+
         }
         close_ppr_and_remove_flow_key();
+
     }
 
 private:
