@@ -412,14 +412,8 @@ public:
             }
 
         }
-        void process_pkts(){
-            std::cout<<"packets.size:"<<packets.size()<<std::endl;
-            for(unsigned int i=0;i<packets.size();i++){
-            	std::cout<<"packets.size:"<<packets.size()<<std::endl;
-                std::cout<<"process "<<i<<" packets"<<std::endl;
-                //process_pkt(&packets[i],&_fs);
 
-            }
+        void forward_pkts(){
             for(unsigned int i=0;i<packets.size();i++){
 
                 std::cout<<"begin to send pkt"<<std::endl;
@@ -428,6 +422,17 @@ public:
             }
             packets.clear();
             assert(packets.size()==0);
+        }
+        void process_pkts(){
+            std::cout<<"packets.size:"<<packets.size()<<std::endl;
+            for(unsigned int i=0;i<packets.size();i++){
+            	std::cout<<"packets.size:"<<packets.size()<<std::endl;
+                std::cout<<"process "<<i<<" packets"<<std::endl;
+                //process_pkt(&packets[i],&_fs);
+
+            }
+            forward_pkts();
+
         }
         future<>update_state(){
             if(packets.size()==1){   //if it is the first packets of this flow in this batch
