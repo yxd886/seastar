@@ -84,7 +84,7 @@ public:
             // fprint(std::cout, "timer called.\n");
             this->_close_fn(this->_is_client);
         });
-        _t.arm(100s);
+        _t.arm(3s);
     }
 
 public:
@@ -93,7 +93,7 @@ public:
         ge.event_happen(dummy_udp_events::pkt_in);
         if(_t.armed()) {
             _t.cancel();
-            _t.arm(100s);
+            _t.arm(3s);
         }
         return ge;
     }
@@ -383,9 +383,7 @@ public:
 
         	assert(packets.size()<100);
 
-        	if(!packets.empty()){
-        		process_pkts();
-        	}
+
         }
 
 
@@ -435,6 +433,9 @@ public:
         future<> run_ips() {
             return _ac.run_async_loop([this](){
                 if(_ac.cur_event().on_close_event()) {
+                    if(!packets.empty()){
+                            process_pkts();
+                        }
                     return make_ready_future<af_action>(af_action::close_forward);
                 }
                 std::cout<<"pkt_num:"<<_f._pkt_counter<<std::endl;
