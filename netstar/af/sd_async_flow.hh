@@ -79,10 +79,7 @@ private:
         internal_packet_forward(std::move(pkt));
     }
 
-    void internal_packet_forward(net::packet pkt) {
-        send_packet_out(std::move(pkt), _manager.get_reverse_direction(_client.direction));
-        _pkts_in_pipeline -= 1;
-    }
+
 
 private:
     // Critical functions for controlling the loop
@@ -116,6 +113,7 @@ private:
         }
 
         while(!_client.buffer_q.empty()) {
+            //printf("!_client.buffer_q.empty()\n");
             auto& next_pkt = _client.buffer_q.front();
             auto fe = preprocess_packet(next_pkt.pkt);
             if(fe.no_event()) {
@@ -193,9 +191,15 @@ public:
     }
 
     ~sd_async_flow_impl() {
+    	std::cout<<"         ~sd_async_flow_impl"<<std::endl;
         async_flow_debug("sd_async_flow_impl: deconstruction.\n");
         async_flow_assert(!_client.cur_context);
         async_flow_assert(_pkts_in_pipeline == 0);
+    }
+
+    void internal_packet_forward(net::packet pkt) {
+        send_packet_out(std::move(pkt), _manager.get_reverse_direction(_client.direction));
+        _pkts_in_pipeline -= 1;
     }
 
     void destroy_initial_context() {
@@ -249,7 +253,13 @@ public:
     }
 
     void ppr_passive_close(){
-        close_ppr_and_remove_flow_key();
+
+
+        if(_client.cur_context){
+            //assert(1==0);
+            _client.ppr.handle_packet_send(_client.cur_context.value().pkt);
+            return;
+        }
 
         if(_client.loop_fn != nullptr && !_client.cur_context) {
             _pkts_in_pipeline += 1;
@@ -257,7 +267,10 @@ public:
                                         filtered_events<EventEnumType>::make_close_event(),
                                         true);
             invoke_async_loop();
+
         }
+        close_ppr_and_remove_flow_key();
+
     }
 
 private:
@@ -332,6 +345,12 @@ public:
 
     uint64_t get_flow_key_hash () {
         return _impl->_flow_key_hash;
+    }
+
+    void internal_send(net::packet pkt){
+
+        _impl->internal_packet_forward(std::move(pkt));
+
     }
 
     FlowKeyType get_flow_key_type () {
@@ -457,6 +476,12 @@ public:
         return _flow_table.size();
     }
 
+
+    future<> send(net::packet pkt, uint8_t direction) {
+        return _directions[direction].output_stream.produce(std::move(pkt));
+    }
+
+
 private:
     subscription<net::packet> direction_registration(uint8_t direction,
                                                      uint8_t reverse_direction,
@@ -492,9 +517,9 @@ private:
         _directions[direction].reverse_direction = reverse_direction;
         return sub;
     }
-    future<> send(net::packet pkt, uint8_t direction) {
-        return _directions[direction].output_stream.produce(std::move(pkt));
-    }
+
+
+
     uint8_t get_reverse_direction(uint8_t direction) {
         return _directions[direction].reverse_direction;
     }
