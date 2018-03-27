@@ -266,18 +266,16 @@ tests = [
     'tests/tuple_utils_test',
     'tests/tls_echo_server',
     'tests/tls_simple_client',
-    'tests/netstar/simple_send',
-    'tests/netstar/create_two_ports',
-    'tests/netstar/per_core_objs_invoke_on_some',
-    'tests/netstar/per_core_objs_invoke_on_all',
-    'tests/netstar/simple_send_work_unit',
+    'tests/netstar/http_ids',
+    'tests/netstar/http_request_extraction',
+    'tests/netstar/microbench_dbrw',
     'tests/netstar/playground',
-    'tests/netstar/extendable_buffer_test',
-    'tests/netstar/mica_client_get_set_del',
-    'tests/netstar/two_stack_ports',
-    'tests/netstar/test_af_event',
-    'tests/netstar/udp_traffic_gen',
-    'tests/netstar/static_udp_traffic_gen',
+    'tests/netstar/simple_forwarder',
+    'tests/netstar/tcp_payload_extraction',
+    'tests/netstar/tcp_sctp_server',
+    'tests/netstar/two_stacks',
+    'tests/netstar/with_multiple_hookpoints',
+    
     ]
 
 apps = [
