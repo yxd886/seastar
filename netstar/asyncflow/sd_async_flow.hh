@@ -71,12 +71,7 @@ private:
         internal_packet_forward(std::move(pkt));
     }
 
-    void internal_packet_forward(rte_packet pkt) {
-        if(pkt) {
-            _manager.send(std::move(pkt), _reverse_direction_for_client);
-            async_flow_debug("sd_async_flow_impl: send packet out to direction %d.\n", _reverse_direction_for_client);
-        }
-    }
+
 
 private:
     // Critical functions for controlling the loop
@@ -223,6 +218,14 @@ public:
                                         filtered_events<EventEnumType>::make_close_event(),
                                         true);
             invoke_async_loop();
+        }
+    }
+
+
+    void internal_packet_forward(rte_packet pkt) {
+        if(pkt) {
+            _manager.send(std::move(pkt), _reverse_direction_for_client);
+            async_flow_debug("sd_async_flow_impl: send packet out to direction %d.\n", _reverse_direction_for_client);
         }
     }
 

@@ -266,7 +266,18 @@ tests = [
     'tests/tuple_utils_test',
     'tests/tls_echo_server',
     'tests/tls_simple_client',
+    'tests/netstar/simple_send',
+    'tests/netstar/create_two_ports',
+    'tests/netstar/per_core_objs_invoke_on_some',
+    'tests/netstar/per_core_objs_invoke_on_all',
+    'tests/netstar/simple_send_work_unit',
     'tests/netstar/playground',
+    'tests/netstar/extendable_buffer_test',
+    'tests/netstar/mica_client_get_set_del',
+    'tests/netstar/two_stack_ports',
+    'tests/netstar/test_af_event',
+    'tests/netstar/udp_traffic_gen',
+    'tests/netstar/static_udp_traffic_gen',
     ]
 
 apps = [
@@ -332,14 +343,15 @@ libnet = [
     'net/dhcp.cc',
     'net/tls.cc',
     'net/dns.cc',
-    'net/patchfile/fdir_device.cc',
-    'net/patchfile/standard_device.cc',
     ]
-    
+
 libnetstar = [
-    'netstar/mica/util/cityhash/city_mod.cc',
-    'netstar/mica/mica_def.cc',
-    'netstar/mica/mica_client.cc',
+    'netstar/netstar_dpdk_device.cc',
+    'netstar/mica_client.cc',
+    'mica/util/cityhash/city_mod.cc',
+    'netstar/fdir_device.cc',
+    'netstar/mica_def.cc',
+    'bess/time.cc',
     ]
 
 core = [
@@ -398,6 +410,8 @@ boost_test_lib = [
 ]
 
 
+
+
 def maybe_static(flag, libs):
     if flag and not args.static:
         libs = '-Wl,-Bstatic {} -Wl,-Bdynamic'.format(libs)
@@ -439,7 +453,7 @@ memcache_base = [
 ] + libnet + core
 
 deps = {
-    'libseastar.a' : core + libnet + http + protobuf + prometheus,
+    'libseastar.a' : core + libnet + http + protobuf + prometheus+ libnetstar,
     'seastar.pc': [],
     'apps/httpd/httpd': ['apps/httpd/demo.json', 'apps/httpd/main.cc'] + http + libnet + core,
     'apps/memcached/memcached': ['apps/memcached/memcache.cc'] + memcache_base,
@@ -498,8 +512,20 @@ deps = {
     'tests/tuple_utils_test': ['tests/tuple_utils_test.cc'],
     'tests/tls_echo_server': ['tests/tls_echo_server.cc'] + core + libnet,
     'tests/tls_simple_client': ['tests/tls_simple_client.cc'] + core + libnet,
+    'tests/netstar/simple_send': ['tests/netstar/simple_send.cc'] + core + libnet + libnetstar,
+    'tests/netstar/create_two_ports': ['tests/netstar/create_two_ports.cc'] + core + libnet + libnetstar,
+    'tests/netstar/per_core_objs_invoke_on_some': ['tests/netstar/per_core_objs_invoke_on_some.cc'] + core + libnet + libnetstar,
+    'tests/netstar/per_core_objs_invoke_on_all': ['tests/netstar/per_core_objs_invoke_on_all.cc'] + core + libnet + libnetstar,
+    'tests/netstar/simple_send_work_unit': ['tests/netstar/simple_send_work_unit.cc'] + core + libnet + libnetstar,
     'tests/netstar/playground': ['tests/netstar/playground.cc'] + core + libnet + libnetstar,
+    'tests/netstar/extendable_buffer_test': ['tests/netstar/extendable_buffer_test.cc'] + core + libnet + libnetstar,
+    'tests/netstar/mica_client_get_set_del': ['tests/netstar/mica_client_get_set_del.cc'] + core + libnet + libnetstar,
+    'tests/netstar/two_stack_ports': ['tests/netstar/two_stack_ports.cc'] + core + libnet + libnetstar,
+    'tests/netstar/test_af_event': ['tests/netstar/test_af_event.cc'] + core + libnet + libnetstar,
+    'tests/netstar/udp_traffic_gen': ['tests/netstar/udp_traffic_gen.cc'] + core + libnet + libnetstar,
+    'tests/netstar/static_udp_traffic_gen': ['tests/netstar/static_udp_traffic_gen.cc'] + core + libnet + libnetstar,
 }
+
 
 boost_tests = [
     'tests/memcached/test_ascii_parser',
