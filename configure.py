@@ -341,15 +341,14 @@ libnet = [
     'net/dhcp.cc',
     'net/tls.cc',
     'net/dns.cc',
+    'net/patchfile/fdir_device.cc',
+    'net/patchfile/standard_device.cc',
     ]
 
 libnetstar = [
-    'netstar/netstar_dpdk_device.cc',
-    'netstar/mica_client.cc',
-    'mica/util/cityhash/city_mod.cc',
-    'netstar/fdir_device.cc',
-    'netstar/mica_def.cc',
-    'bess/time.cc',
+    'netstar/mica/util/cityhash/city_mod.cc',
+    'netstar/mica/mica_def.cc',
+    'netstar/mica/mica_client.cc',
     ]
 
 core = [
