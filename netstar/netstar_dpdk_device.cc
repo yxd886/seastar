@@ -39,7 +39,7 @@
 #include <rte_ethdev.h>
 #include <rte_cycles.h>
 #include <rte_memzone.h>
-
+std::vector<struct rte_mempool*> netstar_pools;
 using namespace seastar;
 using namespace seastar::net;
 
@@ -1167,6 +1167,7 @@ build_mbuf_cluster:
                                        rte_pktmbuf_init, nullptr,
                                        rte_socket_id(), 0);
             }
+            netstar_pools.push_back(_pool);
 
             if (!_pool) {
                 printf("Failed to create mempool for Tx\n");
@@ -1862,6 +1863,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
                                rte_pktmbuf_init, nullptr,
                                rte_socket_id(), 0);
     }
+    netstar_pools.push_back(_pktmbuf_pool_rx);
 
     return _pktmbuf_pool_rx != nullptr;
 }
