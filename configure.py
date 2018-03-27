@@ -266,15 +266,8 @@ tests = [
     'tests/tuple_utils_test',
     'tests/tls_echo_server',
     'tests/tls_simple_client',
-    'tests/netstar/http_ids',
-    'tests/netstar/http_request_extraction',
-    'tests/netstar/microbench_dbrw',
     'tests/netstar/playground',
-    'tests/netstar/simple_forwarder',
-    'tests/netstar/tcp_payload_extraction',
-    'tests/netstar/tcp_sctp_server',
-    'tests/netstar/two_stacks',
-    'tests/netstar/with_multiple_hookpoints',
+
     
     ]
 
@@ -509,15 +502,8 @@ deps = {
     'tests/tuple_utils_test': ['tests/tuple_utils_test.cc'],
     'tests/tls_echo_server': ['tests/tls_echo_server.cc'] + core + libnet,
     'tests/tls_simple_client': ['tests/tls_simple_client.cc'] + core + libnet,
-    'tests/netstar/http_ids': ['tests/netstar/http_ids.cc'] + core + libnet + libnetstar,
-    'tests/netstar/http_request_extraction': ['tests/netstar/http_request_extraction.cc']+ core + libnet + libnetstar,
-    'tests/netstar/microbench_dbrw' :['tests/netstar/microbench_dbrw.cc']+ core + libnet + libnetstar,
     'tests/netstar/playground': ['tests/netstar/playground.cc']+ core + libnet + libnetstar,
-    'tests/netstar/simple_forwarder': ['tests/netstar/simple_forwarder.cc']+ core + libnet + libnetstar,
-    'tests/netstar/tcp_payload_extraction': ['tests/netstar/tcp_payload_extraction.cc']+ core + libnet + libnetstar,
-    'tests/netstar/tcp_sctp_server': ['tests/netstar/tcp_sctp_server.cc']+ core + libnet + libnetstar,
-    'tests/netstar/two_stacks' :['tests/netstar/two_stacks.cc']+ core + libnet + libnetstar,
-    'tests/netstar/with_multiple_hookpoints': ['tests/netstar/with_multiple_hookpoints.cc']+ core + libnet + libnetstar,
+
 }
 
 
