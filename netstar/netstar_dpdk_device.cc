@@ -1168,6 +1168,7 @@ build_mbuf_cluster:
                                        rte_socket_id(), 0);
             }
             netstar_pools.push_back(_pool);
+            printf("Tx pool pointer push_back\n");
 
             if (!_pool) {
                 printf("Failed to create mempool for Tx\n");
@@ -1864,6 +1865,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
                                rte_socket_id(), 0);
     }
     netstar_pools.push_back(_pktmbuf_pool_rx);
+    printf("Rx pool pointer push_back\n");
 
     return _pktmbuf_pool_rx != nullptr;
 }
