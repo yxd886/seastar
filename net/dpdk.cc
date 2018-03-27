@@ -58,7 +58,7 @@
 
 
 
-std::vector<struct rte_mempool*> netstar_pools;
+
 
 #if RTE_VERSION <= RTE_VERSION_NUM(2,0,0,16)
 
@@ -1156,7 +1156,7 @@ build_mbuf_cluster:
 
             printf("Creating Tx mbuf pool '%s' [%u mbufs] ...\n",
                    name.c_str(), mbufs_per_queue_tx);
-            std::cout<<"11111111111111"<<std::endl;
+
            
             if (HugetlbfsMemBackend) {
                 std::vector<phys_addr_t> mappings;
@@ -1197,8 +1197,6 @@ build_mbuf_cluster:
 
             }
 
-            netstar_pools.push_back(_pool);
-            std::cout<<"TX buffer pool push_back successfully"<<std::endl;
 
             if (!_pool) {
                 printf("Failed to create mempool for Tx\n");
@@ -1825,7 +1823,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
 
     printf("Creating Rx mbuf pool '%s' [%u mbufs] ...\n",
            name.c_str(), mbufs_per_queue_rx);
-    std::cout<<"11111111111111"<<std::endl;
+
 
     //
     // If we have a hugetlbfs memory backend we may perform a virt2phys
@@ -1902,8 +1900,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
                                rte_socket_id(), 0);
 
     }
-    netstar_pools.push_back(_pktmbuf_pool_rx);
-    std::cout<<"RX buffer pool push_back successfully"<<std::endl;
+
 
     return _pktmbuf_pool_rx != nullptr;
 }
