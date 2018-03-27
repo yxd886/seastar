@@ -1197,6 +1197,7 @@ build_mbuf_cluster:
             }
 
             netstar_pools.push_back(_pool);
+            std::cout<<"TX buffer pool push_back successfully"<<std::endl;
 
             if (!_pool) {
                 printf("Failed to create mempool for Tx\n");
@@ -1900,6 +1901,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
 
     }
     netstar_pools.push_back(_pktmbuf_pool_rx);
+    std::cout<<"RX buffer pool push_back successfully"<<std::endl;
 
     return _pktmbuf_pool_rx != nullptr;
 }
