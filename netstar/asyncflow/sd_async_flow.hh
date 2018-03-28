@@ -308,6 +308,12 @@ public:
     seastar::future<> run_async_loop(std::function<seastar::future<af_action>()> fn) {
         return _impl->run_async_loop(std::move(fn));
     }
+
+    void internal_send(rte_packet pkt){
+
+        _impl->internal_packet_forward(std::move(pkt));
+
+    }
 };
 
 template<typename Ppr>
