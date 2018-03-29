@@ -91,7 +91,7 @@ typedef void    *MARKER[0];   /**< generic marker for a point in a structure */
 #endif
 
 /******************* Net device related constatns *****************************/
-static constexpr uint64_t default_ring_size      = 4096*10;
+static constexpr uint64_t default_ring_size      = 1024*2*2*2*2;
 
 //
 // We need 2 times the ring size of buffers because of the way PMDs
