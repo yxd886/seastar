@@ -91,20 +91,20 @@ typedef void    *MARKER[0];   /**< generic marker for a point in a structure */
 #endif
 
 /******************* Net device related constatns *****************************/
-static constexpr uint64_t default_ring_size      = 1024*2*2*2;
+static constexpr uint16_t default_ring_size      = 1024*2*2*2;
 
 //
 // We need 2 times the ring size of buffers because of the way PMDs
 // refill the ring.
 //
-static constexpr uint64_t mbufs_per_queue_rx     = 2 * default_ring_size;
+static constexpr uint16_t mbufs_per_queue_rx     = 2 * default_ring_size;
 static constexpr uint16_t rx_gc_thresh           = 64;
 
 //
 // No need to keep more descriptors in the air than can be sent in a single
 // rte_eth_tx_burst() call.
 //
-static constexpr uint64_t mbufs_per_queue_tx     = 2 * default_ring_size;
+static constexpr uint16_t mbufs_per_queue_tx     = 2 * default_ring_size;
 
 static constexpr uint16_t mbuf_cache_size        = 512;
 static constexpr uint16_t mbuf_overhead          =
@@ -1148,7 +1148,7 @@ build_mbuf_cluster:
             // patch by djp
             // modify the name of the pktmbuf_pool.
             sstring name = sstring(pktmbuf_pool_name) + to_sstring(qid) + to_sstring(port_idx) + "_tx";
-            printf("Creating Tx mbuf pool '%s' [%" PRIu64 " mbufs] ...\n",
+            printf("Creating Tx mbuf pool '%s' [%u mbufs] ...\n",
                    name.c_str(), mbufs_per_queue_tx);
 
             if (HugetlbfsMemBackend) {
@@ -1493,7 +1493,7 @@ private:
      * @return a virtual address of the allocated memory chunk or nullptr in
      *         case of a failure.
      */
-    static void* alloc_mempool_xmem(uint64_t num_bufs, uint16_t buf_sz,
+    static void* alloc_mempool_xmem(uint16_t num_bufs, uint16_t buf_sz,
                                     std::vector<phys_addr_t>& mappings);
 
     /**
@@ -1844,7 +1844,7 @@ void dpdk_device::init_port_fini()
 
 template <bool HugetlbfsMemBackend>
 void* dpdk_qp<HugetlbfsMemBackend>::alloc_mempool_xmem(
-    uint64_t num_bufs, uint16_t buf_sz, std::vector<phys_addr_t>& mappings)
+    uint16_t num_bufs, uint16_t buf_sz, std::vector<phys_addr_t>& mappings)
 {
     using namespace memory;
     char* xmem;
@@ -1884,7 +1884,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
     // Modify the name of the pktmbuf_pool.
     sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + to_sstring(_dev->port_idx()) + "_rx";
 
-    printf("Creating Rx mbuf pool '%s' [%" PRIu64 " mbufs] ...\n",
+    printf("Creating Rx mbuf pool '%s' [%u mbufs] ...\n",
            name.c_str(), mbufs_per_queue_rx);
 
     //
