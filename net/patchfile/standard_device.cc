@@ -91,13 +91,13 @@ typedef void    *MARKER[0];   /**< generic marker for a point in a structure */
 #endif
 
 /******************* Net device related constatns *****************************/
-static constexpr uint16_t default_ring_size      = 4096*10;
+static constexpr uint64_t default_ring_size      = 4096*10;
 
 //
 // We need 2 times the ring size of buffers because of the way PMDs
 // refill the ring.
 //
-static constexpr uint16_t mbufs_per_queue_rx     = 2 * default_ring_size;
+static constexpr uint64_t mbufs_per_queue_rx     = 2 * default_ring_size;
 static constexpr uint16_t rx_gc_thresh           = 64;
 
 //
