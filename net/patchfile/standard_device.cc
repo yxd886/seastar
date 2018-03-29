@@ -104,7 +104,7 @@ static constexpr uint16_t rx_gc_thresh           = 64;
 // No need to keep more descriptors in the air than can be sent in a single
 // rte_eth_tx_burst() call.
 //
-static constexpr uint16_t mbufs_per_queue_tx     = 2 * default_ring_size;
+static constexpr uint64_t mbufs_per_queue_tx     = 2 * default_ring_size;
 
 static constexpr uint16_t mbuf_cache_size        = 512;
 static constexpr uint16_t mbuf_overhead          =
@@ -1493,7 +1493,7 @@ private:
      * @return a virtual address of the allocated memory chunk or nullptr in
      *         case of a failure.
      */
-    static void* alloc_mempool_xmem(uint16_t num_bufs, uint16_t buf_sz,
+    static void* alloc_mempool_xmem(uint64_t num_bufs, uint16_t buf_sz,
                                     std::vector<phys_addr_t>& mappings);
 
     /**
@@ -1844,7 +1844,7 @@ void dpdk_device::init_port_fini()
 
 template <bool HugetlbfsMemBackend>
 void* dpdk_qp<HugetlbfsMemBackend>::alloc_mempool_xmem(
-    uint16_t num_bufs, uint16_t buf_sz, std::vector<phys_addr_t>& mappings)
+    uint64_t num_bufs, uint16_t buf_sz, std::vector<phys_addr_t>& mappings)
 {
     using namespace memory;
     char* xmem;
@@ -1884,7 +1884,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
     // Modify the name of the pktmbuf_pool.
     sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + to_sstring(_dev->port_idx()) + "_rx";
 
-    printf("Creating Rx mbuf pool '%s' [%u mbufs] ...\n",
+    printf("Creating Rx mbuf pool '%s' [%d mbufs] ...\n",
            name.c_str(), mbufs_per_queue_rx);
 
     //
@@ -1930,7 +1930,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
         // 2) Bind data buffers to each of them.
         // 3) Return them back to the pool.
         //
-        for (int i = 0; i < mbufs_per_queue_rx; i++) {
+        for (unsigned int i = 0; i < mbufs_per_queue_rx; i++) {
             rte_mbuf* m = rte_pktmbuf_alloc(_pktmbuf_pool_rx);
             assert(m);
             _rx_free_bufs.push_back(m);
