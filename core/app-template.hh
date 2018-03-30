@@ -67,6 +67,7 @@ public:
     // with exit code 0 when the future returned by func resolves
     // successfully.
     int run(int ac, char ** av, std::function<future<> ()>&& func);
+    int set_config(int ac, char ** av);
 };
 
 }

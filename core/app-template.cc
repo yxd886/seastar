@@ -164,4 +164,59 @@ app_template::run_deprecated(int ac, char ** av, std::function<void ()>&& func) 
     return exit_code;
 }
 
+int
+app_template::set_config(int ac, char ** av) {
+#ifdef DEBUG
+    print("WARNING: debug mode. Not for benchmarking or production\n");
+#endif
+    bpo::variables_map configuration;
+    try {
+        bpo::store(bpo::command_line_parser(ac, av)
+                    .options(_opts)
+                    .positional(_pos_opts)
+                    .run()
+            , configuration);
+        auto home = std::getenv("HOME");
+        if (home) {
+            std::ifstream ifs(std::string(home) + "/.config/seastar/seastar.conf");
+            if (ifs) {
+                bpo::store(bpo::parse_config_file(ifs, _opts), configuration);
+            }
+            std::ifstream ifs_io(std::string(home) + "/.config/seastar/io.conf");
+            if (ifs_io) {
+                bpo::store(bpo::parse_config_file(ifs_io, _opts), configuration);
+            }
+        }
+    } catch (bpo::error& e) {
+        print("error: %s\n\nTry --help.\n", e.what());
+        return 2;
+    }
+    if (configuration.count("help")) {
+        std::cout << _opts << "\n";
+        return 1;
+    }
+    if (configuration["help-loggers"].as<bool>()) {
+        log_cli::print_available_loggers(std::cout);
+        return 1;
+    }
+
+    bpo::notify(configuration);
+
+    // Needs to be before `smp::configure()`.
+    try {
+        apply_logging_settings(log_cli::extract_settings(configuration));
+    } catch (const std::runtime_error& exn) {
+        std::cout << "logging configuration error: " << exn.what() << '\n';
+        return 1;
+    }
+
+    configuration.emplace("argv0", boost::program_options::variable_value(std::string(av[0]), false));
+    smp::configure(configuration);
+    _configuration = {std::move(configuration)};
+    return 0;
+
+}
+
+
+
 }
