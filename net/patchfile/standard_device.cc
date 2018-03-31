@@ -97,7 +97,7 @@ static constexpr uint16_t default_ring_size      = 1024*2*2;
 // We need 2 times the ring size of buffers because of the way PMDs
 // refill the ring.
 //
-static constexpr uint32_t mbufs_per_queue_rx     = 7 * default_ring_size;
+static constexpr uint32_t mbufs_per_queue_rx     = 15 * default_ring_size;
 static constexpr uint16_t rx_gc_thresh           = 64;
 
 //
