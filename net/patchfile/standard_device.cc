@@ -97,7 +97,7 @@ static constexpr uint16_t default_ring_size      = 1024*2*2;
 // We need 2 times the ring size of buffers because of the way PMDs
 // refill the ring.
 //
-static constexpr uint16_t mbufs_per_queue_rx     = 20 * default_ring_size;
+static constexpr uint32_t mbufs_per_queue_rx     = 20 * default_ring_size;
 static constexpr uint16_t rx_gc_thresh           = 64;
 
 //
@@ -1493,7 +1493,7 @@ private:
      * @return a virtual address of the allocated memory chunk or nullptr in
      *         case of a failure.
      */
-    static void* alloc_mempool_xmem(uint16_t num_bufs, uint16_t buf_sz,
+    static void* alloc_mempool_xmem(uint32_t num_bufs, uint16_t buf_sz,
                                     std::vector<phys_addr_t>& mappings);
 
     /**
@@ -1844,7 +1844,7 @@ void dpdk_device::init_port_fini()
 
 template <bool HugetlbfsMemBackend>
 void* dpdk_qp<HugetlbfsMemBackend>::alloc_mempool_xmem(
-    uint16_t num_bufs, uint16_t buf_sz, std::vector<phys_addr_t>& mappings)
+    uint32_t num_bufs, uint16_t buf_sz, std::vector<phys_addr_t>& mappings)
 {
     using namespace memory;
     char* xmem;
@@ -1884,7 +1884,7 @@ bool dpdk_qp<HugetlbfsMemBackend>::init_rx_mbuf_pool()
     // Modify the name of the pktmbuf_pool.
     sstring name = sstring(pktmbuf_pool_name) + to_sstring(_qid) + to_sstring(_dev->port_idx()) + "_rx";
 
-    printf("Creating Rx mbuf pool '%s' [%u mbufs] ...\n",
+    printf("Creating Rx mbuf pool '%s' [%d mbufs] ...\n",
            name.c_str(), mbufs_per_queue_rx);
 
     //
