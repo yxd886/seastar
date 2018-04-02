@@ -309,11 +309,6 @@ struct aho_pattern
     return patterns;
 }
 
-/*
- * Get packets from a file. File format:
- * <dfa id> <num_bytes> byte_1 byte_2 ...
- * ...
- */
 
 
 void aho_preprocess_dfa(struct aho_dfa *dfa)
